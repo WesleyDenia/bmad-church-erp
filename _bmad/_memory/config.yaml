@@ -7,5 +7,5 @@
 # Core Configuration Values
 user_name: Wesley Silva
 communication_language: portugues
-document_output_language: English
+document_output_language: portuguese
 output_folder: "{project-root}/_bmad-output"
