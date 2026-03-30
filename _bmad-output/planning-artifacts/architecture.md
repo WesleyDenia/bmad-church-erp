@@ -25,7 +25,7 @@ O produto precisa suportar autenticação com permissões por perfil, lançament
 Os NFRs mais relevantes são responsividade em desktop e mobile, linguagem clara e não corporativa, segurança no tratamento de dados pessoais e financeiros, reversibilidade de ações sensíveis, auditabilidade de alterações financeiras e confiabilidade em janelas críticas de uso semanal. Estes requisitos afetam diretamente estrutura de aplicação, modelagem de permissões, estratégias de persistência, logging e padrões de feedback ao utilizador.
 
 **Scale & Complexity:**
-O projeto apresenta complexidade média. Não há sinais de real-time intenso, multi-campus inicial ou integrações profundas no MVP, mas há forte necessidade de consistência funcional, segurança de domínio e experiência previsível.
+O projeto apresenta complexidade média. Não há sinais de real-time intenso, multi-campus inicial ou integrações profundas no MVP, mas há forte necessidade de consistência funcional, segurança de domínio e experiência previsível.Docker
 
 - Primary domain: web full-stack administrativo
 - Complexity level: medium
