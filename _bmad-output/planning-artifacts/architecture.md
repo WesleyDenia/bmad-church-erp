@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4]
+stepsCompleted: [1, 2, 3, 4, 5]
 inputDocuments:
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/prd.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/ux-design-specification.md
@@ -217,3 +217,137 @@ A arquitetura deve permitir introduzir Redis posteriormente para cache e rate li
 - A decisão de tenancy por `church_id` impacta autenticação, autorização, consultas, policies e auditoria.
 - A escolha de Laravel como fonte principal de validação impacta o desenho dos contratos da API e o tratamento de erros no frontend.
 - A ausência de cache crítico no MVP simplifica deploy inicial, mas exige consultas e índices bem pensados no schema principal.
+
+## Implementation Patterns & Consistency Rules
+
+### Pattern Categories Defined
+
+**Critical Conflict Points Identified:**
+5 áreas críticas onde agentes diferentes poderiam tomar decisões incompatíveis:
+- convenções de nomenclatura
+- organização estrutural
+- formatos de API e dados
+- comunicação entre frontend e backend
+- tratamento de erro, loading e validação
+
+### Naming Patterns
+
+**Database Naming Conventions:**
+- Tabelas em `snake_case` plural: `users`, `churches`, `financial_entries`
+- Colunas em `snake_case`: `church_id`, `created_at`, `updated_at`
+- Foreign keys em `snake_case` com sufixo `_id`: `user_id`, `church_id`
+- Índices e constraints seguindo convenções padrão do Laravel sempre que possível
+
+**API Naming Conventions:**
+- Endpoints REST em plural: `/api/v1/churches`, `/api/v1/members`, `/api/v1/financial-entries`
+- Route params com identificadores simples: `/api/v1/members/{id}`
+- Query params em `snake_case`: `church_id`, `date_from`, `date_to`
+
+**Code Naming Conventions:**
+- PHP classes em `PascalCase`: `MemberService`, `FinancialEntryRepository`, `VisitorResource`
+- Métodos e variáveis PHP em `camelCase`
+- Arquivos React/Next.js em `PascalCase` para componentes: `TreasurerHomePage.tsx`
+- Hooks em `camelCase` com prefixo `use`
+- Utilitários TS em `camelCase`
+
+### Structure Patterns
+
+**Project Organization:**
+- Backend organizado por domínio de negócio
+- Cada domínio do backend terá subestrutura técnica interna
+- Frontend organizado por áreas funcionais e rotas do App Router
+- Testes do backend em `tests/Feature` e `tests/Unit`
+
+**Backend Domain Structure Pattern:**
+Cada domínio relevante em `app/Domain` deve seguir, quando aplicável, uma subestrutura técnica consistente como:
+
+- `Models`
+- `Services`
+- `Resources`
+- `Repositories`
+
+Exemplo:
+- `app/Domain/Finance/Models`
+- `app/Domain/Finance/Services`
+- `app/Domain/Finance/Resources`
+- `app/Domain/Finance/Repositories`
+
+Regras:
+- `Models`: entidades Eloquent e comportamento próximo ao dado
+- `Services`: regras de aplicação e orquestração de casos de uso
+- `Resources`: `JsonResource` e transformações de saída da API
+- `Repositories`: consultas e acesso estruturado a dados quando a complexidade justificar
+
+**File Structure Patterns:**
+- Backend:
+  - `app/Domain` para módulos por domínio
+  - `app/Http/Controllers/Api/V1` para controllers da API
+  - `app/Http/Requests` para validação de entrada
+  - `app/Policies` para autorização
+- Frontend:
+  - `src/app` para rotas
+  - `src/components` para componentes reutilizáveis
+  - `src/features` para lógica por domínio
+  - `src/lib` para clients, helpers e utilidades de infraestrutura
+
+### Format Patterns
+
+**API Response Formats:**
+- Respostas de sucesso devem seguir o padrão idiomático do Laravel usando `JsonResource` e `ResourceCollection`
+- Não criar wrapper global customizado desnecessário se o recurso puder responder diretamente no padrão Laravel
+- Paginação deve seguir o formato padrão gerado pelo Laravel para recursos paginados
+- Erros de validação, autorização e exceção devem ser padronizados no backend de forma consistente, preservando compatibilidade com o ecossistema Laravel
+
+**Data Exchange Formats:**
+- Contratos HTTP oficiais em `snake_case`
+- Datas em ISO 8601
+- Booleanos em `true/false`
+- `null` explícito quando aplicável
+
+### Communication Patterns
+
+**Event System Patterns:**
+- Eventos internos do backend em nomes descritivos de domínio: `FinancialEntryUpdated`, `VisitorFollowUpCreated`
+- Sem dependência de event bus distribuído no MVP
+- Eventos usados para auditoria e efeitos secundários internos
+
+**State Management Patterns:**
+- Frontend prioriza estado local e por feature
+- Evitar global state excessivo no MVP
+- Estado de servidor tratado por camada de client/API bem definida
+
+### Process Patterns
+
+**Error Handling Patterns:**
+- Backend concentra validação, autorização e erros de domínio
+- Frontend distingue erro de validação, autorização e erro inesperado
+- Mensagens ao usuário devem ser claras e operacionais
+- Logs técnicos ficam no backend
+
+**Loading State Patterns:**
+- Cada tela principal define loading inicial explícito
+- Ações críticas usam estados distintos de submissão
+- Estados vazios, loading e erro devem existir nas homes e listagens principais
+
+### Enforcement Guidelines
+
+**All AI Agents MUST:**
+- respeitar `church_id` como eixo obrigatório de isolamento
+- manter contratos HTTP em `snake_case`
+- usar `JsonResource` / `ResourceCollection` para respostas de sucesso da API Laravel
+- tratar o backend Laravel como fonte principal de verdade para validação e autorização
+- seguir organização por domínio com subestrutura técnica interna consistente
+
+### Pattern Examples
+
+**Good Examples:**
+- `app/Domain/Finance/Models/FinancialEntry.php`
+- `app/Domain/Finance/Services/CreateFinancialEntryService.php`
+- `app/Domain/Finance/Resources/FinancialEntryResource.php`
+- `app/Domain/Finance/Repositories/FinancialEntryRepository.php`
+
+**Anti-Patterns:**
+- controllers com regra de negócio pesada
+- respostas HTTP com formatos diferentes em módulos diferentes
+- queries sem escopo de tenant
+- mistura de convenções de naming no mesmo contrato
