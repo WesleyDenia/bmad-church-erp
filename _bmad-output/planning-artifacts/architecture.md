@@ -1,13 +1,16 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 inputDocuments:
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/prd.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/ux-design-specification.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/mvp-scope.md
 workflowType: 'architecture'
+lastStep: 8
+status: 'complete'
 project_name: 'curso-bmad'
 user_name: 'Wesley Silva'
 date: '2026-03-25'
+completedAt: '2026-04-06'
 ---
 
 # Architecture Decision Document
@@ -351,3 +354,424 @@ Regras:
 - respostas HTTP com formatos diferentes em módulos diferentes
 - queries sem escopo de tenant
 - mistura de convenções de naming no mesmo contrato
+
+## Project Structure & Boundaries
+
+### Complete Project Directory Structure
+
+```text
+church-erp/
+├── README.md
+├── docs/
+├── .github/
+│   └── workflows/
+│       ├── api-ci.yml
+│       └── web-ci.yml
+├── church-erp-api/
+│   ├── README.md
+│   ├── artisan
+│   ├── composer.json
+│   ├── phpunit.xml
+│   ├── .env.example
+│   ├── app/
+│   │   ├── Domain/
+│   │   │   ├── Identity/
+│   │   │   │   ├── Models/
+│   │   │   │   ├── Services/
+│   │   │   │   ├── Resources/
+│   │   │   │   └── Repositories/
+│   │   │   ├── Finance/
+│   │   │   │   ├── Models/
+│   │   │   │   ├── Services/
+│   │   │   │   ├── Resources/
+│   │   │   │   └── Repositories/
+│   │   │   ├── People/
+│   │   │   │   ├── Models/
+│   │   │   │   ├── Services/
+│   │   │   │   ├── Resources/
+│   │   │   │   └── Repositories/
+│   │   │   ├── Operations/
+│   │   │   │   ├── Models/
+│   │   │   │   ├── Services/
+│   │   │   │   ├── Resources/
+│   │   │   │   └── Repositories/
+│   │   │   └── Communications/
+│   │   │       ├── Models/
+│   │   │       ├── Services/
+│   │   │       ├── Resources/
+│   │   │       └── Repositories/
+│   │   ├── Http/
+│   │   │   ├── Controllers/
+│   │   │   │   └── Api/
+│   │   │   │       └── V1/
+│   │   │   ├── Middleware/
+│   │   │   └── Requests/
+│   │   ├── Policies/
+│   │   ├── Providers/
+│   │   └── Exceptions/
+│   ├── bootstrap/
+│   ├── config/
+│   ├── database/
+│   │   ├── factories/
+│   │   ├── migrations/
+│   │   └── seeders/
+│   ├── routes/
+│   │   ├── api.php
+│   │   └── console.php
+│   ├── storage/
+│   └── tests/
+│       ├── Feature/
+│       └── Unit/
+├── church-erp-web/
+│   ├── README.md
+│   ├── package.json
+│   ├── next.config.ts
+│   ├── tsconfig.json
+│   ├── .env.example
+│   ├── public/
+│   └── src/
+│       ├── app/
+│       │   ├── (auth)/
+│       │   ├── treasury/
+│       │   ├── secretaria/
+│       │   ├── leadership/
+│       │   ├── communications/
+│       │   ├── layout.tsx
+│       │   └── page.tsx
+│       ├── components/
+│       │   ├── ui/
+│       │   ├── forms/
+│       │   ├── layout/
+│       │   └── feedback/
+│       ├── features/
+│       │   ├── auth/
+│       │   ├── finance/
+│       │   ├── people/
+│       │   ├── operations/
+│       │   └── communications/
+│       ├── lib/
+│       │   ├── api/
+│       │   ├── env/
+│       │   ├── formatters/
+│       │   └── utils/
+│       ├── hooks/
+│       ├── types/
+│       └── middleware.ts
+└── e2e/
+    ├── api/
+    └── web/
+```
+
+### Architectural Boundaries
+
+**API Boundaries:**
+- Toda regra de negócio, validação principal, autorização e persistência vivem no `church-erp-api`
+- O frontend nunca acessa banco diretamente
+- A API expõe contratos REST versionados em `/api/v1`
+
+**Component Boundaries:**
+- `church-erp-web` é responsável por UI, navegação, estado de tela e consumo da API
+- Componentes de UI não devem conter regra de negócio sensível
+- Regras críticas de domínio permanecem no backend
+
+**Service Boundaries:**
+- Cada domínio Laravel encapsula seus próprios serviços e repositórios
+- Controllers apenas recebem requests, delegam e retornam resources
+- Frontend consome clients de API em `src/lib/api`
+
+**Data Boundaries:**
+- MySQL é acessado apenas pelo backend Laravel
+- `church_id` delimita o escopo lógico de tenant nas entidades relevantes
+- Auditoria e histórico financeiro permanecem no domínio de backend
+
+### Requirements to Structure Mapping
+
+**Feature/Epic Mapping:**
+- Epic 1 Fundacao e Acesso Seguro
+  - API: `app/Domain/Identity`
+  - Web: `src/features/auth`, `src/app/(auth)`
+- Epic 2 Operacao Financeira
+  - API: `app/Domain/Finance`
+  - Web: `src/features/finance`, `src/app/treasury`
+- Epic 3 Fechamento e Visibilidade
+  - API: `app/Domain/Finance`, `app/Domain/Operations`
+  - Web: `src/app/leadership`, `src/features/finance`
+- Epic 4 Base de Pessoas e Rotina da Secretaria
+  - API: `app/Domain/People`, `app/Domain/Operations`
+  - Web: `src/features/people`, `src/app/secretaria`
+- Epic 5 Comunicacao Operacional
+  - API: `app/Domain/Communications`
+  - Web: `src/features/communications`, `src/app/communications`
+
+**Cross-Cutting Concerns:**
+- Auth e policies: `app/Domain/Identity`, `app/Policies`, `src/features/auth`
+- Tenancy: middleware, policies, repositories e queries no backend
+- Feedback e estados de tela: `src/components/feedback`
+- API clients e contratos: `src/lib/api`
+
+### Integration Points
+
+**Internal Communication:**
+- Frontend comunica apenas via HTTP com a API Laravel
+- Backend usa services, repositories e resources dentro de fronteiras de domínio
+
+**External Integrations:**
+- Handoff para WhatsApp ocorre via frontend, usando conteúdo preparado pela aplicação
+- Sem integração nativa profunda de mensageria no MVP
+
+**Data Flow:**
+- usuário interage com Next.js
+- Next.js envia request à API Laravel
+- Laravel valida, autoriza, aplica regra de domínio e persiste no MySQL
+- Laravel responde usando `JsonResource`
+- Next.js renderiza estado, erro ou sucesso
+
+### File Organization Patterns
+
+**Configuration Files:**
+- Configurações do backend em `church-erp-api/config`
+- Configurações do frontend em raiz de `church-erp-web`
+- Variáveis de ambiente separadas por aplicação
+
+**Source Organization:**
+- Backend por domínio com subestrutura técnica
+- Frontend por rotas + features + componentes compartilhados
+
+**Test Organization:**
+- Backend: `tests/Feature` e `tests/Unit`
+- Frontend: testes por feature ou componente
+- E2E em pasta de topo `e2e/` para fluxos integrados
+
+**Asset Organization:**
+- Assets públicos do frontend em `church-erp-web/public`
+- Artefatos internos do backend em `storage`
+
+### Development Workflow Integration
+
+**Development Server Structure:**
+- API e frontend sobem separadamente em desenvolvimento
+- Cada aplicação mantém seu `.env` e ciclo de build próprios
+
+**Build Process Structure:**
+- Backend e frontend possuem pipelines independentes
+- Contratos de API são o ponto de acoplamento entre os dois
+
+**Deployment Structure:**
+- Backend Laravel pode ser implantado separadamente do frontend Next.js
+- A separação favorece evolução e troubleshooting por camada
+
+## Architecture Validation Results
+
+### Coherence Validation ✅
+
+**Decision Compatibility:**
+A combinação de Laravel 12 API, MySQL 8.4 LTS e Next.js App Router é coerente com os requisitos do produto e com a preferência técnica declarada. As decisões de tenancy lógica por `church_id`, validação central no backend e frontend desacoplado não entram em conflito e se reforçam mutuamente.
+
+**Pattern Consistency:**
+Os padrões definidos são compatíveis com a stack escolhida. As convenções de naming, organização por domínio com subestrutura técnica, contratos HTTP em `snake_case` e uso de `JsonResource` alinham bem backend e frontend.
+
+**Structure Alignment:**
+A estrutura proposta suporta os domínios do produto, separa responsabilidades com clareza e respeita as fronteiras entre UI, API, domínio, autorização, persistência e auditoria.
+
+### Requirements Coverage Validation ✅
+
+**Epic/Feature Coverage:**
+Todos os épicos do MVP possuem suporte arquitetural explícito:
+- fundação e acesso: `Identity`
+- operação financeira e fechamento: `Finance`
+- rotina operacional: `Operations`
+- pessoas: `People`
+- comunicação: `Communications`
+
+**Functional Requirements Coverage:**
+Os requisitos funcionais de autenticação, permissões, multi-tenancy, lançamentos financeiros, auditoria, base de pessoas, pendências operacionais, relatórios e comunicação têm suporte claro na arquitetura definida.
+
+**Non-Functional Requirements Coverage:**
+A arquitetura responde aos NFRs principais:
+- segurança: backend como fonte de verdade para auth, validação e autorização
+- responsividade: frontend em Next.js com estrutura adequada para interfaces operacionais
+- auditabilidade: domínio financeiro com trilha explícita
+- clareza e consistência: padrões de API, naming e estrutura definidos
+- evolutividade: separação entre frontend e backend favorece crescimento controlado
+
+### Implementation Readiness Validation ✅
+
+**Decision Completeness:**
+As decisões críticas de stack, banco, tenancy, organização de código, contratos HTTP e estrutura de projeto estão suficientemente definidas para orientar implementação consistente.
+
+**Structure Completeness:**
+A estrutura do projeto está completa no nível necessário para início de implementação e distribuição das primeiras histórias.
+
+**Pattern Completeness:**
+Os principais pontos de conflito entre agentes foram tratados:
+- nomenclatura
+- resposta da API
+- subestrutura de domínio no backend
+- organização do frontend
+- padrões de erro e loading
+
+### Gap Analysis Results
+
+**Critical Gaps:**
+- Nenhum gap crítico identificado que bloqueie a execução do backlog.
+
+**Important Gaps:**
+- Formalizar estratégia exata de autenticação entre Next.js e Laravel
+- Formalizar abordagem de autorização por perfil e tenant no fluxo HTTP
+- Formalizar estratégia inicial de observabilidade e logging operacional
+- Formalizar modelo de deploy entre frontend e backend
+
+**Nice-to-Have Gaps:**
+- Detalhar contratos iniciais da API por domínio
+- Definir convenções de paginação e filtros com exemplos por endpoint
+- Registrar guideline de testes automatizados por camada
+
+### Validation Issues Addressed
+
+- A ambiguidade inicial sobre stack foi resolvida com a definição explícita de arquitetura desacoplada
+- O conflito potencial entre organização por domínio e estrutura técnica foi resolvido com subestrutura interna por domínio
+- O formato de resposta da API foi alinhado ao padrão idiomático do Laravel
+- As fronteiras entre backend e frontend ficaram definidas com clareza suficiente para implementação
+
+### Architecture Completeness Checklist
+
+**✅ Requirements Analysis**
+- [x] Project context thoroughly analyzed
+- [x] Scale and complexity assessed
+- [x] Technical constraints identified
+- [x] Cross-cutting concerns mapped
+
+**✅ Architectural Decisions**
+- [x] Critical decisions documented with versions
+- [x] Technology stack fully specified
+- [x] Integration patterns defined
+- [x] Performance considerations addressed at MVP level
+
+**✅ Implementation Patterns**
+- [x] Naming conventions established
+- [x] Structure patterns defined
+- [x] Communication patterns specified
+- [x] Process patterns documented
+
+**✅ Project Structure**
+- [x] Complete directory structure defined
+- [x] Component boundaries established
+- [x] Integration points mapped
+- [x] Requirements to structure mapping complete
+
+### Architecture Readiness Assessment
+
+**Overall Status:** READY FOR IMPLEMENTATION
+
+**Confidence Level:** high
+
+**Key Strengths:**
+- stack explícita e coerente com o tipo de produto
+- separação saudável entre frontend e backend
+- multi-tenancy tratada desde a fundação
+- domínio financeiro preparado para auditabilidade
+- estrutura suficientemente concreta para orientar agentes e desenvolvimento
+
+**Areas for Future Enhancement:**
+- ADR específica de autenticação e sessão
+- ADR específica de deploy e infraestrutura
+- guideline de testes por backend, frontend e e2e
+- contratos iniciais de API por domínio
+
+### Implementation Handoff
+
+**AI Agent Guidelines:**
+- seguir exatamente os padrões documentados
+- respeitar `church_id` em consultas, policies e fluxos de domínio
+- manter backend Laravel como fonte principal de validação, auth e autorização
+- usar `JsonResource` / `ResourceCollection` nas respostas de sucesso da API
+- respeitar a estrutura por domínio com subestrutura técnica interna
+
+**First Implementation Priority:**
+Inicializar `church-erp-api` com Laravel e `church-erp-web` com Next.js, configurar comunicação entre as aplicações e preparar a base do domínio de identidade e tenancy.
+
+## ADR: Authentication via Next.js BFF with Internal JWT Context
+
+### Status
+
+Accepted
+
+### Context
+
+A arquitetura do projeto foi definida como frontend desacoplado em Next.js e backend em Laravel API. O requisito adicional definido para autenticação é evitar expor autenticação diretamente ao browser e manter a sessão principal sob controle do frontend server-side.
+
+Também foi definido que o contexto operacional do usuário deve incluir, no mínimo, identidade e tenant ativo, com `user_id` e `church_id` disponíveis no token usado entre as camadas internas da solução.
+
+### Decision
+
+A autenticação seguirá o padrão **BFF (Backend for Frontend)** com as seguintes regras:
+
+- o browser autentica apenas contra o `church-erp-web`
+- o `church-erp-web` atua como camada intermediária autenticada entre browser e `church-erp-api`
+- a sessão do usuário no frontend será mantida em cookie `HttpOnly`
+- o browser não consumirá diretamente endpoints autenticados do Laravel
+- a comunicação autenticada entre `Next.js` e `Laravel` usará JWT interno com expiração curta
+- o backend Laravel continua como fonte de verdade para identidade, tenant, autorização e regras de domínio
+
+### Internal JWT Claims
+
+O JWT interno entre `Next.js` e `Laravel` deve carregar apenas o contexto mínimo necessário para execução segura e eficiente.
+
+**Required claims:**
+- `sub`: identificador canônico do usuário autenticado
+- `user_id`: identificador interno do usuário
+- `church_id`: tenant ativo da sessão
+- `iss`: emissor do token
+- `aud`: audiência do token
+- `iat`: data de emissão
+- `exp`: data de expiração
+- `jti`: identificador único do token
+
+**Useful claims:**
+- `roles`: papéis do usuário no tenant ativo
+- `permissions_version`: versão para invalidação quando perfil/permissões mudarem
+- `session_id`: vínculo com a sessão atual do BFF
+
+### Constraints
+
+- o JWT interno não deve ser exposto ao JavaScript do browser
+- o JWT interno não deve carregar listas extensas de permissões ou dados sensíveis
+- o `church_id` representa sempre o tenant ativo da sessão corrente
+- troca de contexto de igreja exige reemissão de token e atualização da sessão
+- mudanças relevantes de permissão exigem invalidação de sessão/token
+
+### Request Flow
+
+1. o usuário envia credenciais ao `church-erp-web`
+2. o `church-erp-web` encaminha a autenticação ao `church-erp-api`
+3. o `church-erp-api` valida identidade e contexto permitido
+4. o `church-erp-web` estabelece a sessão autenticada com cookie `HttpOnly`
+5. para chamadas autenticadas, o `church-erp-web` envia JWT interno ao `church-erp-api`
+6. o `church-erp-api` valida o token, aplica autorização e executa a regra de negócio
+7. o frontend renderiza o resultado sem expor a credencial interna ao browser
+
+### Authorization Rules
+
+- autorização real permanece no Laravel através de policies, guards e regras de domínio
+- o frontend pode usar o contexto de sessão para adaptação de navegação e UI, mas não é autoridade final
+- toda consulta sensível deve considerar `church_id` e permissões do usuário autenticado
+
+### Consequences
+
+**Positive:**
+- reduz exposição de autenticação ao browser
+- centraliza segurança e sessão no BFF
+- permite propagar `user_id` e `church_id` de forma consistente entre camadas
+- mantém o Laravel como autoridade de domínio e autorização
+
+**Trade-offs:**
+- aumenta complexidade em comparação com SPA auth mais simples
+- exige disciplina clara na comunicação `Next.js -> Laravel`
+- exige estratégia explícita de emissão, rotação e expiração de tokens internos
+
+### Implementation Notes
+
+- proteger rotas autenticadas no App Router via camada server-side do `church-erp-web`
+- expor endpoint de contexto autenticado equivalente a `/me` através do BFF
+- centralizar login, logout e troca de tenant no `church-erp-web`
+- registrar erros de autenticação e autorização no backend com logs técnicos apropriados
