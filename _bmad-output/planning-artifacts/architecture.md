@@ -775,3 +775,270 @@ O JWT interno entre `Next.js` e `Laravel` deve carregar apenas o contexto mínim
 - expor endpoint de contexto autenticado equivalente a `/me` através do BFF
 - centralizar login, logout e troca de tenant no `church-erp-web`
 - registrar erros de autenticação e autorização no backend com logs técnicos apropriados
+
+### Authentication Operational Design
+
+**1. Internal JWT Format**
+
+- algoritmo de assinatura: `RS256`
+- emissor (`iss`): `church-erp-web`
+- audiência (`aud`): `church-erp-api`
+- tempo de vida curto: entre `5` e `15` minutos
+
+**Claims obrigatórias:**
+- `sub`
+- `user_id`
+- `church_id`
+- `roles`
+- `session_id`
+- `permissions_version`
+- `iat`
+- `exp`
+- `jti`
+
+**Regras de conteúdo:**
+- não incluir dados sensíveis
+- não incluir listas extensas de permissões
+- não transformar o token em fonte de verdade de autorização
+- usar o token apenas como contexto autenticado de curta duração entre BFF e API
+
+**2. Login, Logout, Refresh e `/me`**
+
+**Login flow:**
+- `POST /auth/login` no `church-erp-web`
+- o BFF recebe credenciais do browser
+- o BFF encaminha autenticação ao `church-erp-api`
+- o Laravel valida credenciais e contexto permitido
+- o BFF estabelece sessão em cookie `HttpOnly`
+
+**Logout flow:**
+- `POST /auth/logout` no `church-erp-web`
+- a sessão local é invalidada
+- qualquer contexto interno ativo vinculado à sessão deve ser encerrado
+
+**Refresh flow:**
+- `POST /auth/refresh`
+- o BFF revalida a sessão corrente
+- um novo JWT interno de curta duração é emitido para comunicação com a API
+
+**Authenticated context endpoint:**
+- `GET /auth/me`
+- retorna contexto autenticado mínimo para o frontend
+- inclui usuário autenticado, `church_id` ativo e `roles` do contexto atual
+
+**3. Active Church Switching**
+
+**Endpoint:**
+- `POST /auth/switch-church`
+
+**Rules:**
+- o usuário só pode alternar para igrejas às quais possui vínculo autorizado
+- o Laravel valida a troca de tenant
+- o BFF reemite sessão e contexto autenticado
+- o novo JWT interno deve refletir o novo `church_id`
+
+**Consequências:**
+- o contexto anterior deixa de ser válido
+- qualquer cache contextual por tenant deve ser descartado ou revalidado
+
+**4. Authorization Model**
+
+- `roles` no token servem apenas como contexto operacional rápido
+- autorização definitiva continua no Laravel
+- usar `Policies` para recursos e ações de domínio
+- usar `Gates` para regras menores e centralizadas quando fizer sentido
+- toda consulta sensível deve considerar `church_id`
+
+**Frontend responsibility:**
+- adaptar navegação, layout e visibilidade de ações com base no contexto autenticado
+- nunca assumir que visibilidade de UI substitui autorização real
+
+**Backend responsibility:**
+- validar identidade
+- validar tenant ativo
+- validar perfil e autorização por ação
+- rejeitar qualquer operação fora do escopo de `church_id` e permissões do usuário
+
+### Authentication Implementation Sequence
+
+1. Definir chave de assinatura e formato final do JWT interno
+2. Implementar login e logout no BFF
+3. Implementar `refresh` e `/auth/me`
+4. Implementar troca de `church_id` ativo
+5. Implementar policies e guards por domínio no Laravel
+6. Integrar proteção de rotas server-side no App Router
+
+### Authentication Detailed Sequence
+
+**1. Exact JWT Payload**
+
+**Header:**
+- `alg: RS256`
+- `typ: JWT`
+
+**Payload:**
+- `sub`: identificador canônico do usuário
+- `user_id`: identificador interno do usuário
+- `church_id`: tenant ativo
+- `roles`: array curto de perfis ativos no tenant corrente
+- `session_id`: identificador da sessão do BFF
+- `permissions_version`: inteiro para invalidação de permissões
+- `iss`: `church-erp-web`
+- `aud`: `church-erp-api`
+- `iat`
+- `exp`
+- `jti`
+
+**2. BFF Endpoints**
+
+- `POST /auth/login`
+- `POST /auth/logout`
+- `POST /auth/refresh`
+- `GET /auth/me`
+- `POST /auth/switch-church`
+
+**Responsabilidades:**
+- `login`: autenticar no Laravel e criar sessão `HttpOnly`
+- `logout`: destruir sessão local e invalidar contexto
+- `refresh`: reemitir contexto interno de curta duração
+- `me`: devolver contexto autenticado para hidratação da UI
+- `switch-church`: trocar tenant ativo e reemitir sessão
+
+**3. Authorization Strategy in Laravel**
+
+**Perfis iniciais do MVP:**
+- `treasurer`
+- `secretary`
+- `leadership`
+
+**Regras:**
+- todo acesso depende de `church_id`
+- `Policies` por recurso de domínio
+- `Gates` apenas para checks simples e transversais
+
+**Policies candidatas:**
+- `FinancialEntryPolicy`
+- `MemberPolicy`
+- `VisitorPolicy`
+- `CommunicationTemplatePolicy`
+
+**4. Technical Login Flow**
+
+1. o browser envia credenciais ao `church-erp-web`
+2. o BFF chama endpoint de autenticação do Laravel
+3. o Laravel valida usuário e vínculo com igreja
+4. o Laravel retorna identidade e contexto autorizado
+5. o BFF cria sessão `HttpOnly`
+6. o BFF passa a emitir JWT interno curto para chamadas autenticadas ao Laravel
+
+**5. Technical `/auth/me` Flow**
+
+1. o BFF lê a sessão atual
+2. monta ou renova o token interno
+3. consulta o Laravel se precisar reidratar contexto
+4. retorna contexto autenticado mínimo para o frontend
+
+**Resposta mínima esperada:**
+- usuário autenticado
+- tenant ativo
+- roles
+- capacidades mínimas de UI baseadas no contexto
+
+**6. Technical Active Church Switching Flow**
+
+1. o usuário solicita troca no frontend
+2. o BFF envia a solicitação ao Laravel
+3. o Laravel valida se o usuário pertence à igreja solicitada
+4. o BFF atualiza a sessão autenticada
+5. um novo JWT interno é emitido com o novo `church_id`
+6. o frontend recarrega o contexto operacional
+
+**7. Recommended Authentication Delivery Order**
+
+1. fechar contrato do payload JWT
+2. implementar `POST /auth/login`
+3. implementar `GET /auth/me`
+4. implementar `POST /auth/logout`
+5. implementar `POST /auth/refresh`
+6. implementar `POST /auth/switch-church`
+7. implementar policies por domínio
+
+### Authorization Strategy by Role in Laravel
+
+**Authorization Principle:**
+- autenticação identifica o usuário
+- autorização decide o que ele pode fazer
+- autorização real permanece sempre no Laravel
+- toda decisão de autorização considera `user_id`, `church_id`, papel no tenant ativo e estado do recurso
+
+**Initial MVP Roles:**
+- `treasurer`
+- `secretary`
+- `leadership`
+
+**Recommended Membership Model:**
+- modelar a relação usuário ↔ igreja ↔ papel
+- evitar prender o papel diretamente apenas à tabela `users`
+- usar estrutura equivalente a `church_user` com:
+  - `user_id`
+  - `church_id`
+  - `role`
+  - `status`
+  - timestamps
+
+**Authorization Execution Order:**
+1. resolver usuário autenticado
+2. resolver `church_id` ativo
+3. verificar vínculo do usuário com a igreja
+4. carregar papel no tenant
+5. aplicar `Policy` do recurso ou ação
+6. executar regra de domínio
+
+**Policies candidatas do MVP:**
+- `FinancialEntryPolicy`
+- `FinancialReportPolicy`
+- `MemberPolicy`
+- `VisitorPolicy`
+- `OperationalPendingPolicy`
+- `CommunicationTemplatePolicy`
+
+**Role Expectations:**
+
+**`treasurer`:**
+- criar e editar lançamentos financeiros
+- visualizar fechamento financeiro
+- acessar trilhas de auditoria financeira
+- não administrar operações de pessoas fora do escopo necessário
+
+**`secretary`:**
+- criar e editar membros e visitantes
+- resolver pendências operacionais de pessoas
+- preparar comunicações
+- não editar dados financeiros sensíveis
+
+**`leadership`:**
+- visualizar resumos e relatórios
+- acesso prioritariamente somente leitura no MVP
+- sem ações operacionais destrutivas
+
+**Gate Usage:**
+- usar `Gates` apenas para checks simples e transversais
+- exemplos:
+  - `access-backoffice`
+  - `switch-church-context`
+  - `view-leadership-summary`
+
+**Implementation Rule:**
+- controllers não devem concentrar autorização manual dispersa
+- usar `Policies`, `Gates`, `authorize()` e escopo por `church_id`
+- nunca confiar apenas no `role` presente no token sem revalidação de contexto no backend
+
+**Authorization Error Handling:**
+- respostas de autorização negada com `403`
+- mensagem funcional e clara ao usuário
+- logging técnico no backend com:
+  - `user_id`
+  - `church_id`
+  - ação
+  - recurso
+  - motivo da negação
