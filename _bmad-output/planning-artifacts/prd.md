@@ -76,28 +76,32 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 ### 8.1 Organização e Acesso
 
 - Criar e gerir perfil da igreja
+- Isolamento lógico por igreja desde a fundação do produto
 - Acesso básico com permissões por perfil para tesoureiro, secretaria e liderança
 - Categorias iniciais simples para operação financeira e de pessoas
 
 ### 8.2 Finanças
 
 - Lançamento rápido de receitas e despesas
-- Campos mínimos obrigatórios
+- Campos mínimos obrigatórios: tipo, valor, subtipo, contraparte e centro de custo
 - Criação inline de contrapartes ausentes
 - Edição com trilha de auditoria e motivo de alteração
 - Indicadores leves de revisão para anomalias
-- Resumo de fechamento imediato com totais e segmentações
+- Resumo de fechamento imediato com totais e segmentações por centro de custo e categoria/subtipo
+- Exportação ou partilha simples do resumo com a liderança
 
 ### 8.3 Registos de Pessoas
 
 - Criar e atualizar registos de membros
 - Criar e atualizar registos de visitantes
+- Manter status e dados essenciais de contacto para membros e visitantes
 - Pesquisar e filtrar por nome, estado e dados básicos
 
 ### 8.4 Operação Semanal
 
 - Home do tesoureiro com ações diretas e pendências
-- Home da secretaria com filas de pendência por domínio
+- Home da secretaria com filas de pendência por domínio e checklist operacional semanal
+- Visão resumida para liderança com estado financeiro e operacional sem sobrecarga
 - Navegação direta do cartão de pendência para o fluxo de ação
 
 ### 8.5 Comunicações
@@ -147,12 +151,17 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 - O sistema deve suportar usuários autenticados com permissões básicas por perfil.
 - O sistema deve restringir dados sensíveis financeiros e pessoais conforme o perfil.
+- O sistema deve suportar isolamento lógico por igreja desde a fundação da aplicação.
+- O sistema deve permitir criar e gerir o perfil inicial da igreja para iniciar a operação.
+- O sistema deve disponibilizar categorias mínimas iniciais para a operação financeira e de pessoas com configuração enxuta.
 
 ### FR-2 Lançamento Financeiro Rápido
 
 - O sistema deve permitir registar receitas e despesas com o mínimo de dados obrigatórios.
+- O sistema deve exigir no lançamento financeiro os campos tipo, valor, subtipo, contraparte e centro de custo.
 - O sistema deve permitir criação inline de contrapartes ausentes durante o lançamento.
 - O sistema deve confirmar o salvamento com clareza.
+- O sistema deve sinalizar itens financeiros incomuns ou incompletos para revisão.
 
 ### FR-3 Correções Financeiras e Auditabilidade
 
@@ -163,17 +172,21 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 ### FR-4 Resumo de Fechamento
 
 - O sistema deve gerar um relatório simples de fechamento imediatamente após a operação.
-- O relatório deve mostrar receitas, despesas, resultado líquido e segmentação por categoria.
+- O relatório deve mostrar receitas, despesas, resultado líquido e segmentação por centro de custo e categoria/subtipo.
+- O sistema deve permitir exportar ou partilhar o resumo de fechamento com a liderança.
 
 ### FR-5 Registos de Membros e Visitantes
 
 - O sistema deve permitir criação e edição de registos de membros e visitantes.
+- O sistema deve manter status e informações essenciais de contacto para membros e visitantes.
 - O sistema deve suportar pesquisa por nome e atributos básicos.
 
 ### FR-6 Homes Operacionais por Perfil
 
-- O sistema deve fornecer visões iniciais específicas para tesoureiro e secretaria.
+- O sistema deve fornecer visões iniciais específicas para tesoureiro, secretaria e liderança.
 - As homes devem expor ações diretas e pendências relevantes.
+- O sistema deve expor pendências operacionais por perfil e por domínio de trabalho.
+- O sistema deve permitir navegação direta do cartão de pendência para a fila ou fluxo de resolução correspondente.
 
 ### FR-7 Preparação de Comunicação
 
@@ -183,12 +196,45 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ## 12. Requisitos Não Funcionais
 
-- O produto deve parecer responsivo nos fluxos centrais em desktop e mobile.
-- O produto deve usar linguagem clara e não corporativa.
-- O produto deve tornar ações destrutivas ou sensíveis compreensíveis e reversíveis.
-- O produto deve manter auditabilidade para edições financeiras sensíveis.
-- O produto deve suportar tratamento seguro de dados pessoais e financeiros.
-- O produto deve ser confiável durante fluxos semanais críticos, especialmente em janelas de uso ligadas ao culto.
+### NFR-1 Responsividade e Tempo de Resposta
+
+- Os fluxos centrais do MVP devem funcionar de forma confortável em desktop e mobile.
+- Em condições normais de uso, a navegação inicial das homes por perfil e o salvamento de ações centrais devem apresentar feedback visual em até 2 segundos para pelo menos 95% das operações.
+
+### NFR-2 Linguagem e Clareza Operacional
+
+- O produto deve usar linguagem clara, acolhedora e não corporativa em telas, validações, estados vazios e confirmações.
+- Toda mensagem de erro ou restrição deve explicar o problema e o próximo passo esperado sem jargão técnico.
+
+### NFR-3 Segurança Percebida e Reversibilidade
+
+- Ações destrutivas ou sensíveis devem apresentar confirmação explícita e motivo quando aplicável.
+- O sistema deve tornar caminhos de correção compreensíveis, sem exigir suporte técnico para desfazer ou corrigir um erro operacional comum.
+
+### NFR-4 Auditabilidade Financeira
+
+- Toda edição financeira sensível deve registrar usuário, data/hora, motivo e valores alterados.
+- O histórico de alterações financeiras deve ficar visível ao perfil autorizado no próprio fluxo operacional.
+
+### NFR-5 Segurança e Privacidade de Dados
+
+- O sistema deve aplicar autenticação, controle de acesso por perfil e isolamento por igreja sobre dados pessoais e financeiros.
+- Dados sensíveis não devem ser expostos a perfis não autorizados nem em listagens, nem em detalhes, nem em respostas de erro.
+
+### NFR-6 Confiabilidade Operacional
+
+- O sistema deve estar preparado para uso em janelas semanais críticas, especialmente domingo e pós-culto, sem depender de configurações manuais prévias para o fluxo hero.
+- Em caso de falha operacional recuperável, o sistema deve preservar contexto suficiente para o usuário retomar o trabalho sem recompor manualmente toda a tarefa.
+
+### NFR-7 Primeiro Valor com Configuração Mínima
+
+- Uma nova igreja deve conseguir concluir onboarding básico, primeiro lançamento financeiro e primeiro resumo no mesmo dia.
+- O produto não deve exigir configuração ampla antes que os usuários executem a primeira tarefa útil.
+
+### NFR-8 Acessibilidade e Uso Operacional
+
+- Fluxos centrais devem oferecer áreas de toque adequadas, contraste suficiente e tipografia legível.
+- Os principais formulários e ações devem ser utilizáveis por teclado para perfis com uso intenso de dados.
 
 ## 13. Métricas de Sucesso
 
@@ -219,10 +265,11 @@ Mitigação: suportar preparação de comunicação e handoff por copiar/partilh
 
 ## 15. Decisões em Aberto
 
-- Nível de granularidade das permissões no MVP
-- Estrutura exata de centros de custo e subtipos financeiros
-- Se o acesso da liderança será apenas leitura em todos os casos iniciais
+- Nível exato de granularidade das permissões no MVP além dos perfis básicos
+- Estrutura final de centros de custo e taxonomia de subtipos financeiros
+- Se a visão da liderança será estritamente leitura em todos os cenários iniciais
 - Se a progressão visitante-para-membro entra no MVP ou fica para fase 2
+- Se o checklist operacional semanal da secretaria será tratado como componente implícito da home ou como entrega explicitamente nomeada
 
 ## 16. Próximos Artefactos Recomendados
 
