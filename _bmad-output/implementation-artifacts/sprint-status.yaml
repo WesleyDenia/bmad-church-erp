@@ -1,0 +1,79 @@
+# generated: 2026-04-08
+# project: curso-bmad
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: /home/oem/Workspace/bmad-church-erp/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-04-08
+project: curso-bmad
+project_key: NOKEY
+tracking_system: file-system
+story_location: /home/oem/Workspace/bmad-church-erp/_bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: in-progress
+  1-1-inicializar-a-fundacao-do-projeto-com-backend-e-frontend-desacoplados: review
+  1-2-criar-igreja-e-conta-administradora-inicial: backlog
+  1-3-autenticar-usuario-via-bff-e-aplicar-contexto-da-igreja: backlog
+  1-4-controlar-permissao-basica-por-perfil-e-tenant: backlog
+  1-5-configurar-categorias-minimas-iniciais: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-exibir-home-operacional-do-tesoureiro: backlog
+  2-2-registrar-receita-ou-despesa-com-campos-minimos: backlog
+  2-3-criar-contraparte-inline-durante-o-lancamento: backlog
+  2-4-editar-lancamento-com-motivo-e-trilha-de-auditoria: backlog
+  2-5-sinalizar-e-resolver-pendencias-financeiras: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-gerar-resumo-de-fechamento-do-periodo: backlog
+  3-2-exibir-detalhamento-por-centro-de-custo-e-subtipo: backlog
+  3-3-compartilhar-ou-exportar-o-resumo-de-fechamento: backlog
+  3-4-exibir-visao-resumida-para-lideranca: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-exibir-home-operacional-da-secretaria: backlog
+  4-2-cadastrar-e-editar-membros: backlog
+  4-3-cadastrar-e-editar-visitantes: backlog
+  4-4-pesquisar-e-filtrar-pessoas: backlog
+  4-5-resolver-pendencias-operacionais-de-pessoas: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-manter-modelos-pre-definidos-de-comunicacao: backlog
+  5-2-preparar-mensagem-a-partir-de-dados-de-pessoas: backlog
+  5-3-acionar-pendencia-pronta-para-comunicacao: backlog
+  5-4-fazer-handoff-externo-por-copiar-ou-partilhar: backlog
+  epic-5-retrospective: optional

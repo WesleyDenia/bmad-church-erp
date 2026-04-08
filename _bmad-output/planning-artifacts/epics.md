@@ -11,7 +11,11 @@ inputDocuments:
 
 ## Overview
 
-This document provides the complete epic and story breakdown for curso-bmad, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
+This document provides the complete epic and story breakdown for curso-bmad, decomposing the requirements from the PRD, UX Design, and the approved Architecture into implementable stories.
+
+## Revision Note
+
+This version was revised after the architecture was approved. The story sequence now reflects the required dual-starter bootstrap, the Next.js BFF authentication flow with internal JWT context, and the implementation order needed to preserve epic independence.
 
 ## Requirements Inventory
 
@@ -139,11 +143,33 @@ Permitir preparar comunicacoes reutilizando dados existentes e concluir o handof
 
 Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca.
 
-### Story 1.1: Criar igreja e conta administradora inicial
+### Story 1.1: Inicializar a fundacao do projeto com backend e frontend desacoplados
+
+As a equipe de produto,
+I want inicializar `church-erp-api` em Laravel e `church-erp-web` em Next.js com a configuracao base do projeto,
+So that as proximas stories sejam implementadas sobre a arquitetura aprovada e sem retrabalho estrutural.
+
+**FRs covered:** FR3, FR29
+
+**Acceptance Criteria:**
+
+**Given** que o projeto ainda nao foi inicializado
+**When** a equipe executa o bootstrap definido na arquitetura
+**Then** o repositorio passa a conter `church-erp-api` criado com Laravel 12 e `church-erp-web` criado com Next.js App Router
+**And** a estrutura base de pastas, configuracoes e ferramentas acordadas fica pronta para evolucao
+
+**Given** que a fundacao tecnica foi criada
+**When** a equipe conclui a configuracao inicial
+**Then** o backend fica preparado para usar MySQL 8.4, organizacao por dominio e escopo por `church_id`
+**And** o frontend fica preparado para atuar como BFF autenticado entre browser e API
+
+### Story 1.2: Criar igreja e conta administradora inicial
 
 As a responsavel pela implantacao da igreja,
 I want criar o perfil inicial da igreja junto com a conta administradora,
 So that eu possa iniciar o uso do sistema sem depender de configuracao externa.
+
+**FRs covered:** FR4
 
 **Acceptance Criteria:**
 
@@ -157,47 +183,53 @@ So that eu possa iniciar o uso do sistema sem depender de configuracao externa.
 **Then** o sistema impede a finalizacao
 **And** explica os erros em linguagem simples
 
-### Story 1.2: Autenticar usuario e aplicar contexto da igreja
+### Story 1.3: Autenticar usuario via BFF e aplicar contexto da igreja
 
 As a usuario autenticado,
 I want entrar no sistema com meu contexto de igreja aplicado automaticamente,
 So that eu veja apenas os dados da minha organizacao.
 
+**FRs covered:** FR1, FR3
+
 **Acceptance Criteria:**
 
 **Given** que o usuario possui credenciais validas
 **When** realiza login
-**Then** o sistema autentica a sessao e aplica o tenant da igreja associado ao usuario
-**And** redireciona para a home adequada ao perfil
+**Then** o browser autentica contra o `church-erp-web`, a sessao e estabelecida com cookie `HttpOnly` e o tenant da igreja e aplicado corretamente
+**And** a comunicacao autenticada entre `church-erp-web` e `church-erp-api` passa a usar JWT interno sem exposicao ao JavaScript do browser
 
 **Given** que as credenciais sao invalidas
 **When** o usuario tenta autenticar
 **Then** o sistema nega o acesso
 **And** informa a falha sem expor detalhes sensiveis
 
-### Story 1.3: Controlar permissao basica por perfil
+### Story 1.4: Controlar permissao basica por perfil e tenant
 
 As a lider de implantacao do produto,
 I want que tesoureiro, secretaria e lideranca tenham acessos coerentes com seu papel,
 So that dados financeiros e pessoais fiquem protegidos desde o MVP.
+
+**FRs covered:** FR2
 
 **Acceptance Criteria:**
 
 **Given** que um usuario autenticado acessa uma area permitida ao seu perfil
 **When** abre a funcionalidade correspondente
 **Then** o sistema libera o acesso normalmente
-**And** mantem o contexto do tenant
+**And** mantem o contexto do tenant e o escopo por `church_id`
 
 **Given** que um usuario tenta acessar funcionalidade fora da sua permissao
 **When** a requisicao e feita
 **Then** o sistema bloqueia o acesso
 **And** apresenta mensagem compreensivel explicando a restricao
 
-### Story 1.4: Configurar categorias minimas iniciais
+### Story 1.5: Configurar categorias minimas iniciais
 
 As a administradora da igreja,
 I want iniciar a operacao com categorias financeiras e de pessoas predefinidas,
 So that eu consiga gerar valor rapido sem configuracao extensa.
+
+**FRs covered:** FR5
 
 **Acceptance Criteria:**
 
@@ -219,13 +251,15 @@ Permitir que o tesoureiro use sua home operacional para registrar receitas e des
 
 As a tesoureiro,
 I want abrir uma home com acoes financeiras principais e pendencias financeiras abertas,
-So that eu saiba imediatamente por onde comecar o fechamento semanal.
+So that eu saiba imediatamente por onde comecar a rotina financeira semanal.
+
+**FRs covered:** FR21, FR29
 
 **Acceptance Criteria:**
 
 **Given** que um usuario com perfil de tesoureiro autenticado entra no sistema
 **When** acessa a tela inicial
-**Then** o sistema exibe a home do tesoureiro com atalhos para novo lancamento, revisao e fechamento
+**Then** o sistema exibe a home do tesoureiro com atalhos para novo lancamento e revisao, alem de resumo operacional do periodo
 **And** mostra apenas dados do tenant atual
 
 **Given** que existem pendencias financeiras abertas
@@ -238,6 +272,8 @@ So that eu saiba imediatamente por onde comecar o fechamento semanal.
 As a tesoureiro,
 I want registrar receita ou despesa com um formulario curto,
 So that eu conclua o lancamento em poucos passos apos o culto.
+
+**FRs covered:** FR6, FR7, FR9
 
 **Acceptance Criteria:**
 
@@ -257,6 +293,8 @@ As a tesoureiro,
 I want cadastrar uma contraparte sem sair do fluxo de lancamento,
 So that eu nao perca ritmo quando encontro um registro ausente.
 
+**FRs covered:** FR8
+
 **Acceptance Criteria:**
 
 **Given** que a contraparte informada ainda nao existe
@@ -275,6 +313,8 @@ As a tesoureiro,
 I want corrigir um lancamento salvo informando o motivo da alteracao,
 So that eu mantenha seguranca e prestacao de contas confiavel.
 
+**FRs covered:** FR10, FR11, FR12
+
 **Acceptance Criteria:**
 
 **Given** que existe um lancamento financeiro salvo
@@ -292,6 +332,8 @@ So that eu mantenha seguranca e prestacao de contas confiavel.
 As a tesoureiro,
 I want visualizar pendencias financeiras e entrar diretamente no fluxo de revisao,
 So that eu resolva excecoes antes de gerar o fechamento.
+
+**FRs covered:** FR13, FR23a, FR24a
 
 **Acceptance Criteria:**
 
@@ -315,6 +357,8 @@ As a tesoureiro,
 I want gerar um resumo de fechamento com um clique,
 So that eu conclua a prestacao de contas do periodo sem montar relatorios manualmente.
 
+**FRs covered:** FR14
+
 **Acceptance Criteria:**
 
 **Given** que existem lancamentos validos no periodo selecionado
@@ -332,6 +376,8 @@ So that eu conclua a prestacao de contas do periodo sem montar relatorios manual
 As a tesoureiro,
 I want ver a quebra do fechamento por centro de custo e subtipo,
 So that eu consiga explicar os totais com clareza para a lideranca.
+
+**FRs covered:** FR15
 
 **Acceptance Criteria:**
 
@@ -351,6 +397,8 @@ As a tesoureiro,
 I want exportar ou compartilhar o resumo de fechamento,
 So that eu entregue a visibilidade necessaria para a lideranca no mesmo fluxo.
 
+**FRs covered:** FR16
+
 **Acceptance Criteria:**
 
 **Given** que o resumo de fechamento esta disponivel
@@ -368,6 +416,8 @@ So that eu entregue a visibilidade necessaria para a lideranca no mesmo fluxo.
 As a lider da igreja,
 I want acessar uma visao resumida do estado financeiro e operacional,
 So that eu entenda a situacao atual sem entrar em detalhe operacional.
+
+**FRs covered:** FR28
 
 **Acceptance Criteria:**
 
@@ -391,6 +441,8 @@ As a secretaria da igreja,
 I want abrir uma home com pendencias por categoria e atalhos principais da rotina,
 So that eu consiga organizar minha rotina sem navegar por modulos abstratos.
 
+**FRs covered:** FR22
+
 **Acceptance Criteria:**
 
 **Given** que um usuario com perfil de secretaria acessa o sistema
@@ -408,6 +460,8 @@ So that eu consiga organizar minha rotina sem navegar por modulos abstratos.
 As a secretaria da igreja,
 I want criar e atualizar registos de membros com os dados essenciais,
 So that a base da igreja permaneça util para a rotina semanal.
+
+**FRs covered:** FR17
 
 **Acceptance Criteria:**
 
@@ -427,6 +481,8 @@ As a secretaria da igreja,
 I want manter registos basicos de visitantes com status de acompanhamento,
 So that eu consiga fazer follow-up sem depender de planilhas externas.
 
+**FRs covered:** FR18, FR19
+
 **Acceptance Criteria:**
 
 **Given** que a secretaria cadastra um novo visitante
@@ -445,6 +501,8 @@ As a secretaria da igreja,
 I want pesquisar membros e visitantes por nome, estado e atributos basicos,
 So that eu encontre rapidamente o registo certo durante o atendimento semanal.
 
+**FRs covered:** FR20
+
 **Acceptance Criteria:**
 
 **Given** que existem registos de pessoas no tenant
@@ -462,6 +520,8 @@ So that eu encontre rapidamente o registo certo durante o atendimento semanal.
 As a secretaria da igreja,
 I want ver pendencias de pessoas e entrar direto no fluxo de resolucao,
 So that eu conclua follow-ups e atualizacoes com menos friccao.
+
+**FRs covered:** FR23b, FR24b
 
 **Acceptance Criteria:**
 
@@ -485,6 +545,8 @@ As a secretaria da igreja,
 I want acessar modelos pre-definidos de comunicacao,
 So that eu reduza retrabalho nas mensagens recorrentes da semana.
 
+**FRs covered:** FR25
+
 **Acceptance Criteria:**
 
 **Given** que a secretaria acessa a area de comunicacoes
@@ -502,6 +564,8 @@ So that eu reduza retrabalho nas mensagens recorrentes da semana.
 As a secretaria da igreja,
 I want gerar uma mensagem usando dados de membros e visitantes,
 So that eu consiga personalizar a comunicacao sem copiar informacoes manualmente.
+
+**FRs covered:** FR26
 
 **Acceptance Criteria:**
 
@@ -521,6 +585,8 @@ As a secretaria da igreja,
 I want abrir diretamente o fluxo de comunicacao a partir de uma pendencia acionavel,
 So that eu transforme follow-up pendente em acao concreta com menos cliques.
 
+**FRs covered:** FR23c, FR24c
+
 **Acceptance Criteria:**
 
 **Given** que existe uma pendencia pronta para comunicacao
@@ -538,6 +604,8 @@ So that eu transforme follow-up pendente em acao concreta com menos cliques.
 As a secretaria da igreja,
 I want copiar ou partilhar a mensagem preparada para o WhatsApp ou canal externo,
 So that eu conclua a comunicacao sem exigir integracao nativa no MVP.
+
+**FRs covered:** FR27
 
 **Acceptance Criteria:**
 
