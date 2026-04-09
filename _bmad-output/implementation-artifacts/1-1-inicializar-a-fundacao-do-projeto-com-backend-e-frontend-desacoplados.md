@@ -53,12 +53,15 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 ### Requisitos tecnicos obrigatorios
 
 - O backend deve nascer em `church-erp-api` com Laravel 12.
-- O frontend deve nascer em `church-erp-web` com Next.js App Router, TypeScript, Tailwind e ESLint.
+- O frontend deve nascer em `church-erp-web` com Next.js App Router, TypeScript, Tailwind, `shadcn/ui` e ESLint.
 - O banco alvo do backend e MySQL 8.4 LTS.
 - Multi-tenancy deve ser tratado desde a fundacao via `church_id`; nao deixar isso como refactor futuro.
 - O frontend deve ser preparado como BFF. O browser nao deve consumir endpoints autenticados do Laravel diretamente.
 - O backend Laravel continua sendo a fonte de verdade para autenticacao, autorizacao, validacao e regras de dominio.
 - Contratos HTTP entre frontend e backend devem usar `snake_case`.
+- Componentes base de interface do frontend devem usar `shadcn/ui` e residir em `church-erp-web/src/components/ui`.
+- Nao introduzir biblioteca paralela de componentes de interface no `church-erp-web`.
+- Composicoes de negocio e componentes orientados a dominio devem residir em `church-erp-web/src/components` ou `church-erp-web/src/features`.
 
 ### Compliance de arquitetura
 
@@ -70,6 +73,8 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 - Nao deixar controllers Laravel concentrarem regra de negocio pesada.
 - Nao criar wrappers de resposta HTTP customizados sem necessidade. Preferir `JsonResource` / `ResourceCollection`.
 - Nao criar queries ou repositorios futuros que ignorem `church_id`.
+- Nao criar componentes base fora de `src/components/ui` quando forem primitives reutilizaveis de interface.
+- Nao quebrar consistencia visual do web app com estilos fora dos tokens e utilitarios padronizados do projeto.
 
 ### Requisitos atuais de bibliotecas e framework
 
@@ -98,6 +103,7 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 - Frontend:
   - `church-erp-web/src/app`
   - `church-erp-web/src/components`
+  - `church-erp-web/src/components/ui`
   - `church-erp-web/src/features`
   - `church-erp-web/src/lib/api`
   - `church-erp-web/src/lib/env`
@@ -112,6 +118,13 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 - Validar que `npm install` ou equivalente e `npm run lint`/`npm run build` funcionam em `church-erp-web`.
 - Se houver criacao de CI nesta story, manter pipelines separadas para API e web.
 - Evitar testes e scaffolding desnecessariamente avancados nesta etapa; o objetivo e fundacao estavel, nao cobertura completa do produto.
+
+### Definition of Done adicional para frontend
+
+- A fundacao do `church-erp-web` deve explicitar `Next.js + Tailwind CSS + shadcn/ui` como padrao oficial da interface.
+- O baseline visual deve permanecer consistente com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- Componentes base existentes em `src/components/ui` devem ser reaproveitados antes da criacao de novos primitives.
+- Qualquer composicao de negocio criada nesta story deve residir em `src/components` ou `src/features`.
 
 ### Guardrails para o dev agent
 

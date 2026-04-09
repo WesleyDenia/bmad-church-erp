@@ -1,0 +1,74 @@
+services:
+  reverse-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/conf.d/local.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web-dev
+      - api-dev
+    networks:
+      - edge
+
+  mysql-core:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: root_change_me
+    volumes:
+      - mysql_local_data:/var/lib/mysql
+      - ./mysql/init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    networks:
+      - backend
+
+  web-dev:
+    build:
+      context: ../church-erp-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_APP_NAME: Church ERP Local
+      NEXT_PUBLIC_APP_URL: http://localhost:8080
+      API_BASE_URL: http://api-dev:8000
+      INTERNAL_API_AUDIENCE: church-erp-api-local
+      INTERNAL_API_ISSUER: church-erp-web-local
+    networks:
+      - edge
+
+  api-dev:
+    build:
+      context: ../church-erp-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_NAME: Church ERP API Local
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080/api
+      APP_KEY: base64:b7X2g7D8hwv7y3AFbM9wUZywX5kX4Do2n6Ym8n8XbUg=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-core
+      DB_PORT: 3306
+      DB_DATABASE: church_erp_dev
+      DB_USERNAME: church_erp
+      DB_PASSWORD: change_me
+    volumes:
+      - api_local_storage:/var/www/html/storage
+    depends_on:
+      - mysql-core
+    networks:
+      - edge
+      - backend
+
+networks:
+  edge:
+  backend:
+
+volumes:
+  mysql_local_data:
+  api_local_storage:

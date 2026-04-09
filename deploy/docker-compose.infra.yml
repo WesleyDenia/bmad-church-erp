@@ -1,0 +1,45 @@
+services:
+  reverse-proxy:
+    image: nginx:1.27-alpine
+    container_name: church-erp-reverse-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d/server.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-core:
+    image: mysql:8.4
+    container_name: church-erp-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: root_change_me
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  edge:
+    name: church-erp-edge
+  backend:
+    name: church-erp-backend
+
+volumes:
+  mysql_data:

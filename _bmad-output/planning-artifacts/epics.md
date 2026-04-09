@@ -17,6 +17,16 @@ This document provides the complete epic and story breakdown for curso-bmad, dec
 
 This version was revised after the architecture was approved. The story sequence now reflects the required dual-starter bootstrap, the Next.js BFF authentication flow with internal JWT context, and the implementation order needed to preserve epic independence.
 
+## Frontend Web Standard
+
+Todas as stories que entregam ou alteram interface web no `church-erp-web` devem seguir este padrao arquitetural adicional:
+
+- Componentes base de interface devem usar `shadcn/ui` e residir em `church-erp-web/src/components/ui`.
+- Nao introduzir biblioteca paralela de componentes para resolver elementos base de UI.
+- Composicoes de negocio, shells de tela e componentes orientados a dominio devem residir em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+- Layout, espacamento, estados visuais e responsividade devem seguir `Tailwind CSS` e os tokens/utilitarios ja estabelecidos no projeto.
+- Antes de criar novo componente base, verificar e reaproveitar os componentes existentes em `src/components/ui`.
+
 ## Requirements Inventory
 
 ### Functional Requirements
@@ -163,6 +173,17 @@ So that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 **Then** o backend fica preparado para usar MySQL 8.4, organizacao por dominio e escopo por `church_id`
 **And** o frontend fica preparado para atuar como BFF autenticado entre browser e API
 
+**Frontend Implementation Constraints:**
+
+- Todo componente base introduzido para o web app deve usar `shadcn/ui` e ficar em `church-erp-web/src/components/ui`.
+- Esta story nao deve introduzir biblioteca paralela de componentes de interface.
+- Composicoes de negocio e shells do frontend devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A fundacao visual do `church-erp-web` deve permanecer consistente com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se os componentes base existentes tiverem sido reaproveitados antes da criacao de novos.
+
 ### Story 1.2: Criar igreja e conta administradora inicial
 
 As a responsavel pela implantacao da igreja,
@@ -182,6 +203,17 @@ So that eu possa iniciar o uso do sistema sem depender de configuracao externa.
 **When** o usuario tenta concluir o onboarding
 **Then** o sistema impede a finalizacao
 **And** explica os erros em linguagem simples
+
+**Frontend Implementation Constraints:**
+
+- Formularios, inputs, buttons, cards e feedbacks desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para onboarding ou formularios.
+- Composicoes de onboarding e blocos orientados a fluxo devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A experiencia de onboarding deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ### Story 1.3: Autenticar usuario via BFF e aplicar contexto da igreja
 
@@ -203,6 +235,17 @@ So that eu veja apenas os dados da minha organizacao.
 **Then** o sistema nega o acesso
 **And** informa a falha sem expor detalhes sensiveis
 
+**Frontend Implementation Constraints:**
+
+- Campos, botoes, alertas e estados de autenticacao desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para login, sessao ou feedback visual.
+- Composicoes de autenticacao, containers de pagina e estados de sessao devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A tela e os estados de autenticacao devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 1.4: Controlar permissao basica por perfil e tenant
 
 As a lider de implantacao do produto,
@@ -223,6 +266,17 @@ So that dados financeiros e pessoais fiquem protegidos desde o MVP.
 **Then** o sistema bloqueia o acesso
 **And** apresenta mensagem compreensivel explicando a restricao
 
+**Frontend Implementation Constraints:**
+
+- Estados de bloqueio, banners, alerts, wrappers de rota e feedbacks desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para controle visual de acesso.
+- Composicoes de navegacao protegida e apresentacao por perfil devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- Os estados de acesso permitido e bloqueado devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 1.5: Configurar categorias minimas iniciais
 
 As a administradora da igreja,
@@ -242,6 +296,17 @@ So that eu consiga gerar valor rapido sem configuracao extensa.
 **When** o usuario entra em um fluxo que depende dessas categorias
 **Then** o sistema oferece os defaults iniciais sem exigir cadastro manual previo
 **And** mantem possibilidade de evolucao futura sem refactor estrutural
+
+**Frontend Implementation Constraints:**
+
+- Qualquer seletor, aviso ou estado de disponibilidade desta story no web app deve usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para configuracao inicial ou selecao de categorias.
+- Composicoes orientadas a dominio para setup inicial devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- Os estados visuais relacionados aos defaults iniciais devem manter consistencia com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ## Epic 2: Operacao Financeira Semanal do Tesoureiro
 
@@ -267,6 +332,17 @@ So that eu saiba imediatamente por onde comecar a rotina financeira semanal.
 **Then** o sistema apresenta os cartoes de pendencia com contagem e contexto suficiente
 **And** exibe os itens em ordem simples definida pelo sistema
 
+**Frontend Implementation Constraints:**
+
+- Cards, atalhos, banners, empty states e elementos de home desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para dashboard ou home operacional.
+- Composicoes de home do tesoureiro e widgets financeiros devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A home do tesoureiro deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 2.2: Registrar receita ou despesa com campos minimos
 
 As a tesoureiro,
@@ -286,6 +362,17 @@ So that eu conclua o lancamento em poucos passos apos o culto.
 **When** o tesoureiro tenta salvar
 **Then** o sistema nao conclui o lancamento
 **And** explica quais campos precisam de correcao em linguagem simples
+
+**Frontend Implementation Constraints:**
+
+- Formularios, campos monetarios, selects, actions e mensagens desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para formularios financeiros.
+- Composicoes de formulario de lancamento e fluxos associados devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O formulario deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ### Story 2.3: Criar contraparte inline durante o lancamento
 
@@ -307,6 +394,17 @@ So that eu nao perca ritmo quando encontro um registro ausente.
 **Then** o sistema impede a criacao
 **And** preserva o restante do formulario de lancamento sem perda de dados
 
+**Frontend Implementation Constraints:**
+
+- Dialogs, drawers, campos inline e feedbacks desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para overlays ou edicao inline.
+- Composicoes de contraparte inline e formulario financeiro devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A experiencia inline deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 2.4: Editar lancamento com motivo e trilha de auditoria
 
 As a tesoureiro,
@@ -327,6 +425,17 @@ So that eu mantenha seguranca e prestacao de contas confiavel.
 **Then** o sistema bloqueia a atualizacao
 **And** informa que o motivo e obrigatorio para alteracoes financeiras
 
+**Frontend Implementation Constraints:**
+
+- Formularios de edicao, confirms, dialogs e historico visual desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para edicao, auditoria ou confirmacoes.
+- Composicoes de revisao financeira e trilha apresentada ao usuario devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- Os fluxos de edicao e auditoria devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 2.5: Sinalizar e resolver pendencias financeiras
 
 As a tesoureiro,
@@ -346,6 +455,17 @@ So that eu resolva excecoes antes de gerar o fechamento.
 **When** aciona o cartao correspondente
 **Then** o sistema abre diretamente o fluxo de revisao ou correcao aplicavel
 **And** permite retornar a home apos resolver o item
+
+**Frontend Implementation Constraints:**
+
+- Cartoes, badges, listas e estados de pendencia desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para filas ou listas operacionais.
+- Composicoes de inbox financeira e navegacao contextual devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- Os estados de pendencia e resolucao devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ## Epic 3: Fechamento e Visibilidade para Lideranca
 
@@ -371,6 +491,17 @@ So that eu conclua a prestacao de contas do periodo sem montar relatorios manual
 **Then** o sistema apresenta um estado vazio compreensivel
 **And** orienta o proximo passo sem erro tecnico
 
+**Frontend Implementation Constraints:**
+
+- Blocos de resumo, actions, cards e empty states desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para visualizacao de fechamento.
+- Composicoes de fechamento e resumo do periodo devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A experiencia de fechamento deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 3.2: Exibir detalhamento por centro de custo e subtipo
 
 As a tesoureiro,
@@ -390,6 +521,17 @@ So that eu consiga explicar os totais com clareza para a lideranca.
 **When** o detalhamento e exibido
 **Then** o sistema nao polui a visualizacao com ruido desnecessario
 **And** mantem foco nas informacoes relevantes
+
+**Frontend Implementation Constraints:**
+
+- Tabelas, accordions, cards e elementos de detalhamento desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para visualizacao analitica do fechamento.
+- Composicoes de detalhamento financeiro devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O detalhamento deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ### Story 3.3: Compartilhar ou exportar o resumo de fechamento
 
@@ -411,6 +553,17 @@ So that eu entregue a visibilidade necessaria para a lideranca no mesmo fluxo.
 **Then** o sistema informa que a acao foi preparada com sucesso
 **And** nao exige retrabalho para reencontrar o resumo
 
+**Frontend Implementation Constraints:**
+
+- Actions, menus, alerts e estados de compartilhamento desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para exportacao, partilha ou confirmacao de acao.
+- Composicoes de compartilhamento e apresentacao do resumo devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- Os fluxos de exportacao e handoff devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 3.4: Exibir visao resumida para lideranca
 
 As a lider da igreja,
@@ -430,6 +583,17 @@ So that eu entenda a situacao atual sem entrar em detalhe operacional.
 **When** o usuario tenta aprofundar alem da visao prevista
 **Then** o sistema restringe o acesso
 **And** explica a limitacao de forma compreensivel
+
+**Frontend Implementation Constraints:**
+
+- Cards de resumo, metricas, estados de permissao e componentes de visao executiva desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para dashboards ou visao de lideranca.
+- Composicoes de visao resumida para lideranca devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A visao de lideranca deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ## Epic 4: Base de Pessoas e Rotina da Secretaria
 
@@ -455,6 +619,17 @@ So that eu consiga organizar minha rotina sem navegar por modulos abstratos.
 **Then** o sistema destaca as pendencias acionaveis
 **And** permite identificar rapidamente o proximo passo
 
+**Frontend Implementation Constraints:**
+
+- Cards, atalhos, listas e estados da home desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para home operacional da secretaria.
+- Composicoes de home e pendencias da secretaria devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A home da secretaria deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 4.2: Cadastrar e editar membros
 
 As a secretaria da igreja,
@@ -474,6 +649,17 @@ So that a base da igreja permaneça util para a rotina semanal.
 **When** a secretaria atualiza seus dados essenciais
 **Then** o sistema persiste a alteracao
 **And** torna o registo pesquisavel imediatamente
+
+**Frontend Implementation Constraints:**
+
+- Formularios, campos, sections e feedbacks desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para cadastro ou edicao de pessoas.
+- Composicoes de cadastro e edicao de membros devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O fluxo de membros deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ### Story 4.3: Cadastrar e editar visitantes
 
@@ -495,6 +681,17 @@ So that eu consiga fazer follow-up sem depender de planilhas externas.
 **Then** o sistema salva a edicao
 **And** preserva consistencia para a rotina semanal
 
+**Frontend Implementation Constraints:**
+
+- Formularios, campos, badges de status e feedbacks desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para cadastro ou edicao de visitantes.
+- Composicoes de cadastro e edicao de visitantes devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O fluxo de visitantes deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 4.4: Pesquisar e filtrar pessoas
 
 As a secretaria da igreja,
@@ -515,6 +712,17 @@ So that eu encontre rapidamente o registo certo durante o atendimento semanal.
 **Then** o sistema apresenta estado vazio compreensivel
 **And** sugere ajustes simples para continuar
 
+**Frontend Implementation Constraints:**
+
+- Tabelas, filtros, inputs de busca e empty states desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para pesquisa, filtro ou listagem.
+- Composicoes de busca de pessoas e listas resultantes devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A experiencia de pesquisa deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 4.5: Resolver pendencias operacionais de pessoas
 
 As a secretaria da igreja,
@@ -534,6 +742,17 @@ So that eu conclua follow-ups e atualizacoes com menos friccao.
 **When** aciona o cartao correspondente
 **Then** o sistema abre diretamente a ficha, fila ou checklist aplicavel
 **And** permite retornar a home apos concluir a tarefa
+
+**Frontend Implementation Constraints:**
+
+- Cartoes, badges, listas e estados de pendencia desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para inbox operacional de pessoas.
+- Composicoes de pendencias de pessoas e fluxos de resolucao devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- Os estados de pendencia e resolucao devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ## Epic 5: Comunicacao Operacional e Handoff Externo
 
@@ -559,6 +778,17 @@ So that eu reduza retrabalho nas mensagens recorrentes da semana.
 **Then** o sistema ainda apresenta os modelos base do MVP
 **And** evita estado vazio impeditivo
 
+**Frontend Implementation Constraints:**
+
+- Listas, cards, actions e empty states desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para a area de comunicacoes.
+- Composicoes de lista e manutencao de modelos devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A area de modelos deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 5.2: Preparar mensagem a partir de dados de pessoas
 
 As a secretaria da igreja,
@@ -578,6 +808,17 @@ So that eu consiga personalizar a comunicacao sem copiar informacoes manualmente
 **When** o rascunho e gerado
 **Then** o sistema sinaliza as lacunas de forma clara
 **And** nao impede a edicao manual do texto
+
+**Frontend Implementation Constraints:**
+
+- Editores simples, campos, alerts e estados desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para composicao de mensagens.
+- Composicoes de preparacao de mensagem e personalizacao devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A composicao de mensagens deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
 ### Story 5.3: Acionar pendencia pronta para comunicacao
 
@@ -599,6 +840,17 @@ So that eu transforme follow-up pendente em acao concreta com menos cliques.
 **Then** o sistema informa o que falta
 **And** redireciona para o fluxo correto de complementacao se aplicavel
 
+**Frontend Implementation Constraints:**
+
+- Cartoes, banners, alerts e elementos de redirecionamento desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para pendencias de comunicacao.
+- Composicoes de pendencia pronta para comunicacao e navegacao contextual devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O fluxo de acionamento de pendencia deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ### Story 5.4: Fazer handoff externo por copiar ou partilhar
 
 As a secretaria da igreja,
@@ -618,3 +870,14 @@ So that eu conclua a comunicacao sem exigir integracao nativa no MVP.
 **When** volta ao sistema
 **Then** o fluxo permanece em estado consistente
 **And** nao exige recompor a mensagem do zero
+
+**Frontend Implementation Constraints:**
+
+- Actions, alerts, toasts e estados finais desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para handoff externo ou feedback final.
+- Composicoes de handoff e confirmacao de comunicacao devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O handoff externo deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
