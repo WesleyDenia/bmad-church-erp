@@ -34,10 +34,24 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Install frontend tooling
-        run: npm install
+        run: npm ci
 
-      - name: Prepare app key
+      #criar .env baseado no exemplo
+      - name: Prepare environment file
+        run: cp .env.example .env
+
+      #gerar APP_KEY
+      - name: Generate app key
         run: php artisan key:generate
 
+      #usar SQLite para testes
+      - name: Configure SQLite database
+        run: |
+          touch database/database.sqlite
+
+      #rodar migrations (se necessário)
+      - name: Run migrations
+        run: php artisan migrate --force
+      
       - name: Run tests
         run: php artisan test
