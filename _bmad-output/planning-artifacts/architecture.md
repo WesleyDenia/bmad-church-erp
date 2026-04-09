@@ -125,7 +125,7 @@ npx create-next-app@latest church-erp-web --ts --tailwind --eslint --app --src-d
 Laravel 12 como base oficial da API, com estrutura madura para rotas, middleware, validação, policies, jobs, migrations e organização por domínio.
 
 **Frontend Foundation:**
-Next.js App Router com TypeScript, Tailwind CSS, ESLint e estrutura moderna para interfaces web responsivas.
+Next.js App Router com TypeScript, Tailwind CSS, `shadcn/ui`, ESLint e estrutura moderna para interfaces web responsivas.
 
 **Database Direction:**
 O backend Laravel será configurado para MySQL como banco transacional do sistema, alinhado à preferência técnica explicitada para o projeto.
@@ -290,6 +290,7 @@ Regras:
 - Frontend:
   - `src/app` para rotas
   - `src/components` para componentes reutilizáveis
+  - `src/components/ui` como base oficial dos componentes `shadcn/ui`
   - `src/features` para lógica por domínio
   - `src/lib` para clients, helpers e utilidades de infraestrutura
 
@@ -318,6 +319,25 @@ Regras:
 - Frontend prioriza estado local e por feature
 - Evitar global state excessivo no MVP
 - Estado de servidor tratado por camada de client/API bem definida
+
+### Frontend UI System Pattern
+
+**UI Stack Decision:**
+- O frontend web padroniza `Next.js App Router` + `Tailwind CSS` + `shadcn/ui`
+- `shadcn/ui` será a base dos componentes reutilizáveis de interface
+- Tailwind permanece como fundação de tokens utilitários, layout, spacing e responsividade
+
+**Rationale:**
+- reduz tempo de implementação de telas administrativas
+- melhora consistência entre módulos e histórias implementadas por agentes diferentes
+- mantém liberdade de composição sem introduzir um design system fechado demais
+- encaixa naturalmente na estrutura já prevista de `src/components/ui`
+
+**Implementation Rules:**
+- componentes derivados de `shadcn/ui` devem residir em `src/components/ui`
+- composições de negócio devem ficar em `src/components`, `src/features` ou rotas, não dentro da camada base de UI
+- tokens visuais compartilhados devem ser centralizados em `globals.css` e no tema do projeto
+- evitar bibliotecas paralelas de componentes para não fragmentar padrões visuais e acessibilidade
 
 ### Process Patterns
 
@@ -1042,3 +1062,72 @@ O JWT interno entre `Next.js` e `Laravel` deve carregar apenas o contexto mínim
   - ação
   - recurso
   - motivo da negação
+
+## Deployment Architecture
+
+### Deployment Topology Decision
+
+**Target Topology:**
+- um único servidor hospedará inicialmente os ambientes `dev`, `stg` e `prod`
+- `nginx` funcionará como reverse proxy de entrada por host
+- cada ambiente terá containers próprios de `web` e `api`
+- o `MySQL` será compartilhado como infraestrutura persistente, com um database por ambiente
+
+**External Routing:**
+- `dev.teudominio.pt` -> `web-dev`
+- `stg.teudominio.pt` -> `web-stg`
+- `teudominio.pt` -> `web-prod`
+- `dev.api.teudominio.pt` -> `api-dev`
+- `stg.api.teudominio.pt` -> `api-stg`
+- `api.teudominio.pt` -> `api-prod`
+
+**Local Routing:**
+- `localhost` -> `web-dev`
+- `localhost/api/*` -> `api-dev`
+
+### Isolation Rule for Shared Infrastructure
+
+**Critical Operational Rule:**
+- `nginx` e `mysql` não devem participar da mesma stack operacional de redeploy dos ambientes de aplicação no servidor
+- a infraestrutura compartilhada deve subir em uma stack própria
+- os ambientes `dev`, `stg` e `prod` devem subir em outra stack, conectando-se por redes Docker externas
+
+**Rationale:**
+- evita derrubar banco e proxy ao atualizar apenas `dev`, `stg` ou `prod`
+- reduz risco operacional durante rollout no mesmo host
+- permite recriar containers de aplicação sem impacto na camada persistente
+
+### Containerization Strategy
+
+**Web Container:**
+- `Next.js` empacotado em modo `standalone`
+- um container por ambiente
+- sem exposição direta de porta pública; acesso apenas via reverse proxy
+
+**API Container:**
+- `Laravel` executado em container próprio
+- um container por ambiente
+- conexão privada ao `mysql` compartilhado pela rede interna Docker
+
+**Database Strategy:**
+- um único container `mysql` persistente no host
+- databases independentes por ambiente:
+  - `church_erp_dev`
+  - `church_erp_stg`
+  - `church_erp_prod`
+- volumes persistentes dedicados ao banco
+
+### Deployment Files Standard
+
+**Required Server Files:**
+- `deploy/docker-compose.infra.yml` para `nginx` + `mysql`
+- `deploy/docker-compose.server.yml` para `web-dev`, `api-dev`, `web-stg`, `api-stg`, `web-prod`, `api-prod`
+
+**Required Local File:**
+- `deploy/docker-compose.local.yml` para subir `localhost` com `web-dev`, `api-dev`, `nginx` e `mysql`
+
+### Operational Notes
+
+- deploy parcial deve usar `docker compose up -d --build` apenas nos serviços do ambiente alterado
+- migrations devem ser executadas pelo container da API do ambiente correspondente
+- segredos reais de `prod` não devem permanecer hardcoded em compose; devem vir de variáveis externas ou arquivo `.env` do host

@@ -8,7 +8,7 @@ const protectedPrefixes = [
   "/communications",
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isProtectedRoute = protectedPrefixes.some((prefix) =>
     request.nextUrl.pathname.startsWith(prefix),
   );

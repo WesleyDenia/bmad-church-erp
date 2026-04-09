@@ -1,0 +1,151 @@
+services:
+  web-dev:
+    build:
+      context: ../church-erp-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_APP_NAME: Church ERP Dev
+      NEXT_PUBLIC_APP_URL: https://dev.teudominio.pt
+      API_BASE_URL: http://api-dev:8000
+      INTERNAL_API_AUDIENCE: church-erp-api-dev
+      INTERNAL_API_ISSUER: church-erp-web-dev
+    networks:
+      edge:
+        aliases:
+          - web-dev
+
+  api-dev:
+    build:
+      context: ../church-erp-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_NAME: Church ERP API Dev
+      APP_ENV: development
+      APP_DEBUG: "true"
+      APP_URL: https://dev.api.teudominio.pt
+      APP_KEY: base64:7YQ4ns0c5n0mNhV5w7Bq8U2n3jYFW+AWm9R/6FQ7f3Q=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-core
+      DB_PORT: 3306
+      DB_DATABASE: church_erp_dev
+      DB_USERNAME: church_erp
+      DB_PASSWORD: change_me
+    volumes:
+      - api_dev_storage:/var/www/html/storage
+    networks:
+      edge:
+        aliases:
+          - api-dev
+      backend:
+    healthcheck:
+      test: ["CMD-SHELL", "php -v >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web-stg:
+    build:
+      context: ../church-erp-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_APP_NAME: Church ERP Staging
+      NEXT_PUBLIC_APP_URL: https://stg.teudominio.pt
+      API_BASE_URL: http://api-stg:8000
+      INTERNAL_API_AUDIENCE: church-erp-api-stg
+      INTERNAL_API_ISSUER: church-erp-web-stg
+    networks:
+      edge:
+        aliases:
+          - web-stg
+
+  api-stg:
+    build:
+      context: ../church-erp-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_NAME: Church ERP API Staging
+      APP_ENV: staging
+      APP_DEBUG: "false"
+      APP_URL: https://stg.api.teudominio.pt
+      APP_KEY: base64:Tl1N7dS1Yz4qq1Bg5wQevlA2m2PO2WfATVFoY6tJrq0=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-core
+      DB_PORT: 3306
+      DB_DATABASE: church_erp_stg
+      DB_USERNAME: church_erp
+      DB_PASSWORD: change_me
+    volumes:
+      - api_stg_storage:/var/www/html/storage
+    networks:
+      edge:
+        aliases:
+          - api-stg
+      backend:
+    healthcheck:
+      test: ["CMD-SHELL", "php -v >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web-prod:
+    build:
+      context: ../church-erp-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_APP_NAME: Church ERP
+      NEXT_PUBLIC_APP_URL: https://teudominio.pt
+      API_BASE_URL: http://api-prod:8000
+      INTERNAL_API_AUDIENCE: church-erp-api-prod
+      INTERNAL_API_ISSUER: church-erp-web-prod
+    networks:
+      edge:
+        aliases:
+          - web-prod
+
+  api-prod:
+    build:
+      context: ../church-erp-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_NAME: Church ERP API
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: https://api.teudominio.pt
+      APP_KEY: base64:ZPVXmqY4w4YxV8ir0p4Fq4X56vP4HwR13PjicNIk0J4=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-core
+      DB_PORT: 3306
+      DB_DATABASE: church_erp_prod
+      DB_USERNAME: church_erp
+      DB_PASSWORD: change_me
+    volumes:
+      - api_prod_storage:/var/www/html/storage
+    networks:
+      edge:
+        aliases:
+          - api-prod
+      backend:
+    healthcheck:
+      test: ["CMD-SHELL", "php -v >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  edge:
+    external: true
+    name: church-erp-edge
+  backend:
+    external: true
+    name: church-erp-backend
+
+volumes:
+  api_dev_storage:
+  api_stg_storage:
+  api_prod_storage:
