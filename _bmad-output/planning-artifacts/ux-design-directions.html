@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>curso-bmad - UX Design Directions</title>
+    <style>
+      :root {
+        --bg: #f4efe6;
+        --panel: rgba(255, 255, 255, 0.82);
+        --text: #1c2736;
+        --muted: #5c6979;
+        --border: rgba(28, 39, 54, 0.12);
+        --shadow: 0 24px 80px rgba(20, 31, 46, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 24rem),
+          linear-gradient(180deg, #fffaf1 0%, #f4efe6 52%, #ece3d5 100%);
+        color: var(--text);
+      }
+
+      .page {
+        width: min(1480px, calc(100vw - 48px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.4fr 0.9fr;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      .hero-card,
+      .legend,
+      .direction {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        backdrop-filter: blur(20px);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-card {
+        border-radius: 28px;
+        padding: 32px;
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.2), transparent 28rem),
+          linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.74));
+      }
+
+      h1, h2, h3 {
+        margin: 0;
+        font-family: "Fraunces", "Georgia", serif;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+      }
+
+      h1 {
+        font-size: 3rem;
+        line-height: 0.95;
+      }
+
+      p {
+        margin: 0;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .eyebrow {
+        display: inline-block;
+        margin-bottom: 14px;
+        font-size: 0.78rem;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #0f766e;
+        font-weight: 700;
+      }
+
+      .hero-card p {
+        max-width: 55ch;
+        margin-top: 18px;
+      }
+
+      .legend {
+        border-radius: 28px;
+        padding: 28px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .legend ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .direction {
+        border-radius: 28px;
+        overflow: hidden;
+      }
+
+      .direction-header {
+        padding: 22px 24px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      }
+
+      .direction-header p {
+        margin-top: 10px;
+        font-size: 0.95rem;
+      }
+
+      .direction-body {
+        padding: 22px;
+      }
+
+      .app-shell {
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        min-height: 520px;
+      }
+
+      .shell-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        font-size: 0.92rem;
+      }
+
+      .shell-main {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        min-height: 470px;
+      }
+
+      .sidebar {
+        padding: 18px;
+        border-right: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .sidebar .brand {
+        font-weight: 700;
+        margin-bottom: 18px;
+      }
+
+      .nav-item {
+        padding: 11px 12px;
+        border-radius: 14px;
+        margin-bottom: 8px;
+        font-size: 0.92rem;
+        color: inherit;
+      }
+
+      .nav-item.active {
+        font-weight: 700;
+      }
+
+      .content {
+        padding: 20px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .headline {
+        display: grid;
+        grid-template-columns: 1.35fr 0.9fr;
+        gap: 16px;
+      }
+
+      .tile, .mini, .status-row {
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .tile h4 {
+        margin: 0 0 8px;
+        font-size: 1.06rem;
+      }
+
+      .tile p, .mini p {
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .score {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .footer-note {
+        margin-top: 26px;
+        padding: 20px 24px;
+        border-radius: 24px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      /* Direction palettes */
+      .d1 { background: linear-gradient(180deg, #083344, #0f172a 55%, #e7ecef); color: #0f172a; }
+      .d1 .direction-header { background: linear-gradient(120deg, #083344, #155e75); color: #f8fafc; }
+      .d1 .app-shell { background: rgba(255,255,255,0.9); }
+      .d1 .shell-top { background: #f2f7f8; }
+      .d1 .sidebar { background: #0f172a; color: #dbe9ef; }
+      .d1 .nav-item.active, .d1 .pill { background: rgba(20, 184, 166, 0.18); color: #99f6e4; }
+      .d1 .tile, .d1 .mini, .d1 .status-row { background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.08); }
+      .d1 .tile.hero-tile { background: linear-gradient(135deg, #164e63, #0f766e); color: #effcf9; }
+      .d1 .tile.hero-tile p { color: rgba(239, 252, 249, 0.86); }
+
+      .d2 { background: linear-gradient(180deg, #f6f0e7, #eadfce); }
+      .d2 .direction-header { background: linear-gradient(120deg, #ede0cf, #d7c2a7); }
+      .d2 .app-shell { background: #fffaf3; }
+      .d2 .shell-top { background: #f8efdf; }
+      .d2 .sidebar { background: #fcf5ea; }
+      .d2 .nav-item.active { background: #eadcc7; color: #674527; }
+      .d2 .pill { background: #f1dfc2; color: #7a4f22; }
+      .d2 .tile, .d2 .mini, .d2 .status-row { background: #fff; border: 1px solid rgba(103, 69, 39, 0.08); }
+      .d2 .tile.hero-tile { background: linear-gradient(135deg, #d6b48b, #f2e4d2); }
+
+      .d3 { background: linear-gradient(180deg, #f5f7fb, #dfe8f2); }
+      .d3 .direction-header { background: linear-gradient(120deg, #e6edf5, #cad8e7); }
+      .d3 .app-shell { background: #ffffff; }
+      .d3 .shell-top { background: #f5f8fc; }
+      .d3 .sidebar { background: #f8fbff; }
+      .d3 .nav-item.active { background: #dfeaf7; color: #184b7a; }
+      .d3 .pill { background: #d8ecff; color: #13548c; }
+      .d3 .tile, .d3 .mini, .d3 .status-row { background: #fbfdff; border: 1px solid rgba(24, 75, 122, 0.09); }
+      .d3 .tile.hero-tile { background: linear-gradient(135deg, #1d4ed8, #60a5fa); color: #eff6ff; }
+      .d3 .tile.hero-tile p { color: rgba(239, 246, 255, 0.86); }
+
+      .d4 { background: linear-gradient(180deg, #f7f5ef, #e4e2d8); }
+      .d4 .direction-header { background: linear-gradient(120deg, #dde5d4, #bcc7b0); }
+      .d4 .app-shell { background: #fefefc; }
+      .d4 .shell-top { background: #f1f4eb; }
+      .d4 .sidebar { background: #eef2e6; }
+      .d4 .nav-item.active { background: #d9e1cc; color: #34593a; }
+      .d4 .pill { background: #dce8d3; color: #2f5c34; }
+      .d4 .tile, .d4 .mini, .d4 .status-row { background: #ffffff; border: 1px solid rgba(52, 89, 58, 0.08); }
+      .d4 .tile.hero-tile { background: linear-gradient(135deg, #5b7c5d, #b4c7ae); color: #f7faf7; }
+      .d4 .tile.hero-tile p { color: rgba(247, 250, 247, 0.88); }
+
+      .d5 { background: linear-gradient(180deg, #fcf9f2, #f0e2cf); }
+      .d5 .direction-header { background: linear-gradient(120deg, #fae7c8, #eab676); }
+      .d5 .app-shell { background: #fffdf9; }
+      .d5 .shell-top { background: #fef5e6; }
+      .d5 .sidebar { background: #fff7eb; }
+      .d5 .nav-item.active { background: #f8dfb8; color: #7c4f14; }
+      .d5 .pill { background: #f6d69d; color: #825113; }
+      .d5 .tile, .d5 .mini, .d5 .status-row { background: #fff; border: 1px solid rgba(124, 79, 20, 0.08); }
+      .d5 .tile.hero-tile { background: linear-gradient(135deg, #f59e0b, #fde68a); }
+
+      .d6 { background: linear-gradient(180deg, #f3f1f9, #ddd9ef); }
+      .d6 .direction-header { background: linear-gradient(120deg, #ddd0ff, #b9a3ef); }
+      .d6 .app-shell { background: #fbfaff; }
+      .d6 .shell-top { background: #f2ecff; }
+      .d6 .sidebar { background: #f7f4ff; }
+      .d6 .nav-item.active { background: #e7ddff; color: #5c3f9b; }
+      .d6 .pill { background: #e0d0ff; color: #603ea3; }
+      .d6 .tile, .d6 .mini, .d6 .status-row { background: #fff; border: 1px solid rgba(96, 62, 163, 0.08); }
+      .d6 .tile.hero-tile { background: linear-gradient(135deg, #7c3aed, #c4b5fd); color: #faf7ff; }
+      .d6 .tile.hero-tile p { color: rgba(250, 247, 255, 0.86); }
+
+      @media (max-width: 1180px) {
+        .hero,
+        .grid,
+        .headline,
+        .shell-main {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <section class="hero">
+        <div class="hero-card">
+          <span class="eyebrow">curso-bmad</span>
+          <h1>Direções visuais para uma home operacional por perfil.</h1>
+          <p>
+            Este showcase explora seis caminhos visuais para o produto: todos
+            respeitam a mesma fundação de UX, mas variam no peso visual, tom
+            emocional e linguagem cromática. O objetivo é escolher a direção
+            que melhor transmite confiança calma, clareza e uso acessível para
+            voluntários.
+          </p>
+        </div>
+        <aside class="legend">
+          <div>
+            <span class="eyebrow">Como avaliar</span>
+            <h2>O que observar</h2>
+          </div>
+          <ul>
+            <li>Hierarquia dos blocos e leitura das prioridades</li>
+            <li>Densidade: confortável sem ficar vazia</li>
+            <li>Tom: sóbrio, acolhedor e não corporativo</li>
+            <li>Facilidade para usuários não técnicos</li>
+            <li>Potencial para tesouraria e secretaria</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section class="grid">
+        <article class="direction d1">
+          <header class="direction-header">
+            <span class="eyebrow">Direção 01</span>
+            <h3>Teal Operacional</h3>
+            <p>Sóbria, clara e fortemente orientada à tesouraria.</p>
+          </header>
+          <div class="direction-body">
+            <div class="app-shell">
+              <div class="shell-top">
+                <strong>Home do Tesoureiro</strong>
+                <span class="pill">Fechamento em foco</span>
+              </div>
+              <div class="shell-main">
+                <aside class="sidebar">
+                  <div class="brand">curso-bmad</div>
+                  <div class="nav-item active">Home operacional</div>
+                  <div class="nav-item">Lançamentos</div>
+                  <div class="nav-item">Pendências</div>
+                  <div class="nav-item">Relatórios</div>
+                </aside>
+                <div class="content">
+                  <div class="headline">
+                    <div class="tile hero-tile">
+                      <h4>Prioridade da semana</h4>
+                      <p>Concluir o fechamento parcial de abril e revisar 3 lançamentos pendentes.</p>
+                    </div>
+                    <div class="tile">
+                      <h4>Saldo atual</h4>
+                      <div class="score">€ 18.430</div>
+                    </div>
+                  </div>
+                  <div class="tile-grid">
+                    <div class="tile"><h4>Contas a pagar/receber</h4><p>5 vencem hoje. 2 aguardam conferência.</p></div>
+                    <div class="tile"><h4>Pendências de revisão</h4><p>Extrato e lançamentos com possível divergência.</p></div>
+                    <div class="tile"><h4>Lançamento rápido</h4><p>Receita, despesa, oferta especial e transferência.</p></div>
+                    <div class="tile"><h4>Atalhos para relatórios</h4><p>Balancete, centro de custo e prestação de contas.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction d2">
+          <header class="direction-header">
+            <span class="eyebrow">Direção 02</span>
+            <h3>Areia Pastoral</h3>
+            <p>Mais acolhedora, humana e leve sem perder legibilidade.</p>
+          </header>
+          <div class="direction-body">
+            <div class="app-shell">
+              <div class="shell-top">
+                <strong>Home da Secretaria</strong>
+                <span class="pill">Rotina da semana</span>
+              </div>
+              <div class="shell-main">
+                <aside class="sidebar">
+                  <div class="brand">curso-bmad</div>
+                  <div class="nav-item active">Painel da secretaria</div>
+                  <div class="nav-item">Pessoas</div>
+                  <div class="nav-item">Eventos</div>
+                  <div class="nav-item">Comunicação</div>
+                </aside>
+                <div class="content">
+                  <div class="headline">
+                    <div class="tile hero-tile">
+                      <h4>O que precisa de atenção agora</h4>
+                      <p>Atualizar visitantes do culto, revisar follow-up e fechar programação do retiro.</p>
+                    </div>
+                    <div class="tile">
+                      <h4>Checklist semanal</h4>
+                      <p>4 de 7 itens concluídos.</p>
+                    </div>
+                  </div>
+                  <div class="tile-grid">
+                    <div class="tile"><h4>Pendências de pessoas</h4><p>6 cadastros precisam revisão de contato.</p></div>
+                    <div class="tile"><h4>Programação de eventos</h4><p>Retiro e ensaio do louvor com horários abertos.</p></div>
+                    <div class="tile"><h4>Visitantes recentes</h4><p>3 pessoas sem retorno registrado.</p></div>
+                    <div class="tile"><h4>Comunicação pendente</h4><p>2 modelos prontos para envio por WhatsApp.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction d3">
+          <header class="direction-header">
+            <span class="eyebrow">Direção 03</span>
+            <h3>Azul de Prestação</h3>
+            <p>Mais institucional, precisa e forte para rastreabilidade.</p>
+          </header>
+          <div class="direction-body">
+            <div class="app-shell">
+              <div class="shell-top">
+                <strong>Home do Tesoureiro</strong>
+                <span class="pill">Prestação pronta</span>
+              </div>
+              <div class="shell-main">
+                <aside class="sidebar">
+                  <div class="brand">curso-bmad</div>
+                  <div class="nav-item active">Resumo da semana</div>
+                  <div class="nav-item">Fluxo de caixa</div>
+                  <div class="nav-item">Centros de custo</div>
+                  <div class="nav-item">Auditoria</div>
+                </aside>
+                <div class="content">
+                  <div class="headline">
+                    <div class="tile hero-tile">
+                      <h4>Fechamento quase concluído</h4>
+                      <p>Faltam 2 confirmações para liberar o relatório mensal do conselho.</p>
+                    </div>
+                    <div class="stack">
+                      <div class="mini tile"><h4>Receitas</h4><p>€ 8.240</p></div>
+                      <div class="mini tile"><h4>Despesas</h4><p>€ 5.130</p></div>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="status-row"><span>Centro de custo: missões</span><span class="pill">1 ajuste</span></div>
+                    <div class="status-row"><span>Extrato bancário conciliado</span><span class="pill">92%</span></div>
+                    <div class="status-row"><span>Prestação de contas</span><span class="pill">Pronta para revisar</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction d4">
+          <header class="direction-header">
+            <span class="eyebrow">Direção 04</span>
+            <h3>Verde Comunitário</h3>
+            <p>Mais calor humano, rotina semanal e sensação de continuidade.</p>
+          </header>
+          <div class="direction-body">
+            <div class="app-shell">
+              <div class="shell-top">
+                <strong>Home da Secretaria</strong>
+                <span class="pill">Acompanhar pessoas</span>
+              </div>
+              <div class="shell-main">
+                <aside class="sidebar">
+                  <div class="brand">curso-bmad</div>
+                  <div class="nav-item active">Semana atual</div>
+                  <div class="nav-item">Membros</div>
+                  <div class="nav-item">Visitantes</div>
+                  <div class="nav-item">Modelos</div>
+                </aside>
+                <div class="content">
+                  <div class="headline">
+                    <div class="tile hero-tile">
+                      <h4>Semana em andamento</h4>
+                      <p>3 visitantes aguardam contato e 1 evento precisa confirmação de equipe.</p>
+                    </div>
+                    <div class="tile">
+                      <h4>Retornos feitos</h4>
+                      <div class="score">12</div>
+                    </div>
+                  </div>
+                  <div class="tile-grid">
+                    <div class="tile"><h4>Programação de eventos</h4><p>Culto jovem, ensaio e reunião de líderes.</p></div>
+                    <div class="tile"><h4>Pessoas em acompanhamento</h4><p>Novos convertidos e visitantes recorrentes.</p></div>
+                    <div class="tile"><h4>Ações rápidas</h4><p>Cadastrar, editar contato e preparar mensagem.</p></div>
+                    <div class="tile"><h4>Checklist operacional</h4><p>Presença, agenda, retornos e avisos.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction d5">
+          <header class="direction-header">
+            <span class="eyebrow">Direção 05</span>
+            <h3>Âmbar de Prioridade</h3>
+            <p>Mais enérgica e orientada à ação imediata por blocos.</p>
+          </header>
+          <div class="direction-body">
+            <div class="app-shell">
+              <div class="shell-top">
+                <strong>Home do Tesoureiro</strong>
+                <span class="pill">Agir agora</span>
+              </div>
+              <div class="shell-main">
+                <aside class="sidebar">
+                  <div class="brand">curso-bmad</div>
+                  <div class="nav-item active">Ações de hoje</div>
+                  <div class="nav-item">Receitas</div>
+                  <div class="nav-item">Pagamentos</div>
+                  <div class="nav-item">Conciliação</div>
+                </aside>
+                <div class="content">
+                  <div class="headline">
+                    <div class="tile hero-tile">
+                      <h4>Hoje você precisa concluir 3 ações</h4>
+                      <p>Revisar lançamento de oferta, conferir extrato e fechar contas a receber.</p>
+                    </div>
+                    <div class="tile">
+                      <h4>Tempo estimado</h4>
+                      <p>18 minutos</p>
+                    </div>
+                  </div>
+                  <div class="tile-grid">
+                    <div class="tile"><h4>Contas a pagar/receber</h4><p>8 abertas, 3 com alerta.</p></div>
+                    <div class="tile"><h4>Revisões urgentes</h4><p>2 divergências detectadas.</p></div>
+                    <div class="tile"><h4>Lançar agora</h4><p>Oferta, despesa ou transferência.</p></div>
+                    <div class="tile"><h4>Fechamento</h4><p>Saldo atualizado e resumo do período.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="direction d6">
+          <header class="direction-header">
+            <span class="eyebrow">Direção 06</span>
+            <h3>Lilás de Suavidade</h3>
+            <p>Mais contemporânea, suave e distinta; menos indicada para institucionalidade.</p>
+          </header>
+          <div class="direction-body">
+            <div class="app-shell">
+              <div class="shell-top">
+                <strong>Home da Secretaria</strong>
+                <span class="pill">Leveza orientada</span>
+              </div>
+              <div class="shell-main">
+                <aside class="sidebar">
+                  <div class="brand">curso-bmad</div>
+                  <div class="nav-item active">Painel semanal</div>
+                  <div class="nav-item">Agenda</div>
+                  <div class="nav-item">Cadastros</div>
+                  <div class="nav-item">Mensagens</div>
+                </aside>
+                <div class="content">
+                  <div class="headline">
+                    <div class="tile hero-tile">
+                      <h4>Semana organizada em uma leitura</h4>
+                      <p>Blocos suaves, foco em orientação e continuidade sem sensação de peso.</p>
+                    </div>
+                    <div class="tile">
+                      <h4>Próximo evento</h4>
+                      <p>Encontro de casais na sexta.</p>
+                    </div>
+                  </div>
+                  <div class="tile-grid">
+                    <div class="tile"><h4>Programação de eventos</h4><p>3 eventos com próximos passos definidos.</p></div>
+                    <div class="tile"><h4>Mensagens preparadas</h4><p>1 modelo pronto, 2 rascunhos.</p></div>
+                    <div class="tile"><h4>Visitantes recentes</h4><p>5 nomes novos aguardando acolhimento.</p></div>
+                    <div class="tile"><h4>Checklist semanal</h4><p>Presença, agenda, retornos e equipe.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="footer-note">
+        <span class="eyebrow">Próximo passo</span>
+        <h2>Escolha a base ou combine elementos.</h2>
+        <p>
+          Recomendo avaliar qual direção transmite melhor: confiança calma,
+          familiaridade para voluntários, clareza em blocos e força operacional
+          para tesouraria e secretaria. Você pode escolher uma direção inteira
+          ou combinar, por exemplo, a estrutura da 01 com o calor da 02.
+        </p>
+      </section>
+    </div>
+  </body>
+</html>
