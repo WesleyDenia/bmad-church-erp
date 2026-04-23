@@ -37,7 +37,10 @@ class InitialChurchSetupTest extends TestCase
 
         $this->assertTrue(Hash::check('secret-password', $user->password));
 
+        $churchId = $response->json('data.church.id');
+
         $this->assertDatabaseHas('church_user', [
+            'church_id' => $churchId,
             'user_id' => $user->id,
             'role' => 'administrator',
             'status' => 'active',
@@ -86,6 +89,35 @@ class InitialChurchSetupTest extends TestCase
 
         $this->assertDatabaseMissing('churches', [
             'name' => 'Igreja Central',
+        ]);
+    }
+
+    public function test_initial_setup_blocks_duplicate_church_slug(): void
+    {
+        $payload = [
+            'church_name' => 'Igreja Central',
+            'admin_name' => 'Maria Silva',
+            'admin_email' => 'maria@example.com',
+            'password' => 'secret-password',
+            'password_confirmation' => 'secret-password',
+        ];
+
+        $this->postJson('/api/v1/onboarding/initial-setup', $payload)
+            ->assertCreated();
+
+        $response = $this->postJson('/api/v1/onboarding/initial-setup', [
+            ...$payload,
+            'admin_email' => 'outra@example.com',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['church_name'])
+            ->assertJsonPath('errors.church_name.0', 'Ja existe uma igreja configurada com este nome.');
+
+        $this->assertDatabaseCount('churches', 1);
+        $this->assertDatabaseMissing('users', [
+            'email' => 'outra@example.com',
         ]);
     }
 }

@@ -3,16 +3,19 @@
 namespace App\Domain\Identity\Models;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
-#[Fillable(['church_id', 'user_id', 'role', 'status'])]
 class ChurchUser extends Pivot
 {
     protected $table = 'church_user';
 
     public $incrementing = true;
+
+    /**
+     * @var list<string>
+     */
+    protected $fillable = ['church_id', 'user_id', 'role', 'status'];
 
     /**
      * @return BelongsTo<Church, $this>

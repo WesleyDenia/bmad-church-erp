@@ -3,14 +3,17 @@
 namespace App\Domain\Identity\Models;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'slug'])]
 class Church extends Model
 {
+    /**
+     * @var list<string>
+     */
+    protected $fillable = ['name', 'slug'];
+
     /**
      * @return HasMany<ChurchUser, $this>
      */
