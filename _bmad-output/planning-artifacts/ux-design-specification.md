@@ -1,12 +1,14 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 inputDocuments:
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/prd.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/architecture.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/mvp-scope.md
 workflowType: ux-design
-status: draft
+status: complete
 language: portuguese
+lastStep: 14
+completedAt: 2026-04-16
 ---
 
 # UX Design Specification curso-bmad
@@ -488,3 +490,570 @@ A aplicacao pratica dessa direcao deve seguir estas linhas:
 - adaptar conteudo e enfase por perfil sem alterar a base estrutural
 - manter o teal operacional como eixo cromatico principal do sistema
 - usar `shadcn/ui` apenas como infraestrutura de componente, nao como aparencia padrao final
+
+## User Journey Flows
+
+### Fechamento Semanal do Tesoureiro
+
+Esta jornada representa o principal ciclo de prova de valor do MVP. O usuario entra na home da tesouraria para entender rapidamente o que exige atencao, registrar ou revisar movimentacoes, acompanhar contas a pagar/receber e avancar para uma visao confiavel de fechamento.
+
+```mermaid
+flowchart TD
+    A[Entrar na Home do Tesoureiro] --> B[Ver blocos de prioridade da semana]
+    B --> C{O que precisa fazer agora?}
+    C -->|Lancar movimento| D[Lancar receita ou despesa]
+    C -->|Revisar pendencia| E[Abrir pendencias de revisao]
+    C -->|Acompanhar rotina| F[Abrir contas a pagar ou receber]
+    D --> G[Confirmar dados essenciais]
+    E --> G
+    F --> G
+    G --> H[Salvar ou atualizar informacao]
+    H --> I[Receber feedback claro e amigavel]
+    I --> J[Ver impacto no contexto atual]
+    J --> K{Precisa continuar?}
+    K -->|Sim| B
+    K -->|Nao| L[Abrir fechamento atual]
+    L --> M[Revisar saldos e consistencia]
+    M --> N[Gerar visao para prestacao de contas]
+    N --> O[Fim com dados confiaveis e rastreaveis]
+```
+
+**Otimizacoes de fluxo:**
+
+- entrada sempre pela home, nunca por menu abstrato
+- blocos mostram prioridade antes da navegacao
+- o usuario consegue voltar ao contexto principal sem se perder
+- o feedback precisa deixar claro o que foi salvo e o que mudou no fechamento
+
+### Rotina Semanal da Secretaria
+
+Esta jornada organiza o trabalho recorrente da secretaria em torno de pessoas, programacao e comunicacao. A home deve funcionar como painel vivo da semana, ajudando o usuario a agir em cadastros, visitantes, programacao de eventos e follow-up sem dispersao.
+
+```mermaid
+flowchart TD
+    A[Entrar na Home da Secretaria] --> B[Ver blocos da semana]
+    B --> C{Qual bloco exige atencao?}
+    C -->|Pendencias de pessoas| D[Abrir registros pendentes]
+    C -->|Visitantes recentes| E[Revisar visitantes]
+    C -->|Programacao de eventos| F[Acompanhar agenda e proximos passos]
+    C -->|Comunicacao pendente| G[Preparar mensagem]
+    D --> H[Atualizar cadastro ou status]
+    E --> H
+    F --> I[Confirmar programacao ou ajuste]
+    G --> J[Selecionar modelo e preparar envio]
+    H --> K[Salvar atualizacao]
+    I --> K
+    J --> K
+    K --> L[Receber feedback claro]
+    L --> M[Voltar a home com contexto atualizado]
+    M --> N{Ha outra acao da semana?}
+    N -->|Sim| B
+    N -->|Nao| O[Fim com rotina organizada e rastreavel]
+```
+
+**Otimizacoes de fluxo:**
+
+- a secretaria precisa ver "o que esta pendente" e "o que vem a seguir" no mesmo lugar
+- programacao de eventos deve ser tratada como parte da rotina, nao modulo isolado
+- comunicacao deve nascer do contexto da semana, nao de tela separada desconectada
+
+### Leitura Resumida da Lideranca
+
+Esta jornada existe para entregar confianca e compreensao rapida sem exigir imersao operacional. A lideranca deve entrar, entender o estado atual e sair com clareza. Quando identificar inconsistencias, pendencias ou itens que dependem de decisao superior, ela tambem deve conseguir intervir com simplicidade, notificando a area responsavel ou aprovando o que estiver aguardando validacao.
+
+```mermaid
+flowchart TD
+    A[Entrar na Home da Lideranca] --> B[Ver resumo executivo em blocos]
+    B --> C[Entender situacao financeira atual]
+    C --> D[Ver principais sinais operacionais]
+    D --> E{Precisa aprofundar algo?}
+    E -->|Nao| F[Sair com clareza]
+    E -->|Sim| G[Abrir resumo relacionado]
+    G --> H{Qual acao e necessaria?}
+    H -->|Consultar detalhe| I[Ver detalhe sem entrar em fluxo operacional pesado]
+    H -->|Notificar area responsavel| J[Registrar notificacao ou encaminhamento]
+    H -->|Aprovar fluxo pendente| K[Analisar item e aprovar]
+    I --> L[Retornar ao resumo]
+    J --> M[Confirmacao de envio e rastreabilidade]
+    K --> N[Confirmacao de aprovacao e atualizacao de status]
+    M --> L
+    N --> L
+    L --> F
+```
+
+**Otimizacoes de fluxo:**
+
+- leitura rapida em poucos blocos
+- profundidade opcional e controlada
+- capacidade de intervencao sem obrigar a lideranca a operar o processo inteiro
+- notificacao simples e rastreavel para a area responsavel
+- aprovacoes visiveis apenas quando houver contexto e permissao
+- foco em confianca, entendimento e decisao, nao execucao operacional detalhada
+
+### Journey Patterns
+
+**Padroes de navegacao**
+
+- a home do perfil e sempre o ponto principal de entrada e retorno
+- o usuario decide o proximo passo a partir de blocos, nao de menus profundos
+- cada fluxo precisa permitir retorno ao contexto sem perda de orientacao
+
+**Padroes de decisao**
+
+- o sistema primeiro mostra prioridade
+- o usuario escolhe o bloco relevante
+- a acao acontece dentro de um contexto claramente delimitado
+- o proximo passo sempre fica visivel apos a conclusao
+
+**Padroes de feedback**
+
+- confirmacao clara, rapida e amigavel
+- reforco do impacto da acao no contexto atual
+- rastreabilidade visivel sem esforco
+- erro recuperavel com orientacao explicita
+
+### Flow Optimization Principles
+
+- reduzir ao maximo a distancia entre entrada e acao util
+- manter a home como centro operacional e nao vitrine
+- diminuir carga cognitiva em decisoes e navegacao
+- tornar estados de sucesso compreensiveis e confiaveis
+- tratar erro e recuperacao como parte normal da experiencia
+- manter consistencia estrutural entre perfis, mudando apenas conteudo e enfase
+
+## Component Strategy
+
+### Design System Components
+
+A base de componentes de `curso-bmad` deve aproveitar `shadcn/ui` para primitives, estrutura e acessibilidade. Esses componentes resolvem bem a camada fundamental da interface e aceleram desenvolvimento sem obrigar o produto a aceitar uma identidade visual pronta.
+
+**Componentes base aproveitados do design system:**
+
+- `Button`
+- `Input`
+- `Textarea`
+- `Select`
+- `Checkbox`
+- `Radio Group`
+- `Switch`
+- `Dialog`
+- `Sheet`
+- `Tabs`
+- `Tooltip`
+- `Popover`
+- `Dropdown Menu`
+- `Badge`
+- `Card`
+- `Alert`
+- `Table`
+- `Toast`
+- `Skeleton`
+- `Separator`
+- `Avatar`
+- `Breadcrumb`
+
+Esses componentes devem ser customizados por tokens e estilo do produto, mas nao precisam ser reinventados conceitualmente.
+
+### Custom Components
+
+Os componentes abaixo sao especificos da experiencia operacional de `curso-bmad` e precisam ser definidos como componentes proprios do produto.
+
+#### WeeklyPriorityBlock
+
+**Purpose:** destacar o que mais exige atencao na semana para o perfil atual  
+**Usage:** topo da home do tesoureiro e da secretaria  
+**Anatomy:** titulo, resumo curto, nivel de prioridade, acao principal, acao secundaria  
+**States:** default, atencao, concluido parcial, concluido  
+**Variants:** tesouraria, secretaria  
+**Accessibility:** heading claro, acao principal com rotulo explicito, leitura linear por teclado  
+**Interaction Behavior:** ao clicar, leva o usuario diretamente ao fluxo principal relacionado
+
+#### OperationalPendingBlock
+
+**Purpose:** mostrar pendencias agrupadas por contexto de trabalho  
+**Usage:** homes por perfil  
+**Content:** quantidade, descricao curta, urgencia, responsavel ou origem  
+**States:** vazio, com pendencias, critico, resolvido  
+**Variants:** pessoas, revisao financeira, comunicacao, aprovacao  
+**Accessibility:** cada item precisa ser navegavel por teclado e legivel sem depender so de cor  
+**Interaction Behavior:** abre lista filtrada ou detalhe da pendencia
+
+#### ClosingStatusBlock
+
+**Purpose:** resumir o estado atual do fechamento financeiro  
+**Usage:** home da tesouraria  
+**Content:** progresso, saldo, itens pendentes, acesso ao resumo  
+**States:** em andamento, atencao, pronto para revisar, concluido  
+**Variants:** semanal, mensal  
+**Interaction Behavior:** abre visao detalhada do fechamento e proximos passos
+
+#### PayablesReceivablesBlock
+
+**Purpose:** concentrar contas a pagar e receber em leitura rapida  
+**Usage:** home da tesouraria  
+**Content:** totais, vencimentos proximos, alertas, atalhos  
+**States:** normal, com vencimento, atrasado, vazio  
+**Variants:** pagar, receber, combinado  
+**Interaction Behavior:** permite entrar no detalhe por status ou urgencia
+
+#### EventScheduleBlock
+
+**Purpose:** exibir programacao de eventos e proximos passos da secretaria  
+**Usage:** home da secretaria  
+**Content:** evento, data, situacao, pendencia relacionada  
+**States:** planejado, em atencao, confirmado, concluido  
+**Variants:** evento unico, lista curta da semana  
+**Interaction Behavior:** abre detalhe da programacao ou acao necessaria
+
+#### CommunicationPendingBlock
+
+**Purpose:** indicar comunicacoes prontas ou pendentes para envio  
+**Usage:** home da secretaria  
+**Content:** tipo da mensagem, publico, status, CTA  
+**States:** rascunho, pronto para enviar, enviado, com bloqueio  
+**Variants:** visitantes, membros, avisos gerais  
+**Interaction Behavior:** abre editor ou preparacao de mensagem ou fluxo de handoff
+
+#### PeopleFollowupBlock
+
+**Purpose:** resumir visitantes recentes e pessoas em acompanhamento  
+**Usage:** home da secretaria  
+**Content:** nomes ou contagem, status, proximo passo  
+**States:** novo, pendente, atualizado, concluido  
+**Variants:** visitantes, membros, acompanhamento pastoral ou operacional  
+**Interaction Behavior:** leva para lista filtrada com contexto preservado
+
+#### LeadershipSummaryBlock
+
+**Purpose:** entregar leitura resumida e confiavel para lideranca  
+**Usage:** home da lideranca  
+**Content:** resumo financeiro, sinais operacionais, alertas, aprovacoes  
+**States:** estavel, atencao, acao necessaria  
+**Variants:** financeiro, operacional, combinado  
+**Interaction Behavior:** permite aprofundar sem entrar em operacao pesada
+
+#### ApprovalActionCard
+
+**Purpose:** representar um item que depende de aprovacao da lideranca  
+**Usage:** home da lideranca e contextos de aprovacao  
+**Content:** item, contexto, responsavel, impacto, CTA de aprovacao  
+**States:** pendente, aprovado, rejeitado, expirado  
+**Accessibility:** acao de aprovar ou rejeitar com rotulos inequivocos  
+**Interaction Behavior:** registra decisao e atualiza rastreabilidade
+
+#### NotifyResponsibleAction
+
+**Purpose:** permitir que a lideranca ou outro perfil notifique a area responsavel  
+**Usage:** blocos de inconsistenca, pendencia ou acompanhamento  
+**Content:** alvo da notificacao, motivo, CTA  
+**States:** disponivel, enviado, erro  
+**Interaction Behavior:** abre acao curta e confirma envio com rastreabilidade
+
+#### TraceabilitySnippet
+
+**Purpose:** mostrar historico curto e impacto recente sem exigir mergulho em auditoria  
+**Usage:** fechamento, pendencias, aprovacoes, comunicacao  
+**Content:** ultima acao, autor, data ou hora, estado atual  
+**States:** simples, detalhado, indisponivel  
+**Interaction Behavior:** pode expandir para historico completo quando necessario
+
+#### QuickActionRail
+
+**Purpose:** concentrar acoes rapidas relevantes para o perfil  
+**Usage:** topo ou lateral da home  
+**Content:** conjunto pequeno de CTAs prioritarios  
+**States:** normal, com destaque, indisponivel  
+**Variants:** tesouraria, secretaria, lideranca  
+**Interaction Behavior:** inicia fluxos criticos com um clique
+
+### Component Implementation Strategy
+
+A estrategia de implementacao deve seguir esta ordem:
+
+1. usar `shadcn/ui` como camada de base
+2. aplicar tokens proprios do produto
+3. criar componentes operacionais compostos sobre primitives existentes
+4. garantir que cada componente de produto reflita contexto, prioridade e proxima acao
+5. evitar componentes visualmente "bonitos", mas semanticamente vazios
+
+**Principios de implementacao:**
+
+- componentes devem nascer orientados a bloco e contexto
+- cada bloco precisa comunicar: o que e, por que importa e o que fazer agora
+- estados devem ser sempre explicitos
+- acessibilidade e clareza textual devem ser tratados como parte da definicao do componente
+- variantes por perfil devem preservar a mesma gramatica visual
+
+### Implementation Roadmap
+
+**Phase 1 - Core MVP Components**
+
+- `WeeklyPriorityBlock`
+- `OperationalPendingBlock`
+- `ClosingStatusBlock`
+- `QuickActionRail`
+- `PayablesReceivablesBlock`
+
+**Phase 2 - Secretary Flow Components**
+
+- `PeopleFollowupBlock`
+- `EventScheduleBlock`
+- `CommunicationPendingBlock`
+
+**Phase 3 - Leadership Components**
+
+- `LeadershipSummaryBlock`
+- `ApprovalActionCard`
+- `NotifyResponsibleAction`
+
+**Phase 4 - Cross-Cutting Support**
+
+- `TraceabilitySnippet`
+- componentes auxiliares de empty state, feedback contextual e estado de sucesso por bloco
+
+A priorizacao deve seguir o fluxo hero do MVP: primeiro tesouraria, depois secretaria, depois lideranca, mantendo consistencia estrutural desde o inicio.
+
+## UX Consistency Patterns
+
+### Button Hierarchy
+
+A hierarquia de botoes deve ser extremamente clara e previsivel. Como o produto sera usado por voluntarios e usuarios pouco tecnicos, cada tela precisa deixar evidente qual e a acao principal e quais sao as alternativas secundarias.
+
+**Padroes:**
+
+- `Primary`: usado para a acao principal da tela ou do bloco
+- `Secondary`: usado para acoes relevantes, mas nao prioritarias
+- `Tertiary/Ghost`: usado para acoes de apoio, navegacao contextual ou utilidades
+- `Danger`: usado apenas para acoes sensiveis, destrutivas ou irreversiveis
+- `Approval`: variante semantica para aprovar fluxos pendentes, com destaque controlado
+
+**Regras de uso:**
+
+- cada bloco ou tela deve ter apenas uma acao primaria dominante
+- evitar multiplos botoes primarios competindo entre si
+- acoes destrutivas nunca devem disputar atencao com a acao principal positiva
+- acoes importantes devem usar verbos claros e especificos, como `Salvar lancamento`, `Notificar responsavel`, `Aprovar item`, `Gerar resumo`
+
+**Acessibilidade:**
+
+- tamanho clicavel confortavel
+- contraste alto
+- foco visivel
+- rotulos inequivocos
+
+### Feedback Patterns
+
+O sistema deve confirmar de forma clara, rapida e amigavel o que aconteceu apos cada acao. Feedback nao deve ser decorativo; ele deve reduzir ansiedade e reforcar rastreabilidade.
+
+**Padroes de feedback:**
+
+- `Success`: confirmacao clara de que algo foi salvo, enviado, atualizado ou aprovado
+- `Warning`: atencao para inconsistencias, pendencias ou acoes incompletas
+- `Error`: erro com causa compreensivel e proximo passo explicito
+- `Info`: orientacao contextual ou estado complementar
+- `Inline feedback`: usado em formularios e blocos
+- `Toast feedback`: usado para confirmacoes rapidas
+- `Persistent feedback`: usado quando o impacto exige acompanhamento visivel
+
+**Regras de uso:**
+
+- o feedback deve dizer o que aconteceu
+- quando relevante, deve indicar onde isso impacta o contexto
+- erros devem explicar como corrigir
+- aprovacoes e notificacoes devem deixar rastreabilidade clara
+- feedback de sucesso nunca deve depender so de cor
+
+**Tom de linguagem:**
+
+- simples
+- cotidiano
+- nao tecnico
+- sem frases vagas como “operacao concluida com sucesso” quando for possivel ser especifico
+
+### Form Patterns
+
+Os formularios devem parecer leves, guiados e seguros. O usuario precisa entender rapidamente o que preencher, por que aquilo importa e o que acontece depois.
+
+**Padroes de formulario:**
+
+- agrupar campos por contexto
+- usar labels sempre visiveis
+- usar placeholders apenas como apoio, nunca como substituto de label
+- campos obrigatorios devem ser poucos e bem justificados
+- validacao preferencialmente proxima ao campo
+- confirmacao clara no envio
+
+**Regras de uso:**
+
+- comecar pelos campos essenciais
+- usar disclosure progressivo para campos secundarios
+- manter linguagem concreta nos labels
+- explicar erro no momento certo, sem excesso de bloqueio prematuro
+- preservar dados digitados quando houver erro
+- sempre indicar o proximo passo apos salvar
+
+**Casos especiais do produto:**
+
+- lancamento financeiro deve priorizar velocidade com seguranca
+- cadastro de pessoas deve favorecer atualizacao simples e continua
+- comunicacao deve nascer do contexto, nao de formulario isolado e frio
+- aprovacao da lideranca deve exigir contexto suficiente antes da decisao
+
+### Navigation Patterns
+
+A navegacao deve reforcar a home por perfil como centro da experiencia. O usuario entra, entende o que importa, age e retorna ao contexto sem se perder.
+
+**Padroes de navegacao:**
+
+- home por perfil como entrada principal
+- blocos como pontos de entrada para fluxos
+- navegacao lateral ou superior rasa e estavel
+- breadcrumbs apenas onde houver profundidade real
+- retorno ao contexto sempre facilitado
+- acoes rapidas visiveis sem exigir exploracao excessiva
+
+**Regras de uso:**
+
+- evitar menus profundos
+- evitar nomes abstratos de modulo
+- manter consistencia estrutural entre tesouraria, secretaria e lideranca
+- quando o usuario aprofundar algo, o caminho de volta deve ser evidente
+- a navegacao deve servir a rotina semanal, nao a taxonomia do sistema
+
+**Comportamento por perfil:**
+
+- tesouraria: foco em prioridade, fechamento, contas e relatorios
+- secretaria: foco em pessoas, programacao e comunicacao
+- lideranca: foco em resumo, atencao, aprovacao e notificacao
+
+### Additional Patterns
+
+**Empty States**
+
+- devem orientar acao
+- precisam explicar o que significa “nao ha dados” naquele contexto
+- devem sugerir o proximo passo util
+
+**Loading States**
+
+- usar skeletons e estados transitorios previsiveis
+- preservar estrutura da tela para nao causar desorientacao
+- mostrar progresso quando o usuario estiver aguardando algo relevante
+
+**Search and Filtering**
+
+- busca deve aparecer onde realmente reduz trabalho
+- filtros precisam ser poucos, claros e reversiveis
+- estados filtrados devem deixar evidente o criterio ativo
+
+**Modals and Overlays**
+
+- usar apenas quando a acao exige foco isolado
+- evitar modais para fluxos longos
+- confirmacao critica deve ser breve, clara e contextual
+- acoes de aprovacao e notificacao podem usar overlays curtos e objetivos
+
+## Responsive Design & Accessibility
+
+### Responsive Strategy
+
+`curso-bmad` deve seguir uma estrategia **desktop-first**, porque o contexto principal de uso e operacional de mesa, com leitura de blocos, consultas, lancamentos e prestacao de contas em densidade moderada. Isso nao elimina tablet e mobile; significa apenas que a estrutura principal nasce pensando em desktop e depois se adapta com criterio.
+
+**Desktop**
+
+- usar melhor o espaco horizontal com grid de blocos e colunas complementares
+- manter navegacao estavel e visivel
+- privilegiar leitura de prioridade, rastreabilidade e contexto sem esconder informacoes criticas
+- permitir que tesouraria, secretaria e lideranca enxerguem o panorama da semana em uma tela principal
+
+**Tablet**
+
+- reduzir colunas sem quebrar a logica dos blocos
+- manter interacoes touch-friendly
+- reorganizar prioridade visual para leitura em largura intermediaria
+- evitar excesso de menus ocultos ou overlays complexos
+
+**Mobile**
+
+- tratar como suporte relevante e nao como experiencia principal
+- colapsar os blocos em pilha vertical clara
+- preservar apenas o conteudo mais importante por prioridade
+- manter acoes principais acessiveis sem exigir exploracao longa
+- evitar que a home vire lista caotica ou miniatura da versao desktop
+
+### Breakpoint Strategy
+
+A estrategia de breakpoint deve usar faixas padrao com ajustes finos conforme os blocos principais da home:
+
+- **Mobile:** `320px - 767px`
+- **Tablet:** `768px - 1023px`
+- **Desktop:** `1024px+`
+
+Como a estrategia e desktop-first, o desenho da arquitetura principal deve partir de `1024px+`, mas a implementacao deve garantir colapso consistente e previsivel nas faixas inferiores.
+
+**Diretrizes de adaptacao:**
+
+- desktop: grid mais amplo com blocos lado a lado
+- tablet: reorganizacao em menos colunas e prioridade de leitura
+- mobile: pilha vertical com ordem de importancia explicitamente controlada
+
+### Accessibility Strategy
+
+O nivel recomendado para `curso-bmad` e **WCAG AA**.
+
+Esse nivel e o mais coerente para o produto porque:
+
+- atende boa pratica de mercado
+- protege usuarios com diferentes niveis de habilidade e leitura
+- e especialmente importante para um publico com baixa familiaridade com sistemas administrativos
+- reforca clareza, previsibilidade e seguranca operacional
+
+**Requisitos principais:**
+
+- contraste minimo adequado para texto e componentes interativos
+- navegacao completa por teclado
+- foco visivel e consistente
+- estrutura semantica correta com headings, landmarks e labels
+- estados nao dependentes apenas de cor
+- alvos de toque de pelo menos `44x44px`
+- mensagens claras para screen readers quando houver erro, sucesso ou mudanca de estado
+
+### Testing Strategy
+
+**Responsive Testing**
+
+- validar desktop em resolucoes operacionais comuns
+- testar tablet em largura intermediaria com foco em homes e blocos
+- testar mobile para leitura, acoes principais e retorno ao contexto
+- validar em Chrome, Firefox, Safari e Edge
+
+**Accessibility Testing**
+
+- testes automatizados com ferramentas de acessibilidade
+- navegacao apenas por teclado
+- verificacao de contraste e dependencia de cor
+- testes com leitor de tela em fluxos principais
+- revisao de formulrios, feedback e foco em overlays
+
+**User Testing**
+
+- validar com usuarios reais pouco tecnicos
+- observar se a prioridade da home continua compreensivel em telas menores
+- testar se formulrios, feedbacks e acoes principais continuam claros sem treinamento
+
+### Implementation Guidelines
+
+**Responsive Development**
+
+- usar grid e espacamento adaptativos sem perder a logica de blocos
+- controlar explicitamente a ordem dos blocos nas diferentes larguras
+- evitar esconder informacao essencial atras de interacoes profundas
+- usar unidades relativas e comportamento consistente entre resolucoes
+
+**Accessibility Development**
+
+- usar HTML semantico sempre que possivel
+- garantir labels, descricoes e relacoes claras entre campos e mensagens
+- tratar feedback de erro e sucesso como parte da estrutura acessivel
+- manter foco gerenciado em modais, sheets e overlays
+- revisar continuamente se o produto continua simples de entender, e nao apenas tecnicamente acessivel

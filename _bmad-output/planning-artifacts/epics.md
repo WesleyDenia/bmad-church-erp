@@ -15,7 +15,7 @@ This document provides the complete epic and story breakdown for curso-bmad, dec
 
 ## Revision Note
 
-This version was revised after the architecture was approved. The story sequence now reflects the required dual-starter bootstrap, the Next.js BFF authentication flow with internal JWT context, and the implementation order needed to preserve epic independence.
+This version was revised after the architecture and UX were approved. The story sequence now reflects the required dual-starter bootstrap, the Next.js BFF authentication flow with internal JWT context, and the implementation order needed to preserve epic independence. The wording and acceptance criteria were also aligned to the revised product language: homes por perfil como ponto principal de entrada, blocos operacionais como objeto dominante da interface, `shadcn/ui` como infraestrutura tecnica, design system proprio baseado em temas e tokens semanticos, e nomenclatura de componentes orientada ao contexto operacional real em vez de dashboards genericos.
 
 ## Frontend Web Standard
 
@@ -79,13 +79,15 @@ NFR12: A arquitetura deve permitir evolucao progressiva do dominio sem refactor 
 ### Additional Requirements
 
 - O isolamento por igreja deve ser uma regra fundacional da solucao e impacta autenticacao, autorizacao, persistencia e consultas.
-- A aplicacao deve nascer organizada por dominios de negocio claros: Identity and Access, Finance, People, Operational Inbox e Communications Support.
+- A aplicacao deve nascer organizada por dominios de negocio claros: Identity and Access, Finance, People, Operations e Communications Support.
 - Auditabilidade deve fazer parte do modelo de dominio financeiro, nao apenas de logging tecnico.
-- O dashboard de pendencias deve ser tratado como capacidade central de retencao, nao apenas camada visual.
+- As homes por perfil e seus blocos operacionais devem ser tratados como capacidade central de orientacao e retencao, nao apenas camada visual.
 - O handoff para WhatsApp deve permanecer desacoplado e simples no MVP, evitando integracoes profundas.
 - O sistema deve aplicar padroes comuns para feedback, erros, confirmacoes e estados de revisao em todos os modulos.
 - Devem existir restricoes claras de acesso para dados financeiros e pessoais, incluindo explicacao compreensivel quando um acesso for bloqueado.
-- A UX exige componentes prioritarios como cartoes de home por perfil, formulario de lancamento rapido, cartoes de pendencias, banners de revisao, bloco de resumo, lista pesquisavel de pessoas, compositor de mensagens e painel de auditoria.
+- A UX exige componentes prioritarios como `WeeklyPriorityBlock`, formulario de lancamento rapido, `OperationalPendingBlock`, banners de revisao, `ClosingStatusBlock`, lista pesquisavel de pessoas, compositor de mensagens, `LeadershipSummaryBlock` e outros blocos operacionais compostos.
+- O frontend deve usar `shadcn/ui` como base tecnica de primitives, com identidade visual aplicada por temas e tokens semanticos do produto.
+- A nomenclatura funcional visivel ao usuario e a nomenclatura de componentes/story text devem refletir a linguagem operacional aprovada no UX, evitando termos genericos como dashboard, widget ou painel sem contexto.
 - O fluxo hero do MVP prioriza tesoureiro registrar entradas e saidas, corrigir erros com seguranca, gerar fechamento instantaneo e compartilhar com a lideranca.
 - O escopo MVP nao inclui folha de pagamento, suite contabil completa, multi-campus, automacao nativa de WhatsApp, analytics avancados ou governanca avancada de permissoes.
 
@@ -130,34 +132,34 @@ FR29: Epic 1, Epic 2, Epic 3, Epic 4 e Epic 5 - padrao transversal de validacao,
 ## Epic List
 
 ### Epic 1: Fundacao da Igreja e Acesso Seguro
-Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca.
+Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca, sobre uma fundacao tecnica e visual coerente com a arquitetura e o UX aprovados.
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR29
 
 ### Epic 2: Operacao Financeira Semanal do Tesoureiro
-Permitir que o tesoureiro use sua home operacional para registrar receitas e despesas rapidamente, revisar pendencias financeiras, corrigir com seguranca e manter confianca operacional no fluxo pos-culto.
+Permitir que o tesoureiro use sua home da tesouraria, estruturada em blocos operacionais, para registrar receitas e despesas rapidamente, revisar pendencias financeiras, corrigir com seguranca e manter confianca operacional no fluxo pos-culto.
 **FRs covered:** FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR21, FR23a, FR24a, FR29
 
 ### Epic 3: Fechamento e Visibilidade para Lideranca
-Permitir gerar fechamento financeiro imediato, revisar o periodo e compartilhar uma visao clara para a lideranca sem sobrecarga operacional.
+Permitir gerar fechamento financeiro imediato, revisar o periodo e compartilhar uma visao clara para a lideranca por meio de leitura resumida em blocos, sem sobrecarga operacional.
 **FRs covered:** FR14, FR15, FR16, FR28, FR29
 
 ### Epic 4: Base de Pessoas e Rotina da Secretaria
-Permitir que a secretaria use sua home operacional para manter membros e visitantes com baixa friccao, resolver pendencias de pessoas e executar a rotina semanal a partir de filas acionaveis.
+Permitir que a secretaria use sua home da secretaria, estruturada em blocos operacionais, para manter membros e visitantes com baixa friccao, resolver pendencias de pessoas e executar a rotina semanal a partir de filas acionaveis.
 **FRs covered:** FR17, FR18, FR19, FR20, FR22, FR23b, FR24b, FR29
 
 ### Epic 5: Comunicacao Operacional e Handoff Externo
-Permitir preparar comunicacoes reutilizando dados existentes e concluir o handoff para canais externos sem exigir integracoes profundas no MVP.
+Permitir preparar comunicacoes reutilizando dados existentes e concluir o handoff para canais externos a partir do contexto operacional da semana, sem exigir integracoes profundas no MVP.
 **FRs covered:** FR23c, FR24c, FR25, FR26, FR27, FR29
 
 ## Epic 1: Fundacao da Igreja e Acesso Seguro
 
-Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca.
+Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca, sobre uma fundacao tecnica e visual coerente com a arquitetura e o UX aprovados.
 
 ### Story 1.1: Inicializar a fundacao do projeto com backend e frontend desacoplados
 
 As a equipe de produto,
 I want inicializar `church-erp-api` em Laravel e `church-erp-web` em Next.js com a configuracao base do projeto,
-So that as proximas stories sejam implementadas sobre a arquitetura aprovada e sem retrabalho estrutural.
+So that as proximas stories sejam implementadas sobre a arquitetura aprovada, com fundacao visual consistente e sem retrabalho estrutural.
 
 **FRs covered:** FR3, FR29
 
@@ -166,12 +168,12 @@ So that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 **Given** que o projeto ainda nao foi inicializado
 **When** a equipe executa o bootstrap definido na arquitetura
 **Then** o repositorio passa a conter `church-erp-api` criado com Laravel 12 e `church-erp-web` criado com Next.js App Router
-**And** a estrutura base de pastas, configuracoes e ferramentas acordadas fica pronta para evolucao
+**And** a estrutura base de pastas, configuracoes e ferramentas acordadas fica pronta para evolucao, incluindo `shadcn/ui` como base tecnica de primitives, uma camada de design system para temas e tokens e organizacao inicial para componentes operacionais compostos
 
 **Given** que a fundacao tecnica foi criada
 **When** a equipe conclui a configuracao inicial
 **Then** o backend fica preparado para usar MySQL 8.4, organizacao por dominio e escopo por `church_id`
-**And** o frontend fica preparado para atuar como BFF autenticado entre browser e API
+**And** o frontend fica preparado para atuar como BFF autenticado entre browser e API, aplicando nomenclatura operacional coerente com o UX aprovado em vez de estruturas genericas de dashboard
 
 **Frontend Implementation Constraints:**
 
@@ -310,12 +312,12 @@ So that eu consiga gerar valor rapido sem configuracao extensa.
 
 ## Epic 2: Operacao Financeira Semanal do Tesoureiro
 
-Permitir que o tesoureiro use sua home operacional para registrar receitas e despesas rapidamente, revisar pendencias financeiras, corrigir com seguranca e manter confianca operacional no fluxo pos-culto.
+Permitir que o tesoureiro use sua home da tesouraria, estruturada em blocos operacionais, para registrar receitas e despesas rapidamente, revisar pendencias financeiras, corrigir com seguranca e manter confianca operacional no fluxo pos-culto.
 
-### Story 2.1: Exibir home operacional do tesoureiro
+### Story 2.1: Exibir home da tesouraria com blocos operacionais
 
 As a tesoureiro,
-I want abrir uma home com acoes financeiras principais e pendencias financeiras abertas,
+I want abrir uma home da tesouraria com blocos de prioridade, acoes principais e pendencias financeiras abertas,
 So that eu saiba imediatamente por onde comecar a rotina financeira semanal.
 
 **FRs covered:** FR21, FR29
@@ -324,13 +326,13 @@ So that eu saiba imediatamente por onde comecar a rotina financeira semanal.
 
 **Given** que um usuario com perfil de tesoureiro autenticado entra no sistema
 **When** acessa a tela inicial
-**Then** o sistema exibe a home do tesoureiro com atalhos para novo lancamento e revisao, alem de resumo operacional do periodo
+**Then** o sistema exibe a home da tesouraria com blocos operacionais para prioridade da semana, lancamento rapido, pendencias de revisao e fechamento atual
 **And** mostra apenas dados do tenant atual
 
 **Given** que existem pendencias financeiras abertas
 **When** a home e carregada
-**Then** o sistema apresenta os cartoes de pendencia com contagem e contexto suficiente
-**And** exibe os itens em ordem simples definida pelo sistema
+**Then** o sistema apresenta os cartoes de pendencia com contagem e contexto suficiente dentro da hierarquia de blocos da home
+**And** exibe os itens em ordem simples definida pelo sistema, sem depender de widgets ou dashboards genericos
 
 **Frontend Implementation Constraints:**
 
@@ -447,7 +449,7 @@ So that eu resolva excecoes antes de gerar o fechamento.
 **Acceptance Criteria:**
 
 **Given** que existem lancamentos com campos obrigatorios faltantes, edicoes recentes que exigem revisao ou inconsistencias basicas definidas pelo MVP
-**When** a home do tesoureiro e carregada
+**When** a home da tesouraria e carregada
 **Then** o sistema gera pendencias financeiras acionaveis
 **And** diferencia claramente itens que precisam de revisao
 
@@ -469,7 +471,7 @@ So that eu resolva excecoes antes de gerar o fechamento.
 
 ## Epic 3: Fechamento e Visibilidade para Lideranca
 
-Permitir gerar fechamento financeiro imediato, revisar o periodo e compartilhar uma visao clara para a lideranca sem sobrecarga operacional.
+Permitir gerar fechamento financeiro imediato, revisar o periodo e compartilhar uma visao clara para a lideranca por meio de leitura resumida em blocos, sem sobrecarga operacional.
 
 ### Story 3.1: Gerar resumo de fechamento do periodo
 
@@ -564,10 +566,10 @@ So that eu entregue a visibilidade necessaria para a lideranca no mesmo fluxo.
 - Os fluxos de exportacao e handoff devem manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
 - A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
-### Story 3.4: Exibir visao resumida para lideranca
+### Story 3.4: Exibir home da lideranca com leitura resumida
 
 As a lider da igreja,
-I want acessar uma visao resumida do estado financeiro e operacional,
+I want acessar uma home da lideranca com resumo executivo em blocos do estado financeiro e operacional,
 So that eu entenda a situacao atual sem entrar em detalhe operacional.
 
 **FRs covered:** FR28
@@ -575,8 +577,8 @@ So that eu entenda a situacao atual sem entrar em detalhe operacional.
 **Acceptance Criteria:**
 
 **Given** que um usuario com perfil de lideranca acessa o sistema
-**When** abre sua area de visibilidade
-**Then** o sistema exibe um resumo claro do fechamento e do estado operacional
+**When** abre sua home por perfil
+**Then** o sistema exibe um resumo claro do fechamento e do estado operacional em blocos executivos com profundidade opcional
 **And** evita expor controles de operacao diaria desnecessarios
 
 **Given** que o perfil de lideranca nao possui permissao para detalhes sensiveis de edicao
@@ -597,12 +599,12 @@ So that eu entenda a situacao atual sem entrar em detalhe operacional.
 
 ## Epic 4: Base de Pessoas e Rotina da Secretaria
 
-Permitir que a secretaria use sua home operacional para manter membros e visitantes com baixa friccao, resolver pendencias de pessoas e executar a rotina semanal a partir de filas acionaveis.
+Permitir que a secretaria use sua home da secretaria, estruturada em blocos operacionais, para manter membros e visitantes com baixa friccao, resolver pendencias de pessoas e executar a rotina semanal a partir de filas acionaveis.
 
-### Story 4.1: Exibir home operacional da secretaria
+### Story 4.1: Exibir home da secretaria com blocos operacionais
 
 As a secretaria da igreja,
-I want abrir uma home com pendencias por categoria e atalhos principais da rotina,
+I want abrir uma home da secretaria com blocos de pendencias, atalhos e checklist semanal,
 So that eu consiga organizar minha rotina sem navegar por modulos abstratos.
 
 **FRs covered:** FR22
@@ -611,12 +613,12 @@ So that eu consiga organizar minha rotina sem navegar por modulos abstratos.
 
 **Given** que um usuario com perfil de secretaria acessa o sistema
 **When** a tela inicial e carregada
-**Then** o sistema apresenta a home da secretaria com pendencias por dominio e atalhos principais
+**Then** o sistema apresenta a home da secretaria com blocos operacionais para pendencias de pessoas, visitantes recentes, acoes rapidas, programacao e checklist semanal
 **And** mostra apenas informacoes do tenant atual
 
 **Given** que existem tarefas abertas relacionadas a pessoas
 **When** a home e exibida
-**Then** o sistema destaca as pendencias acionaveis
+**Then** o sistema destaca as pendencias acionaveis dentro da hierarquia de blocos da home
 **And** permite identificar rapidamente o proximo passo
 
 **Frontend Implementation Constraints:**
@@ -756,7 +758,7 @@ So that eu conclua follow-ups e atualizacoes com menos friccao.
 
 ## Epic 5: Comunicacao Operacional e Handoff Externo
 
-Permitir preparar comunicacoes reutilizando dados existentes e concluir o handoff para canais externos sem exigir integracoes profundas no MVP.
+Permitir preparar comunicacoes reutilizando dados existentes e concluir o handoff para canais externos a partir do contexto operacional da semana, sem exigir integracoes profundas no MVP.
 
 ### Story 5.1: Manter modelos pre-definidos de comunicacao
 

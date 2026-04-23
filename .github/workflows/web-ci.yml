@@ -49,4 +49,8 @@ jobs:
         run: npm run test
 
       - name: Build
+        env:
+          API_BASE_URL: http://localhost:8000
+          INTERNAL_API_AUDIENCE: church-erp-api
+          INTERNAL_API_ISSUER: church-erp-web
         run: npm run build

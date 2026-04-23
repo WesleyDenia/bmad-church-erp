@@ -20,9 +20,47 @@ test("web baseline contains route shells and api client", () => {
     "../src/lib/api/client.ts",
     "../src/lib/env/server.ts",
     "../src/middleware.ts",
+    "../components.json",
+    "../src/lib/utils.ts",
+    "../src/components/ui/button.tsx",
+    "../src/components/design-system/surface.tsx",
+    "../src/components/operational/area-card.tsx",
+    "../src/design-system/tokens.ts",
+    "../src/styles/README.md",
   ];
 
   for (const path of requiredPaths) {
     assert.equal(existsSync(new URL(path, import.meta.url)), true, `${path} should exist`);
   }
+});
+
+test("api client keeps authenticated Laravel calls server-side", () => {
+  const apiClient = readFileSync(
+    new URL("../src/lib/api/client.ts", import.meta.url),
+    "utf8",
+  );
+  const loginPage = readFileSync(
+    new URL("../src/app/(auth)/login/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(apiClient, /server-only/);
+  assert.match(apiClient, /serverEnv\.apiBaseUrl/);
+  assert.doesNotMatch(loginPage, /API_BASE_URL/);
+});
+
+test("shadcn primitive foundation is materialized", () => {
+  const componentsConfig = readFileSync(
+    new URL("../components.json", import.meta.url),
+    "utf8",
+  );
+  const button = readFileSync(
+    new URL("../src/components/ui/button.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(componentsConfig, /"ui": "@\/components\/ui"/);
+  assert.match(button, /React\.forwardRef/);
+  assert.match(button, /buttonVariants/);
+  assert.match(button, /class-variance-authority/);
 });

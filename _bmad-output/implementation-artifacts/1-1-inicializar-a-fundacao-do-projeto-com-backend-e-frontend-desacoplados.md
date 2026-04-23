@@ -1,6 +1,6 @@
 # Story 1.1: Inicializar a fundacao do projeto com backend e frontend desacoplados
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -33,6 +33,7 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
   - [x] Preparar `src/app`, `src/components`, `src/features`, `src/lib`, `src/hooks` e `src/types` conforme a arquitetura.
   - [x] Criar a base para rotas `src/app/(auth)`, `src/app/treasury`, `src/app/secretaria`, `src/app/leadership` e `src/app/communications`.
   - [x] Preparar uma camada em `src/lib/api` para concentrar chamadas do BFF ao Laravel, sem consumo autenticado direto do browser para a API.
+  - [x] Deixar a fundacao visual alinhada ao UX aprovado: `shadcn/ui` como camada base prevista, tokens/temas semanticos do produto, tipografia propria e separacao futura entre primitives, design system compartilhado e componentes operacionais.
 - [x] Preparar o fluxo minimo de desenvolvimento e qualidade (AC: 1)
   - [x] Confirmar arquivos base de configuracao em cada app (`README`, `.env.example`, configs de lint/teste).
   - [x] Criar `.github/workflows/api-ci.yml` e `.github/workflows/web-ci.yml` ou stubs equivalentes, se ainda nao existirem.
@@ -41,6 +42,12 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
   - [x] Documentar que o browser autentica contra `church-erp-web` e que o `church-erp-web` usa JWT interno de curta duracao para falar com `church-erp-api`.
   - [x] Explicitar que toda regra de validacao principal, autorizacao e escopo por tenant permanecem no Laravel.
   - [x] Deixar claro que consultas futuras em entidades de dominio relevantes deverao considerar `church_id`.
+
+### Review Follow-ups (AI)
+
+- [x] [AI-Review][Medium] Inicializar de fato a fundacao `shadcn/ui` ou ajustar a story/arquitetura para remover essa claim; hoje nao ha `components.json`, dependencias auxiliares ou primitives derivadas de shadcn, apesar da task marcada como concluida. [church-erp-web/package.json:13]
+- [x] [AI-Review][Medium] Desacoplar o smoke test da Story 1.1 dos artefatos da Story 1.2; o baseline da fundacao nao deve exigir `/onboarding`, route handler de onboarding ou tipos `features/auth` para passar. [church-erp-web/tests/bff-smoke.test.mjs:14]
+- [x] [AI-Review][Low] Fortalecer o primitive `Button` para padrao de design-system real, com base mais proxima de shadcn (`forwardRef`, composicao de classes e variantes), em vez de um wrapper minimo com string fixa. [church-erp-web/src/components/ui/button.tsx:7]
 
 ## Dev Notes
 
@@ -54,6 +61,7 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 
 - O backend deve nascer em `church-erp-api` com Laravel 12.
 - O frontend deve nascer em `church-erp-web` com Next.js App Router, TypeScript, Tailwind, `shadcn/ui` e ESLint.
+- O frontend deve seguir a fundacao visual aprovada no UX: `shadcn/ui` como infraestrutura tecnica de primitives, com linguagem final do produto definida por temas, tokens e componentes operacionais proprios.
 - O banco alvo do backend e MySQL 8.4 LTS.
 - Multi-tenancy deve ser tratado desde a fundacao via `church_id`; nao deixar isso como refactor futuro.
 - O frontend deve ser preparado como BFF. O browser nao deve consumir endpoints autenticados do Laravel diretamente.
@@ -68,6 +76,10 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 - Manter fronteiras explicitas:
   - `church-erp-web` cuida de UI, navegacao, sessao e BFF.
   - `church-erp-api` cuida de dominio, autorizacao, persistencia e auditoria.
+- No frontend, preservar a separacao arquitetural entre:
+  - primitives base derivadas de `shadcn/ui`
+  - design system compartilhado com temas, tokens e variantes do produto
+  - componentes operacionais compostos por dominio e perfil
 - Nao usar starter acoplado de Laravel com Blade/Inertia/Livewire para substituir o frontend separado.
 - Nao mover regra de negocio sensivel para componentes React.
 - Nao deixar controllers Laravel concentrarem regra de negocio pesada.
@@ -80,6 +92,7 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 
 - Laravel 12 e a versao-alvo aprovada na arquitetura. A documentacao oficial atual de instalacao recomenda `laravel new`, mas esta story deve seguir o comando arquitetural aprovado para manter consistencia do projeto, a menos que o ambiente exija ajuste operacional.
 - Next.js continua com `create-next-app@latest` como caminho oficial de bootstrap do App Router. Segundo a documentacao oficial atualizada em 16 de marco de 2026, o setup padrao habilita TypeScript, Tailwind, ESLint, App Router, Turbopack e alias `@/*`.
+- A arquitetura e a UX aprovadas convergem para `shadcn/ui` como base tecnica de primitives no frontend, com `Tailwind CSS` como camada de tokens, composicao e personalizacao visual.
 - Next.js exige Node.js 20.9 ou superior no guia oficial atual. Validar a versao local antes de inicializar o frontend.
 - MySQL 8.4 permanece a linha LTS alvo do projeto; a referencia oficial atual cobre a serie 8.4.x.
 
@@ -104,10 +117,14 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
   - `church-erp-web/src/app`
   - `church-erp-web/src/components`
   - `church-erp-web/src/components/ui`
+  - `church-erp-web/src/components/design-system`
+  - `church-erp-web/src/components/operational`
   - `church-erp-web/src/features`
+  - `church-erp-web/src/design-system`
   - `church-erp-web/src/lib/api`
   - `church-erp-web/src/lib/env`
   - `church-erp-web/src/hooks`
+  - `church-erp-web/src/styles`
   - `church-erp-web/src/types`
   - `church-erp-web/src/middleware.ts`
 
@@ -133,6 +150,8 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 - Nao introduzir autenticacao funcional completa nesta story; apenas preparar a estrutura para o BFF e para a story 1.3.
 - Nao introduzir modelos de dominio completos ainda. Criar apenas o esqueleto necessario para o crescimento correto.
 - Manter linguagem e documentacao do projeto claras e operacionais, evitando jargao corporativo.
+- Nao tratar `shadcn/ui` como linguagem visual pronta; toda tela operacional deve passar por temas, tokens e regras de composicao do produto.
+- Nao acoplar estilos diretamente por pagina quando o padrao puder ser promovido para design system compartilhado.
 
 ### Inteligencia de historico do repositorio
 
@@ -144,8 +163,9 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 
 - O workspace atual contem artefatos BMAD e documentos de planejamento, mas ainda nao contem implementacao do produto.
 - A primeira entrega de codigo deve respeitar a estrutura alvo definida em `_bmad-output/planning-artifacts/architecture.md`, em vez de improvisar uma estrutura mais simples.
-- Nenhum `project-context.md` foi encontrado no repositorio durante a criacao desta story. Usar os artefatos de planejamento como fonte primaria de contexto.
+- Durante a criacao original desta story, nenhum `project-context.md` existia. Apos a geracao de `_bmad-output/project-context.md` em 2026-04-22, qualquer leitura futura da Story 1.1 deve usar esse arquivo como fonte obrigatoria de guardrails de implementacao, junto com PRD, arquitetura, UX e sprint status.
 - Como esta e a primeira story do epic, nao ha story anterior para reaproveitar learnings de implementacao.
+- Depois da consolidacao do UX, esta story precisa ser lida como a fundacao do frontend orientada a design system: a shell inicial, os estilos globais e a tipografia ja apontam para tokens semanticos, identidade visual propria e evolucao para `src/components/ui`, `src/components/design-system` e `src/components/operational`.
 
 ### References
 
@@ -153,6 +173,7 @@ so that as proximas stories sejam implementadas sobre a arquitetura aprovada e s
 - `_bmad-output/planning-artifacts/architecture.md` - Selected Starter, Core Architectural Decisions, Implementation Patterns, Project Structure, ADR Authentication via Next.js BFF.
 - `_bmad-output/planning-artifacts/prd.md` - secoes 8.1, 11 FR-1 e 12 NFR-5/NFR-7.
 - `_bmad-output/planning-artifacts/ux-design-specification.md` - principios "Valor Imediato Antes de Configuracao", "Homes por Perfil, Nao Labirintos de Modulos" e diretrizes de clareza.
+- `_bmad-output/project-context.md` - regras duraveis para agentes sobre stack, fronteiras Laravel/Next.js, contratos `snake_case`, BFF, tenancy, testes, qualidade e fluxo BMAD.
 - `https://laravel.com/docs/12.x/installation` - referencia oficial atual de instalacao do Laravel 12.
 - `https://nextjs.org/docs/app/getting-started/installation` - referencia oficial atual de bootstrap do Next.js App Router.
 - `https://dev.mysql.com/doc/refman/8.4/en/` - referencia oficial atual do MySQL 8.4.
@@ -174,6 +195,13 @@ GPT-5 Codex
 - `npm run typecheck`
 - `npm run test`
 - `npm run build`
+- `php artisan test --filter=ApiBaselineTest`
+- `env API_BASE_URL=http://localhost:8000 INTERNAL_API_AUDIENCE=church-erp-api INTERNAL_API_ISSUER=church-erp-web npm run build`
+- `npm install class-variance-authority clsx tailwind-merge @radix-ui/react-slot`
+- `npm run test`
+- `npm run typecheck`
+- `npm run lint`
+- `env API_BASE_URL=http://localhost:8000 INTERNAL_API_AUDIENCE=church-erp-api INTERNAL_API_ISSUER=church-erp-web npm run build`
 
 ### Completion Notes List
 
@@ -183,13 +211,78 @@ GPT-5 Codex
 - `church-erp-api` foi inicializada, corrigida para Laravel 12 e exposta com rota `GET /api/v1/health` usando `JsonResource`.
 - O backend recebeu baseline de dominios (`Identity`, `Finance`, `People`, `Operations`, `Communications`), convencoes de `church_id` e documentacao de BFF/tenancy.
 - `church-erp-web` foi inicializada com Next.js App Router, shell operacional inicial, rotas base por area e camada `src/lib/api` para chamadas server-side ao Laravel.
+- A foundation frontend passou a refletir a direcao visual aprovada no UX: `globals.css` centraliza tokens semanticos iniciais de cor e tipografia, `layout.tsx` registra a base tipografica do produto e a interface inicial evita aparencia SaaS generica.
+- A story deve ser entendida como fundacao para evoluir `shadcn/ui` + design system proprio, mesmo antes da expansao completa das pastas `src/components/ui`, `src/components/design-system`, `src/components/operational`, `src/design-system` e `src/styles`.
 - Foram adicionados `.env.example`, READMEs operacionais, smoke test de estrutura web e workflows separados em `.github/workflows/api-ci.yml` e `.github/workflows/web-ci.yml`.
 - Validacoes executadas com sucesso: `php artisan test`, `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`.
 - `next build` reportou aviso deprecando a convencao `middleware`, mas a story exige `src/middleware.ts`; o baseline foi mantido para aderencia ao artefato de planejamento.
+- Ajuste de reabertura concluido: a fundacao visual/design system agora materializa as pastas obrigatorias `src/components/ui`, `src/components/design-system`, `src/components/operational`, `src/design-system` e `src/styles` com artefatos minimos reutilizaveis.
+- `AppShellCard` passou a delegar para o componente operacional `AreaCard`, que usa o wrapper compartilhado `Surface`, reduzindo acoplamento visual direto na shell inicial.
+- O CI web recebeu variaveis BFF minimas no passo de build para evitar falha de coleta de dados em route handlers server-side.
+- Validacoes da Story 1.1 executadas com sucesso apos o ajuste: `php artisan test --filter=ApiBaselineTest`, `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build` com variaveis BFF.
+- Regressao PHP completa foi executada, mas permanece bloqueada por testes adicionados na Story 1.2 (`InitialChurchSetupTest`) porque o PHP local nao possui `pdo_sqlite`; os testes de baseline da Story 1.1 passam.
+- Resolvido review finding [Medium]: fundacao `shadcn/ui` materializada com `components.json`, aliases, `cn()` e dependencias auxiliares padrao.
+- Resolvido review finding [Medium]: smoke test da Story 1.1 desacoplado de `/onboarding`, route handler de onboarding e `features/auth`.
+- Resolvido review finding [Low]: primitive `Button` refeito com `React.forwardRef`, `Slot`, `class-variance-authority`, variantes e composicao de classes.
+- `src/lib/api/client.ts` recebeu import `server-only` para tornar explicito que chamadas autenticadas ao Laravel ficam no BFF.
+- Validacoes finais da correcao de review: `npm run test`, `npm run typecheck`, `npm run lint`, `npm run build` com variaveis BFF e rede liberada para Google Fonts, e `php artisan test --filter=ApiBaselineTest` passaram.
+- Regressao PHP completa permanece bloqueada por testes da Story 1.2 (`InitialChurchSetupTest`) por ausencia local de `pdo_sqlite`; a falha nao pertence ao escopo da Story 1.1.
+- Alinhamento pos-`project-context.md` concluido em 2026-04-22: a story agora referencia `_bmad-output/project-context.md` como guardrail obrigatorio para futuras leituras e nao precisou ser reaberta, pois os ajustes exigidos foram documentais e a implementacao aprovada continua consistente com as regras duraveis recem-geradas.
+
+### Change Log
+
+- 2026-04-21: Materializada a fundacao frontend/design system e movida a Story 1.1 para review.
+- 2026-04-21: Code review solicitou ajustes e retornou a Story 1.1 para in-progress.
+- 2026-04-21: Resolvidos os 3 follow-ups de code review da Story 1.1 e movida novamente para review.
+- 2026-04-22: Code review final aprovou a Story 1.1 e marcou como done.
+- 2026-04-22: Revisada contra `_bmad-output/project-context.md` recem-criado; mantida como done por nao haver mudanca de escopo ou implementacao obrigatoria.
+
+## Senior Developer Review (AI)
+
+### Review Date
+
+2026-04-21
+
+### Reviewer
+
+Wesley Silva / GPT-5 Codex
+
+### Outcome
+
+Changes Requested
+
+### Summary
+
+A fundacao Laravel/Next, dominios backend, BFF client, rotas base, tokens iniciais, CI separado e gates direcionados da Story 1.1 estao majoritariamente implementados. A story nao foi aprovada como `done` porque ha uma divergencia material entre a claim de fundacao `shadcn/ui` e o codigo real, alem de acoplamento indevido do smoke test da fundacao a arquivos introduzidos pela Story 1.2.
+
+### Acceptance Criteria Validation
+
+- AC1: Parcial. `church-erp-api` e `church-erp-web` existem com Laravel 12, Next.js App Router, TypeScript, Tailwind, ESLint e estrutura base. Pendente: a parte "shadcn/ui como base tecnica de primitives" nao esta demonstrada por artefatos reais de shadcn.
+- AC2: Implementado para backend/BFF baseline. MySQL 8.4 esta configurado em `.env.example`, a organizacao por dominio existe, `church_id` esta documentado como guardrail e `src/lib/api/client.ts` prepara o BFF.
+
+### Findings
+
+- Medium: A fundacao `shadcn/ui` esta marcada como feita, mas nao ha evidencia de inicializacao real: nenhum `components.json`, nenhuma configuracao/utility padrao, nem dependencias auxiliares comuns. O `Button` atual e custom minimalista. Referencias: `church-erp-web/package.json:13`, `church-erp-web/src/components/ui/button.tsx:7`.
+- Medium: O smoke test de baseline da Story 1.1 agora depende de arquivos da Story 1.2 (`/onboarding`, route handler e `features/auth`). Isso cria dependencia reversa entre historias e impede validar a fundacao isoladamente. Referencia: `church-erp-web/tests/bff-smoke.test.mjs:14`.
+- Low: O primitive `Button` ainda nao oferece uma base robusta para evolucao do design system (`forwardRef`, composicao de classes e variantes). Isso nao bloqueia o bootstrap, mas deve ser corrigido junto da decisao sobre shadcn. Referencia: `church-erp-web/src/components/ui/button.tsx:7`.
+
+### Validation Performed
+
+- `php artisan test --filter=ApiBaselineTest`: passou, 2 testes / 28 assertions.
+- `npm run lint`: passou.
+- `npm run typecheck`: passou.
+- `npm run test`: passou.
+- `env API_BASE_URL=http://localhost:8000 INTERNAL_API_AUDIENCE=church-erp-api INTERNAL_API_ISSUER=church-erp-web npm run build`: passou com rede liberada para Google Fonts.
+- `php artisan test`: falha por testes da Story 1.2 (`InitialChurchSetupTest`) antes de assertions, devido a ausencia local de `pdo_sqlite`; nao e falha especifica da Story 1.1.
+
+### Decision
+
+Retornar para Dev Story. Nao marcar como `done` ate os follow-ups Medium serem resolvidos.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-1-inicializar-a-fundacao-do-projeto-com-backend-e-frontend-desacoplados.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `.github/workflows/api-ci.yml`
 - `.github/workflows/web-ci.yml`
 - `church-erp-api/.env.example`
@@ -227,6 +320,7 @@ GPT-5 Codex
 - `church-erp-api/tests/Feature/Architecture/ApiBaselineTest.php`
 - `church-erp-web/.env.example`
 - `church-erp-web/README.md`
+- `church-erp-web/components.json`
 - `church-erp-web/package.json`
 - `church-erp-web/package-lock.json`
 - `church-erp-web/src/app/layout.tsx`
@@ -238,10 +332,58 @@ GPT-5 Codex
 - `church-erp-web/src/app/leadership/page.tsx`
 - `church-erp-web/src/app/communications/page.tsx`
 - `church-erp-web/src/components/app-shell-card.tsx`
+- `church-erp-web/src/components/ui/button.tsx`
+- `church-erp-web/src/components/design-system/surface.tsx`
+- `church-erp-web/src/components/operational/area-card.tsx`
+- `church-erp-web/src/design-system/tokens.ts`
+- `church-erp-web/src/styles/README.md`
 - `church-erp-web/src/features/app-shell/navigation.ts`
 - `church-erp-web/src/hooks/use-session-context.ts`
 - `church-erp-web/src/lib/api/client.ts`
 - `church-erp-web/src/lib/env/server.ts`
+- `church-erp-web/src/lib/utils.ts`
 - `church-erp-web/src/middleware.ts`
 - `church-erp-web/src/types/navigation.ts`
 - `church-erp-web/tests/bff-smoke.test.mjs`
+
+## Senior Developer Review (AI) - Final
+
+### Review Date
+
+2026-04-22
+
+### Reviewer
+
+Wesley Silva / GPT-5 Codex
+
+### Outcome
+
+Approved
+
+### Summary
+
+A Story 1.1 atende os acceptance criteria: backend Laravel 12 e frontend Next.js App Router existem como apps desacopladas; a estrutura base de dominios, rotas, requests, policies, CI e documentacao foi criada; o backend esta preparado para MySQL 8.4 e convencoes de `church_id`; o frontend esta preparado como BFF server-side e a fundacao `shadcn/ui` foi materializada com `components.json`, `cn()` e primitive `Button` baseada em `forwardRef`, `Slot` e variantes.
+
+### Findings
+
+- Low: `components.json` declara `iconLibrary` como `lucide`, mas `lucide-react` ainda nao esta instalado. Nao bloqueia a Story 1.1 porque nenhum icone e usado, mas deve ser alinhado quando o primeiro componente com icone for adicionado. Referencia: `church-erp-web/components.json:20`.
+- Low: `Surface` ainda compoe `className` por interpolacao manual, apesar de `cn()` ja existir. Nao quebra comportamento atual, mas reduz a capacidade futura de resolver conflitos Tailwind de forma consistente. Referencia: `church-erp-web/src/components/design-system/surface.tsx:10`.
+- Low: `productTokens.radii.control` aponta para pill radius (`9999px`), enquanto o `Button` base usa `rounded-md`. Nao bloqueia o bootstrap, mas e uma pequena divergencia de token/primitive a resolver quando o design system amadurecer. Referencias: `church-erp-web/src/design-system/tokens.ts:11`, `church-erp-web/src/components/ui/button.tsx:8`.
+
+### Acceptance Criteria Validation
+
+- AC1: Implementado. `church-erp-api` esta em Laravel 12, `church-erp-web` esta em Next.js App Router com TypeScript, Tailwind, ESLint, `src/`, CI separado, estrutura de pastas base e fundacao `shadcn/ui`.
+- AC2: Implementado. `.env.example` do backend usa MySQL, a estrutura por dominio existe, `church_id` esta documentado como guardrail, a API usa `JsonResource`, e o frontend concentra chamadas ao Laravel em camada server-side de BFF.
+
+### Validation Performed
+
+- `npm run test`: passou.
+- `npm run typecheck`: passou.
+- `npm run lint`: passou.
+- `env API_BASE_URL=http://localhost:8000 INTERNAL_API_AUDIENCE=church-erp-api INTERNAL_API_ISSUER=church-erp-web npm run build`: passou com rede liberada para Google Fonts.
+- `php artisan test --filter=ApiBaselineTest`: passou, 2 testes / 28 assertions.
+- `php artisan test`: falha somente nos testes da Story 1.2 (`InitialChurchSetupTest`) por ausencia local de `pdo_sqlite`; nao e falha especifica da Story 1.1.
+
+### Decision
+
+Marcar Story 1.1 como `done`. Os achados restantes sao baixos e nao exigem retorno para Dev Story.

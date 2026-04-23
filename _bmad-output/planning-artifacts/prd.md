@@ -16,7 +16,7 @@ language: portuguese
 
 ## 1. Resumo Executivo
 
-Este produto é um SaaS de ERP eclesiástico desenhado para maximizar adoção e retenção desde as primeiras semanas de uso. O MVP vai priorizar valor operacional imediato para tesoureiros e secretarias, permitindo lançamento financeiro rápido, relatórios instantâneos, manutenção de registos de pessoas e gestão semanal de pendências por perfil. O produto deve parecer confiável, leve e pastoralmente adequado, e não corporativo ou controlador.
+Este produto é um SaaS de ERP eclesiástico desenhado para maximizar adoção e retenção desde as primeiras semanas de uso. O MVP vai priorizar valor operacional imediato para tesoureiros e secretarias, permitindo lançamento financeiro rápido, resumos de fechamento imediatos, manutenção de registos de pessoas e gestão semanal de pendências por perfil. O produto deve parecer confiável, leve e pastoralmente adequado, e não corporativo ou controlador.
 
 ## 2. Problema
 
@@ -28,7 +28,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 - Melhorar a consistência da rotina administrativa semanal
 - Reduzir retrabalho manual em finanças e operação de pessoas
 - Construir confiança por meio de clareza, reversibilidade e auditabilidade
-- Criar uso recorrente através de pendências e ciclos de relatório
+- Criar uso recorrente através de pendências e ciclos de resumo operacional
 
 ## 4. Não Objetivos
 
@@ -47,7 +47,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### Usuário Secundário
 
-- Líder da igreja que precisa de visibilidade simples e relatórios
+- Líder da igreja que precisa de visibilidade simples e resumos claros
 
 ## 6. Jobs to Be Done
 
@@ -99,9 +99,9 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### 8.4 Operação Semanal
 
-- Home do tesoureiro com ações diretas e pendências
-- Home da secretaria com filas de pendência por domínio e checklist operacional semanal
-- Visão resumida para liderança com estado financeiro e operacional sem sobrecarga
+- Home da tesouraria com blocos operacionais, ações diretas e pendências
+- Home da secretaria com blocos operacionais, pendências por domínio e checklist operacional semanal
+- Home da liderança com leitura resumida do estado financeiro e operacional sem sobrecarga
 - Navegação direta do cartão de pendência para o fluxo de ação
 
 ### 8.5 Comunicações
@@ -125,7 +125,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### Jornada A: Fechamento Semanal do Tesoureiro
 
-1. O usuário abre a Home do Tesoureiro
+1. O usuário abre a Home da Tesouraria
 2. Registra ofertas e despesas
 3. Revê exceções sinalizadas, se necessário
 4. Gera o resumo de fechamento
@@ -141,7 +141,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### Jornada C: Visibilidade para a Liderança
 
-1. O usuário acede à visão resumida
+1. O usuário acede à Home da Liderança
 2. Revê o estado financeiro e operacional atual
 3. Sai com clareza, sem sobrecarga de informação
 
@@ -171,8 +171,8 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### FR-4 Resumo de Fechamento
 
-- O sistema deve gerar um relatório simples de fechamento imediatamente após a operação.
-- O relatório deve mostrar receitas, despesas, resultado líquido e segmentação por centro de custo e categoria/subtipo.
+- O sistema deve gerar um resumo simples de fechamento imediatamente após a operação.
+- O resumo deve mostrar receitas, despesas, resultado líquido e segmentação por centro de custo e categoria/subtipo.
 - O sistema deve permitir exportar ou partilhar o resumo de fechamento com a liderança.
 
 ### FR-5 Registos de Membros e Visitantes
@@ -183,8 +183,8 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### FR-6 Homes Operacionais por Perfil
 
-- O sistema deve fornecer visões iniciais específicas para tesoureiro, secretaria e liderança.
-- As homes devem expor ações diretas e pendências relevantes.
+- O sistema deve fornecer homes por perfil específicas para tesoureiro, secretaria e liderança.
+- As homes devem expor blocos operacionais, ações diretas e pendências relevantes.
 - O sistema deve expor pendências operacionais por perfil e por domínio de trabalho.
 - O sistema deve permitir navegação direta do cartão de pendência para a fila ou fluxo de resolução correspondente.
 
@@ -238,7 +238,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ## 13. Métricas de Sucesso
 
-- Tempo até primeiro valor: a igreja conclui o primeiro lançamento e o primeiro resumo no mesmo dia
+- Tempo até primeiro valor: a igreja conclui o primeiro lançamento e o primeiro resumo de fechamento no mesmo dia
 - Uso ativo semanal entre usuários operacionais
 - Percentual de lançamentos concluídos sem suporte
 - Percentual de pendências semanais resolvidas dentro do produto
@@ -274,6 +274,6 @@ Mitigação: suportar preparação de comunicação e handoff por copiar/partilh
 ## 16. Próximos Artefactos Recomendados
 
 - Arquitetura de informação detalhada
-- Wireframes por ecrã para Home do Tesoureiro e Home da Secretaria
+- Wireframes por ecrã para Home da Tesouraria, Home da Secretaria e Home da Liderança
 - Modelo de dados do MVP para finanças, pessoas e pendências
 - Quebra em stories para planeamento de implementação

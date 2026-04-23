@@ -24,7 +24,7 @@ Igrejas pequenas e médias frequentemente dependem de planilhas, WhatsApp, memó
 Entregar uma primeira versão que ajude a igreja a concluir suas tarefas semanais mais frequentes em um só lugar:
 
 - registrar entradas e saídas financeiras rapidamente
-- gerar um relatório simples de fechamento imediatamente
+- gerar um resumo simples de fechamento imediatamente
 - manter uma base útil de membros e visitantes
 - agir sobre pendências semanais por perfil
 - preparar comunicações sem substituir os canais já usados
@@ -59,7 +59,7 @@ Entregar uma primeira versão que ajude a igreja a concluir suas tarefas semanai
 - Edição de lançamentos com trilha de auditoria e motivo da alteração
 - Indicadores simples de revisão para itens incomuns ou incompletos
 
-### 3. Relatório Financeiro Imediato
+### 3. Resumo Financeiro Imediato
 
 - Resumo de fechamento com um clique
 - Totais de receitas, despesas e resultado do período
@@ -73,10 +73,11 @@ Entregar uma primeira versão que ajude a igreja a concluir suas tarefas semanai
 - Status e informações essenciais de contacto
 - Busca e atualização desenhadas para uso semanal com baixa fricção
 
-### 5. Dashboard Operacional por Perfil
+### 5. Homes Operacionais por Perfil
 
-- Home do tesoureiro com ações rápidas e pendências
-- Home da secretaria com pendências de membros, visitantes, comunicações e documentos
+- Home da tesouraria com blocos operacionais, ações rápidas e pendências
+- Home da secretaria com blocos operacionais, pendências de membros, visitantes, comunicações e documentos
+- Home da liderança com leitura resumida do estado financeiro e operacional
 - Navegação direta da pendência para a fila de resolução
 
 ### 6. Camada de Preparação de Comunicação
@@ -94,7 +95,7 @@ Entregar uma primeira versão que ajude a igreja a concluir suas tarefas semanai
 - Registos pastorais profundos
 - Gestão complexa de inscrições para grandes conferências
 - Automação nativa de WhatsApp ou integrações profundas de mensageria
-- Analytics avançados, scoring, rankings ou dashboards de performance
+- Analytics avançados, scoring, rankings ou painéis de performance
 - Arquitetura offline-first para além de responsividade móvel básica
 
 ## Fluxo Hero do MVP
@@ -109,7 +110,7 @@ Este é o principal ciclo de prova de valor do MVP.
 
 ## Loops de Retenção
 
-- Dashboard semanal de pendências incentiva retorno frequente
+- Homes por perfil e blocos semanais de pendências incentivam retorno frequente
 - Base de membros e visitantes reduz retrabalho manual
 - Registos financeiros tornam-se a fonte confiável para prestação de contas
 - Modelos reduzem esforço de comunicação ao longo do tempo
@@ -124,11 +125,11 @@ Este é o principal ciclo de prova de valor do MVP.
 
 ## Critérios de Sucesso do MVP
 
-- A igreja consegue concluir a configuração financeira inicial e o primeiro relatório no mesmo dia
+- A igreja consegue concluir a configuração financeira inicial e o primeiro resumo de fechamento no mesmo dia
 - Um tesoureiro consegue executar o fluxo hero em minutos, não em horas
 - Uma secretaria consegue manter membros e visitantes sem fadiga operacional
 - Os usuários sentem que o sistema ajuda a organizar, e não a vigiar
-- O retorno semanal passa a acontecer em torno de pendências e relatórios
+- O retorno semanal passa a acontecer em torno de pendências e resumos operacionais
 
 ## Candidatos para Fase 2
 

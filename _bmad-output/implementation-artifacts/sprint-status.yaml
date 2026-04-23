@@ -41,8 +41,8 @@ story_location: /home/oem/Workspace/bmad-church-erp/_bmad-output/implementation-
 
 development_status:
   epic-1: in-progress
-  1-1-inicializar-a-fundacao-do-projeto-com-backend-e-frontend-desacoplados: review
-  1-2-criar-igreja-e-conta-administradora-inicial: backlog
+  1-1-inicializar-a-fundacao-do-projeto-com-backend-e-frontend-desacoplados: done
+  1-2-criar-igreja-e-conta-administradora-inicial: in-progress
   1-3-autenticar-usuario-via-bff-e-aplicar-contexto-da-igreja: backlog
   1-4-controlar-permissao-basica-por-perfil-e-tenant: backlog
   1-5-configurar-categorias-minimas-iniciais: backlog

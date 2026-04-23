@@ -1,3 +1,5 @@
+import "server-only";
+
 import { serverEnv } from "@/lib/env/server";
 
 export type BffSessionContext = {

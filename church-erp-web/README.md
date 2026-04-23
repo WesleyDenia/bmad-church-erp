@@ -39,3 +39,11 @@ Frontend Next.js desacoplado, preparado para atuar como BFF do projeto.
 3. Execute `npm install`.
 4. Execute `npm run dev`.
 5. Rode `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`.
+
+## Onboarding inicial
+
+- Pagina: `GET /onboarding`
+- BFF route handler: `POST /api/onboarding/initial-setup`
+- Backend chamado pelo BFF: `POST /api/v1/onboarding/initial-setup`
+
+O browser envia o formulario apenas ao `church-erp-web`; o route handler encaminha o payload `snake_case` ao Laravel usando `src/lib/api/client.ts`.

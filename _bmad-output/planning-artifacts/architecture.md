@@ -4,6 +4,7 @@ inputDocuments:
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/prd.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/ux-design-specification.md
   - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/mvp-scope.md
+  - /home/oem/Workspace/bmad-church-erp/_bmad-output/planning-artifacts/sprint-change-proposal-2026-04-20.md
 workflowType: 'architecture'
 lastStep: 8
 status: 'complete'
@@ -59,13 +60,13 @@ O projeto apresenta complexidade média. Não há sinais de real-time intenso, m
 - Identity & Access
 - Finance
 - People
-- Operational Inbox / Pending Work
+- Operations
 - Communications Support
 
 ### Architectural Notes from Context
 
 - Auditabilidade deve ser parte do modelo de domínio financeiro, não apenas logging técnico
-- O dashboard de pendências deve ser tratado como capability central de retenção, não só como camada visual
+- As homes por perfil e seus blocos operacionais de pendências devem ser tratados como capability central de orientação e retenção, não só como camada visual
 - Toda decisão técnica que aumente controlo deve também aumentar clareza e segurança percebida pelo utilizador
 
 ### Early Architectural Decision Signals
@@ -125,16 +126,16 @@ npx create-next-app@latest church-erp-web --ts --tailwind --eslint --app --src-d
 Laravel 12 como base oficial da API, com estrutura madura para rotas, middleware, validação, policies, jobs, migrations e organização por domínio.
 
 **Frontend Foundation:**
-Next.js App Router com TypeScript, Tailwind CSS, `shadcn/ui`, ESLint e estrutura moderna para interfaces web responsivas.
+Next.js App Router com TypeScript, Tailwind CSS, `shadcn/ui`, ESLint e estrutura moderna para interfaces web responsivas. O `shadcn/ui` será tratado como infraestrutura de primitives e acessibilidade, enquanto o design system visual do produto será definido por temas e tokens próprios.
 
 **Database Direction:**
 O backend Laravel será configurado para MySQL como banco transacional do sistema, alinhado à preferência técnica explicitada para o projeto.
 
 **Code Organization:**
-Separação explícita entre aplicação cliente e aplicação servidora, permitindo fronteiras claras entre UI, API, domínio, autenticação e persistência.
+Separação explícita entre aplicação cliente e aplicação servidora, permitindo fronteiras claras entre UI, API, domínio, autenticação e persistência. No frontend, essa separação também distingue primitives base em `src/components/ui`, design system compartilhado e componentes operacionais compostos por domínio/perfil.
 
 **Development Experience:**
-Excelente DX em ambos os lados: convenções fortes no Laravel para backend administrativo e convenções atuais do ecossistema Next.js para frontend.
+Excelente DX em ambos os lados: convenções fortes no Laravel para backend administrativo e convenções atuais do ecossistema Next.js para frontend. A adoção de `shadcn/ui` reduz custo de fundação sem abrir mão de identidade própria, porque a camada visual final ficará nos tokens, temas e componentes operacionais do produto.
 
 **Trade-off Accepted:**
 A arquitetura desacoplada introduz coordenação extra entre frontend e backend, mas isso é aceitável porque melhora clareza de responsabilidades e evita comprometer a preferência tecnológica principal do projeto.
@@ -148,6 +149,8 @@ A arquitetura desacoplada introduz coordenação extra entre frontend e backend,
 **Critical Decisions (Block Implementation):**
 - Backend desacoplado em Laravel 12 API
 - Frontend desacoplado em Next.js App Router
+- `shadcn/ui` como base técnica de componentes do frontend
+- Design system próprio baseado em `Tailwind CSS` + temas + tokens do produto
 - Banco transacional em MySQL 8.4 LTS
 - Multi-tenancy lógico por `church_id`
 - Migrations e seeders nativos do Laravel
@@ -155,6 +158,8 @@ A arquitetura desacoplada introduz coordenação extra entre frontend e backend,
 
 **Important Decisions (Shape Architecture):**
 - Validação complementar no frontend para UX, sem substituir regras do backend
+- Home por perfil e blocos operacionais como eixo estrutural da UI
+- Componentes operacionais compostos sobre primitives base, sem alterar o MVP funcional
 - Estratégia de cache inicialmente não crítica ao funcionamento do MVP
 - Possibilidade de introduzir Redis depois, sem acoplá-lo como pré-requisito inicial
 
@@ -209,16 +214,20 @@ A arquitetura deve permitir introduzir Redis posteriormente para cache e rate li
 
 **Implementation Sequence:**
 1. Inicializar backend Laravel e frontend Next.js
-2. Configurar conexão MySQL 8.4 no backend
-3. Definir schema inicial com migrations por domínio
-4. Introduzir `church_id` como eixo de isolamento lógico
-5. Implementar seeders para dados mínimos do MVP
-6. Padronizar validação de requests e regras de domínio no backend
-7. Manter frontend desacoplado consumindo contratos da API
+2. Inicializar `shadcn/ui` no frontend e estabelecer a estrutura base de design system
+3. Definir temas e tokens iniciais de cor, tipografia, espaçamento, raio, sombra e estados semânticos
+4. Configurar conexão MySQL 8.4 no backend
+5. Definir schema inicial com migrations por domínio
+6. Introduzir `church_id` como eixo de isolamento lógico
+7. Implementar seeders para dados mínimos do MVP
+8. Padronizar validação de requests e regras de domínio no backend
+9. Implementar componentes operacionais compostos sobre primitives base sem expandir escopo funcional
+10. Manter frontend desacoplado consumindo contratos da API
 
 **Cross-Component Dependencies:**
 - A decisão de tenancy por `church_id` impacta autenticação, autorização, consultas, policies e auditoria.
 - A escolha de Laravel como fonte principal de validação impacta o desenho dos contratos da API e o tratamento de erros no frontend.
+- A decisão de `shadcn/ui` + tokens próprios impacta naming de componentes, organização de código e consistência entre UX, frontend e stories.
 - A ausência de cache crítico no MVP simplifica deploy inicial, mas exige consultas e índices bem pensados no schema principal.
 
 ## Implementation Patterns & Consistency Rules
@@ -226,9 +235,11 @@ A arquitetura deve permitir introduzir Redis posteriormente para cache e rate li
 ### Pattern Categories Defined
 
 **Critical Conflict Points Identified:**
-5 áreas críticas onde agentes diferentes poderiam tomar decisões incompatíveis:
+7 áreas críticas onde agentes diferentes poderiam tomar decisões incompatíveis:
 - convenções de nomenclatura
 - organização estrutural
+- fundação do design system
+- composição entre primitives e componentes operacionais
 - formatos de API e dados
 - comunicação entre frontend e backend
 - tratamento de erro, loading e validação
@@ -253,12 +264,24 @@ A arquitetura deve permitir introduzir Redis posteriormente para cache e rate li
 - Hooks em `camelCase` com prefixo `use`
 - Utilitários TS em `camelCase`
 
+**Frontend Naming Conventions:**
+- Primitives derivadas de `shadcn/ui` permanecem em `src/components/ui` com naming idiomático da biblioteca: `Button`, `Card`, `Dialog`, `Sheet`
+- Componentes de produto e componentes operacionais usam `PascalCase` orientado ao contexto real da UX: `OperationalHomeShell`, `PendingActionCard`, `ClosingSummaryBlock`, `LeadershipSnapshotPanel`
+- Nomes técnicos devem refletir a nomenclatura operacional aprovada no UX; evitar nomes genéricos como `DashboardCard`, `InfoWidget` ou `GenericPanel`
+- Segmentos de rota continuam estáveis e técnicos (`treasury`, `secretaria`, `leadership`), enquanto labels visíveis ao usuário seguem a linguagem funcional e pastoral definida pela UX
+
+**Theme and Token Naming Conventions:**
+- Tokens globais devem ser semânticos e estáveis, não acoplados a cor crua: `color-surface-primary`, `color-action-primary`, `color-feedback-success`, `space-block-md`, `radius-card`
+- Temas e aliases visuais devem refletir intenção de uso e não aparência isolada
+- Não introduzir tokens por tela específica quando o padrão puder ser promovido ao design system
+
 ### Structure Patterns
 
 **Project Organization:**
 - Backend organizado por domínio de negócio
 - Cada domínio do backend terá subestrutura técnica interna
 - Frontend organizado por áreas funcionais e rotas do App Router
+- Frontend com três camadas explícitas: primitives base, design system compartilhado e componentes operacionais do produto
 - Testes do backend em `tests/Feature` e `tests/Unit`
 
 **Backend Domain Structure Pattern:**
@@ -289,10 +312,18 @@ Regras:
   - `app/Policies` para autorização
 - Frontend:
   - `src/app` para rotas
-  - `src/components` para componentes reutilizáveis
-  - `src/components/ui` como base oficial dos componentes `shadcn/ui`
+  - `src/components/ui` para primitives base e componentes diretamente derivados de `shadcn/ui`
+  - `src/components/design-system` para tokens, temas, variantes visuais e wrappers compartilhados
+  - `src/components/operational` para blocos compostos da experiência operacional
+  - `src/components` para composição compartilhada não específica de domínio
   - `src/features` para lógica por domínio
   - `src/lib` para clients, helpers e utilidades de infraestrutura
+
+**Operational Component Composition Pattern:**
+- Primitives de `src/components/ui` não carregam contexto de domínio
+- Componentes de `src/components/design-system` aplicam tokens, variantes, densidade e identidade visual do produto
+- Componentes de `src/components/operational` compõem primitives e blocos visuais em objetos acionáveis da UX, como pendências, resumos e painéis por perfil
+- Features consomem componentes operacionais e coordenam dados da API sem mover regra crítica de domínio para o frontend
 
 ### Format Patterns
 
@@ -319,6 +350,7 @@ Regras:
 - Frontend prioriza estado local e por feature
 - Evitar global state excessivo no MVP
 - Estado de servidor tratado por camada de client/API bem definida
+- Estado visual de blocos operacionais deve permanecer próximo da feature e não em stores globais genéricas
 
 ### Frontend UI System Pattern
 
@@ -351,6 +383,7 @@ Regras:
 - Cada tela principal define loading inicial explícito
 - Ações críticas usam estados distintos de submissão
 - Estados vazios, loading e erro devem existir nas homes e listagens principais
+- Homes por perfil devem preservar hierarquia de blocos, prioridade e próxima ação mesmo durante loading e empty state
 
 ### Enforcement Guidelines
 
@@ -360,6 +393,9 @@ Regras:
 - usar `JsonResource` / `ResourceCollection` para respostas de sucesso da API Laravel
 - tratar o backend Laravel como fonte principal de verdade para validação e autorização
 - seguir organização por domínio com subestrutura técnica interna consistente
+- usar `shadcn/ui` como base técnica de primitives, nunca como linguagem visual final do produto
+- aplicar tokens e temas compartilhados antes de criar variantes visuais ad hoc
+- nomear componentes de frontend pela função operacional real aprovada no UX
 
 ### Pattern Examples
 
@@ -374,6 +410,8 @@ Regras:
 - respostas HTTP com formatos diferentes em módulos diferentes
 - queries sem escopo de tenant
 - mistura de convenções de naming no mesmo contrato
+- uso direto de componentes `shadcn/ui` em telas operacionais sem passar pelos tokens e padrões visuais do produto
+- componentes genéricos de dashboard que não expressem prioridade, contexto e próxima ação
 
 ## Project Structure & Boundaries
 
@@ -460,20 +498,28 @@ church-erp/
 │       │   └── page.tsx
 │       ├── components/
 │       │   ├── ui/
+│       │   ├── design-system/
+│       │   ├── operational/
 │       │   ├── forms/
 │       │   ├── layout/
 │       │   └── feedback/
+│       ├── design-system/
+│       │   ├── themes/
+│       │   ├── tokens/
+│       │   └── recipes/
 │       ├── features/
 │       │   ├── auth/
 │       │   ├── finance/
 │       │   ├── people/
 │       │   ├── operations/
+│       │   ├── home/
 │       │   └── communications/
 │       ├── lib/
 │       │   ├── api/
 │       │   ├── env/
 │       │   ├── formatters/
 │       │   └── utils/
+│       ├── styles/
 │       ├── hooks/
 │       ├── types/
 │       └── middleware.ts
@@ -492,6 +538,9 @@ church-erp/
 **Component Boundaries:**
 - `church-erp-web` é responsável por UI, navegação, estado de tela e consumo da API
 - Componentes de UI não devem conter regra de negócio sensível
+- `src/components/ui` concentra primitives acessíveis e reutilizáveis
+- `src/components/design-system` concentra a aplicação consistente de temas, tokens e variantes
+- `src/components/operational` concentra blocos compostos da experiência, especialmente homes por perfil, pendências, resumos e painéis acionáveis
 - Regras críticas de domínio permanecem no backend
 
 **Service Boundaries:**
@@ -509,25 +558,27 @@ church-erp/
 **Feature/Epic Mapping:**
 - Epic 1 Fundacao e Acesso Seguro
   - API: `app/Domain/Identity`
-  - Web: `src/features/auth`, `src/app/(auth)`
+  - Web: `src/features/auth`, `src/app/(auth)`, `src/design-system`, `src/components/ui`
 - Epic 2 Operacao Financeira
   - API: `app/Domain/Finance`
-  - Web: `src/features/finance`, `src/app/treasury`
+  - Web: `src/features/finance`, `src/features/home`, `src/app/treasury`, `src/components/operational`
 - Epic 3 Fechamento e Visibilidade
   - API: `app/Domain/Finance`, `app/Domain/Operations`
-  - Web: `src/app/leadership`, `src/features/finance`
+  - Web: `src/app/leadership`, `src/features/finance`, `src/components/operational`
 - Epic 4 Base de Pessoas e Rotina da Secretaria
   - API: `app/Domain/People`, `app/Domain/Operations`
-  - Web: `src/features/people`, `src/app/secretaria`
+  - Web: `src/features/people`, `src/features/home`, `src/app/secretaria`, `src/components/operational`
 - Epic 5 Comunicacao Operacional
   - API: `app/Domain/Communications`
-  - Web: `src/features/communications`, `src/app/communications`
+  - Web: `src/features/communications`, `src/app/communications`, `src/components/operational`
 
 **Cross-Cutting Concerns:**
 - Auth e policies: `app/Domain/Identity`, `app/Policies`, `src/features/auth`
 - Tenancy: middleware, policies, repositories e queries no backend
 - Feedback e estados de tela: `src/components/feedback`
 - API clients e contratos: `src/lib/api`
+- Temas, tokens e identidade visual: `src/design-system`, `src/components/design-system`, `src/styles`
+- Blocos operacionais compartilhados: `src/components/operational`, `src/features/home`
 
 ### Integration Points
 
@@ -555,7 +606,7 @@ church-erp/
 
 **Source Organization:**
 - Backend por domínio com subestrutura técnica
-- Frontend por rotas + features + componentes compartilhados
+- Frontend por rotas + features + componentes compartilhados + design system explícito
 
 **Test Organization:**
 - Backend: `tests/Feature` e `tests/Unit`
@@ -564,6 +615,7 @@ church-erp/
 
 **Asset Organization:**
 - Assets públicos do frontend em `church-erp-web/public`
+- Tokens, temas e receitas visuais compartilhadas vivem versionados no código-fonte do frontend, não dispersos em páginas isoladas
 - Artefatos internos do backend em `storage`
 
 ### Development Workflow Integration
@@ -588,10 +640,10 @@ church-erp/
 A combinação de Laravel 12 API, MySQL 8.4 LTS e Next.js App Router é coerente com os requisitos do produto e com a preferência técnica declarada. As decisões de tenancy lógica por `church_id`, validação central no backend e frontend desacoplado não entram em conflito e se reforçam mutuamente.
 
 **Pattern Consistency:**
-Os padrões definidos são compatíveis com a stack escolhida. As convenções de naming, organização por domínio com subestrutura técnica, contratos HTTP em `snake_case` e uso de `JsonResource` alinham bem backend e frontend.
+Os padrões definidos são compatíveis com a stack escolhida. As convenções de naming, organização por domínio com subestrutura técnica, contratos HTTP em `snake_case`, uso de `JsonResource` e a distinção entre primitives, design system e componentes operacionais alinham backend, frontend e UX aprovado.
 
 **Structure Alignment:**
-A estrutura proposta suporta os domínios do produto, separa responsabilidades com clareza e respeita as fronteiras entre UI, API, domínio, autorização, persistência e auditoria.
+A estrutura proposta suporta os domínios do produto, separa responsabilidades com clareza e respeita as fronteiras entre UI, API, domínio, autorização, persistência e auditoria. A camada de frontend agora explicita a fundação em `shadcn/ui`, os temas/tokens e a estratégia de blocos operacionais aprovada no UX.
 
 ### Requirements Coverage Validation ✅
 
@@ -611,7 +663,7 @@ A arquitetura responde aos NFRs principais:
 - segurança: backend como fonte de verdade para auth, validação e autorização
 - responsividade: frontend em Next.js com estrutura adequada para interfaces operacionais
 - auditabilidade: domínio financeiro com trilha explícita
-- clareza e consistência: padrões de API, naming e estrutura definidos
+- clareza e consistência: padrões de API, naming, design system e estrutura definidos
 - evolutividade: separação entre frontend e backend favorece crescimento controlado
 
 ### Implementation Readiness Validation ✅
@@ -628,6 +680,8 @@ Os principais pontos de conflito entre agentes foram tratados:
 - resposta da API
 - subestrutura de domínio no backend
 - organização do frontend
+- fundação visual e design system
+- componentes operacionais por perfil
 - padrões de erro e loading
 
 ### Gap Analysis Results
@@ -706,9 +760,11 @@ Os principais pontos de conflito entre agentes foram tratados:
 - manter backend Laravel como fonte principal de validação, auth e autorização
 - usar `JsonResource` / `ResourceCollection` nas respostas de sucesso da API
 - respeitar a estrutura por domínio com subestrutura técnica interna
+- inicializar o frontend com `shadcn/ui` e consolidar a fundação visual via tokens e temas próprios
+- construir homes e fluxos do MVP com componentes operacionais compostos, e não com dashboards genéricos
 
 **First Implementation Priority:**
-Inicializar `church-erp-api` com Laravel e `church-erp-web` com Next.js, configurar comunicação entre as aplicações e preparar a base do domínio de identidade e tenancy.
+Inicializar `church-erp-api` com Laravel e `church-erp-web` com Next.js, configurar comunicação entre as aplicações, preparar a base do domínio de identidade e tenancy e estabelecer a fundação do frontend com `shadcn/ui`, tokens, temas e organização de componentes operacionais.
 
 ## ADR: Authentication via Next.js BFF with Internal JWT Context
 

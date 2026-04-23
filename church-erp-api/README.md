@@ -44,3 +44,22 @@ O isolamento logico do sistema deve existir desde a fundacao via `church_id`.
 ## Endpoint inicial
 
 - `GET /api/v1/health`
+- `POST /api/v1/onboarding/initial-setup`
+
+## Onboarding inicial
+
+O endpoint de onboarding cria a igreja, a usuaria administradora inicial e o vinculo `church_user` em uma transacao.
+
+Payload minimo:
+
+```json
+{
+  "church_name": "Igreja Central",
+  "admin_name": "Maria Silva",
+  "admin_email": "maria@example.com",
+  "password": "secret-password",
+  "password_confirmation": "secret-password"
+}
+```
+
+Em caso de validacao, a API retorna `422` com `message` simples e erros por campo.
