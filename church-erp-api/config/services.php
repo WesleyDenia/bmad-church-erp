@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'internal_jwt' => [
+        'public_key' => env('INTERNAL_JWT_PUBLIC_KEY'),
+        'issuer' => env('INTERNAL_API_ISSUER', 'church-erp-web'),
+        'audience' => env('INTERNAL_API_AUDIENCE', 'church-erp-api'),
+    ],
+
 ];
