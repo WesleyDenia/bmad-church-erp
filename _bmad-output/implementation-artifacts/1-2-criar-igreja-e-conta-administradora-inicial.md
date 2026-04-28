@@ -1,6 +1,6 @@
 # Story 1.2: Criar igreja e conta administradora inicial
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -17,43 +17,43 @@ so that eu possa iniciar o uso do sistema sem depender de configuracao externa.
 
 ## Tasks / Subtasks
 
-- [ ] Modelar a fundacao de onboarding e tenancy inicial no backend (AC: 1)
-  - [ ] Criar migration para `churches` com dados minimos da igreja necessarios para o onboarding inicial.
-  - [ ] Criar migration para `church_user` como vinculo usuario x igreja x papel, com `church_id`, `user_id`, `role`, `status` e timestamps.
-  - [ ] Ajustar o modelo `User` e criar os modelos de dominio necessarios em `app/Domain/Identity/Models` para refletir a relacao com tenant.
-  - [ ] Garantir foreign keys e indices coerentes com MySQL 8.4 e com a regra fundacional de isolamento por `church_id`.
+- [x] Modelar a fundacao de onboarding e tenancy inicial no backend (AC: 1)
+  - [x] Criar migration para `churches` com dados minimos da igreja necessarios para o onboarding inicial.
+  - [x] Criar migration para `church_user` como vinculo usuario x igreja x papel, com `church_id`, `user_id`, `role`, `status` e timestamps.
+  - [x] Ajustar o modelo `User` e criar os modelos de dominio necessarios em `app/Domain/Identity/Models` para refletir a relacao com tenant.
+  - [x] Garantir foreign keys e indices coerentes com MySQL 8.4 e com a regra fundacional de isolamento por `church_id`.
 
-- [ ] Implementar o caso de uso transacional de criacao da igreja com conta inicial (AC: 1, 2)
-  - [ ] Criar request object para validar payload minimo do onboarding em `app/Http/Requests`.
-  - [ ] Criar service em `app/Domain/Identity/Services` que execute a criacao da igreja, da usuaria inicial e do vinculo `church_user` dentro de `DB::transaction(...)`.
-  - [ ] Persistir a senha usando hashing idiomatico do Laravel, sem logar senha nem trafegar segredo de volta na resposta.
-  - [ ] Definir o papel inicial como `administrator` apenas para bootstrap da igreja; nao implementar ainda a matriz completa de permissoes dos perfis operacionais da story 1.4.
-  - [ ] Garantir idempotencia funcional minima para o onboarding, bloqueando duplicacao indevida por email da conta inicial e por contexto basico da igreja.
+- [x] Implementar o caso de uso transacional de criacao da igreja com conta inicial (AC: 1, 2)
+  - [x] Criar request object para validar payload minimo do onboarding em `app/Http/Requests`.
+  - [x] Criar service em `app/Domain/Identity/Services` que execute a criacao da igreja, da usuaria inicial e do vinculo `church_user` dentro de `DB::transaction(...)`.
+  - [x] Persistir a senha usando hashing idiomatico do Laravel, sem logar senha nem trafegar segredo de volta na resposta.
+  - [x] Definir o papel inicial como `administrator` apenas para bootstrap da igreja; nao implementar ainda a matriz completa de permissoes dos perfis operacionais da story 1.4.
+  - [x] Garantir idempotencia funcional minima para o onboarding, bloqueando duplicacao indevida por email da conta inicial e por contexto basico da igreja.
 
-- [ ] Expor o endpoint publico de onboarding no Laravel com contrato consistente (AC: 1, 2)
-  - [ ] Criar controller em `app/Http/Controllers/Api/V1` para receber o onboarding inicial.
-  - [ ] Registrar rota versionada publica dedicada ao onboarding, sem misturar este fluxo com o login da story 1.3.
-  - [ ] Retornar sucesso via `JsonResource` com payload minimo para a confirmacao do frontend.
-  - [ ] Padronizar erros de validacao em linguagem simples e previsivel para o BFF.
+- [x] Expor o endpoint publico de onboarding no Laravel com contrato consistente (AC: 1, 2)
+  - [x] Criar controller em `app/Http/Controllers/Api/V1` para receber o onboarding inicial.
+  - [x] Registrar rota versionada publica dedicada ao onboarding, sem misturar este fluxo com o login da story 1.3.
+  - [x] Retornar sucesso via `JsonResource` com payload minimo para a confirmacao do frontend.
+  - [x] Padronizar erros de validacao em linguagem simples e previsivel para o BFF.
 
-- [ ] Implementar o fluxo BFF de onboarding no Next.js sem autenticacao final ainda (AC: 1, 2)
-  - [ ] Criar `src/app/(auth)/onboarding/page.tsx` com formulario curto orientado a primeira configuracao.
-  - [ ] Criar route handler em `src/app/api/onboarding/initial-setup/route.ts` para o browser falar apenas com o `church-erp-web`.
-  - [ ] Reutilizar `src/lib/api/client.ts` para encaminhar a chamada ao Laravel sem expor a API diretamente ao browser.
-  - [ ] Implementar a UI do onboarding sobre a foundation aprovada do frontend, usando tokens/temas compartilhados e preparando extracao para `src/components/ui`, `src/components/design-system` e `src/components/operational` quando surgirem blocos reutilizaveis.
-  - [ ] Exibir confirmacao clara de sucesso ao concluir o onboarding, com CTA explicita para seguir ao login.
-  - [ ] Nao criar sessao autenticada nesta story; login, cookie `HttpOnly`, `/auth/me` e JWT interno autenticado continuam na story 1.3.
+- [x] Implementar o fluxo BFF de onboarding no Next.js sem autenticacao final ainda (AC: 1, 2)
+  - [x] Criar `src/app/(auth)/onboarding/page.tsx` com formulario curto orientado a primeira configuracao.
+  - [x] Criar route handler em `src/app/api/onboarding/initial-setup/route.ts` para o browser falar apenas com o `church-erp-web`.
+  - [x] Reutilizar `src/lib/api/client.ts` para encaminhar a chamada ao Laravel sem expor a API diretamente ao browser.
+  - [x] Implementar a UI do onboarding sobre a foundation aprovada do frontend, usando tokens/temas compartilhados e preparando extracao para `src/components/ui`, `src/components/design-system` e `src/components/operational` quando surgirem blocos reutilizaveis.
+  - [x] Exibir confirmacao clara de sucesso ao concluir o onboarding, com CTA explicita para seguir ao login.
+  - [x] Nao criar sessao autenticada nesta story; login, cookie `HttpOnly`, `/auth/me` e JWT interno autenticado continuam na story 1.3.
 
-- [ ] Refinar a UX de validacao e mensagens do onboarding (AC: 2)
-  - [ ] Exibir erros por campo em linguagem simples, sem jargao tecnico.
-  - [ ] Preservar os dados digitados quando houver erro de validacao retornado pelo BFF.
-  - [ ] Manter o formulario curto, com foco nos campos minimos realmente necessarios para primeiro valor.
-  - [ ] Seguir a direcao visual "Teal Operacional", evitando layout generico de SaaS ou pagina isolada fora do design system.
+- [x] Refinar a UX de validacao e mensagens do onboarding (AC: 2)
+  - [x] Exibir erros por campo em linguagem simples, sem jargao tecnico.
+  - [x] Preservar os dados digitados quando houver erro de validacao retornado pelo BFF.
+  - [x] Manter o formulario curto, com foco nos campos minimos realmente necessarios para primeiro valor.
+  - [x] Seguir a direcao visual "Teal Operacional", evitando layout generico de SaaS ou pagina isolada fora do design system.
 
-- [ ] Cobrir o fluxo com testes e atualizacoes minimas de documentacao (AC: 1, 2)
-  - [ ] Adicionar testes de feature no Laravel cobrindo sucesso transacional e falhas de validacao.
-  - [ ] Adicionar teste do route handler BFF e/ou smoke test web cobrindo encaminhamento do onboarding.
-  - [ ] Atualizar os READMEs apenas no necessario para documentar endpoint, variaveis e fluxo local de validacao.
+- [x] Cobrir o fluxo com testes e atualizacoes minimas de documentacao (AC: 1, 2)
+  - [x] Adicionar testes de feature no Laravel cobrindo sucesso transacional e falhas de validacao.
+  - [x] Adicionar teste do route handler BFF e/ou smoke test web cobrindo encaminhamento do onboarding.
+  - [x] Atualizar os READMEs apenas no necessario para documentar endpoint, variaveis e fluxo local de validacao.
 
 ## Dev Notes
 
@@ -205,6 +205,24 @@ GPT-5 Codex
 - `php artisan test --filter=InitialChurchSetupTest` (2026-04-22: bloqueado por ausencia de `pdo_sqlite`)
 - `npm run test` (2026-04-22: passou)
 - `npm run typecheck` (2026-04-22: passou)
+- `php artisan test --filter=InitialChurchSetupTest` (2026-04-23: passou, 4 testes / 27 assertions)
+- `php artisan test` (2026-04-23: passou, 7 testes / 56 assertions)
+- `vendor/bin/pint --dirty --test` (2026-04-23: passou)
+- `find app routes database tests -name '*.php' -print0 | xargs -0 -n1 php -l` (2026-04-23: passou)
+- `npm run test` (2026-04-23: passou, 4 testes)
+- `npm run typecheck` (2026-04-23: passou)
+- `npm run lint` (2026-04-23: passou)
+- `API_BASE_URL=http://localhost:8000 INTERNAL_API_AUDIENCE=church-erp-api INTERNAL_API_ISSUER=church-erp-web npm run build` (2026-04-23: passou)
+- `php artisan test --filter=InitialChurchSetupTest` (2026-04-23 pos-project-context review: passou, 4 testes / 27 assertions)
+- `vendor/bin/pint --dirty --test` (2026-04-23 pos-project-context review: passou)
+- `npm run test` (2026-04-23 pos-project-context review: passou, 4 testes)
+- `npm run typecheck` (2026-04-23 pos-project-context review: passou)
+- `npm run lint` (2026-04-23 pos-project-context review: passou)
+- `API_BASE_URL=http://localhost:8000 INTERNAL_API_AUDIENCE=church-erp-api INTERNAL_API_ISSUER=church-erp-web npm run build` (2026-04-23 pos-project-context review: passou)
+- `php artisan test --filter=InitialChurchSetupTest` (2026-04-27 review fixes: passou, 4 testes / 27 assertions)
+- `npm run test` (2026-04-27 review fixes: passou, 6 testes)
+- `npm run typecheck` (2026-04-27 review fixes: passou)
+- `npm run lint` (2026-04-27 review fixes: passou)
 
 ### Completion Notes List
 
@@ -217,34 +235,53 @@ GPT-5 Codex
 - A story agora explicita que o onboarding deve ser implementado sobre a foundation frontend aprovada apos o UX: tokens/temas semanticos, design system proprio e organizacao clara de componentes.
 - Implementacao inicial adicionada para migrations `churches` e `church_user`, modelos de dominio, service transacional de onboarding, request/resource/controller e rota publica versionada no Laravel.
 - Implementacao inicial adicionada para pagina `/onboarding`, route handler BFF `/api/onboarding/initial-setup` e tipos compartilhados de onboarding no Next.js.
-- Testes Laravel de feature foram adicionados para sucesso, validacao e bloqueio de email duplicado, mas nao puderam ser executados ate o fim neste ambiente porque o PHP local nao possui `pdo_sqlite`.
-- A story permanece `in-progress` porque o gate de testes Laravel nao fechou; nao marquei tarefas como concluidas nem movi para `review`.
+- Testes Laravel de feature foram adicionados para sucesso, validacao e bloqueio de email duplicado; em 2026-04-22 eles ainda estavam bloqueados pela ausencia local de `pdo_sqlite`.
+- Em 2026-04-22, a story permaneceu `in-progress` porque o gate Laravel ainda nao tinha fechado.
 - Verificacao pos-`project-context.md` concluida em 2026-04-22: a implementacao parcial esta alinhada aos guardrails centrais de Laravel API/domain backend, Next.js BFF, contratos `snake_case`, `JsonResource`, service transacional e separacao de autenticacao completa para a Story 1.3.
-- Pontos de continuidade antes de review: fechar o gate Laravel em ambiente com driver de banco disponivel, completar/validar testes web especificos do onboarding se necessario e so entao marcar tarefas como concluidas.
+- Pontos de continuidade registrados em 2026-04-22 foram resolvidos em 2026-04-23 com driver SQLite disponivel e validacoes completas.
+- Gate Laravel fechado em 2026-04-23 com `pdo_sqlite` disponivel; o fluxo de onboarding passou nos testes de sucesso, validacao simples, bloqueio por email duplicado e bloqueio por slug de igreja duplicado.
+- Ajustado o uso de mass assignment nos modelos `Church`, `ChurchUser` e `User` para `protected $fillable`, removendo a falha real encontrada pelo teste de feature.
+- Smoke test web atualizado para a convencao atual do projeto em Next.js 16 (`src/proxy.ts`) e texto visivel do onboarding refinado para linguagem operacional, sem expor detalhe tecnico de BFF/Laravel ao usuario final.
+- Story marcada como pronta para code review apos a suite completa e checks de qualidade passarem.
+- Revisao pre-code-review contra `_bmad-output/project-context.md` realizada em 2026-04-23; foram aplicados dois reforcos pequenos antes do review formal.
+- Teste Laravel passou a afirmar explicitamente que o vinculo `church_user` preserva o `church_id` da igreja criada, reforcando o guardrail de isolamento por tenant.
+- Route handler BFF passou a tratar respostas nao JSON da API com mensagem generica user-facing, evitando expor falhas internas ou quebrar o fluxo do browser.
+- Review de 2026-04-27 fechou o risco de corrida de unicidade no onboarding com tratamento de `QueryException` no service e reforcou o smoke test web com verificacao de normalizacao do route handler.
+- Reforco de 2026-04-28 removeu o fallback embutido das chaves JWT internas, passou o proxy a validar a sessao via `/api/auth/me` antes de liberar rotas protegidas e sincronizou os testes com a chave publica derivada da fixture de testes.
+
+### Implementation Plan
+
+- Validar primeiro a implementacao parcial com testes existentes para identificar falhas reais antes de ampliar o escopo.
+- Corrigir apenas o necessario para fechar os ACs da story: mass assignment dos modelos Eloquent, cobertura de duplicidade de igreja e alinhamento do smoke test web com `src/proxy.ts`.
+- Manter o fluxo sem autenticacao final, preservando a divisao planejada para a Story 1.3.
+- Antes do code review formal, revisar a story contra o `project-context.md` e aplicar apenas ajustes de conformidade sem ampliar escopo funcional.
 
 ### Change Log
 
 - 2026-04-21: Implementacao inicial do fluxo de onboarding criada; validacao final bloqueada por ausencia de driver SQLite no PHP local.
 - 2026-04-22: Revisada contra `_bmad-output/project-context.md` recem-criado; mantida em `in-progress` por gate Laravel bloqueado, sem necessidade de reabrir ou alterar escopo.
+- 2026-04-23: Corrigido mass assignment nos modelos Eloquent, adicionada cobertura de slug duplicado, atualizado smoke test para `proxy.ts`, refinado texto do onboarding e movida a story para `review` apos validacoes completas.
+- 2026-04-23: Aplicados reforcos pre-review contra `project-context.md`: assert explicito de `church_id` no teste de onboarding e fallback BFF para resposta nao JSON da API.
+- 2026-04-27: Revisao final fechada com protecao contra conflito de unicidade no onboarding, helper de normalizacao do route handler extraido para JS e smoke test atualizado para validar o fluxo do BFF.
+- 2026-04-28: Removido o fallback embutido das chaves JWT internas, proxy passou a validar a sessao via `/api/auth/me` antes de liberar rotas protegidas e os testes foram atualizados para cobrir o novo comportamento.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-2-criar-igreja-e-conta-administradora-inicial.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- `church-erp-api/README.md`
-- `church-erp-api/app/Domain/Identity/Models/Church.php`
-- `church-erp-api/app/Domain/Identity/Models/ChurchUser.php`
-- `church-erp-api/app/Domain/Identity/Services/CreateInitialChurchSetupService.php`
-- `church-erp-api/app/Http/Controllers/Api/V1/InitialChurchSetupController.php`
-- `church-erp-api/app/Http/Requests/StoreInitialChurchSetupRequest.php`
-- `church-erp-api/app/Http/Resources/InitialChurchSetupResource.php`
-- `church-erp-api/app/Models/User.php`
-- `church-erp-api/database/migrations/2026_04_21_000001_create_churches_table.php`
-- `church-erp-api/database/migrations/2026_04_21_000002_create_church_user_table.php`
-- `church-erp-api/routes/api.php`
-- `church-erp-api/tests/Feature/Identity/InitialChurchSetupTest.php`
-- `church-erp-web/README.md`
+- `church-erp-api/app/Domain/Identity/Services/ResolveAuthenticatedSessionService.php`
+- `church-erp-api/tests/Feature/Identity/AuthSessionTest.php`
+- `church-erp-web/src/app/(auth)/login/page.tsx`
 - `church-erp-web/src/app/(auth)/onboarding/page.tsx`
+- `church-erp-web/src/app/api/auth/login/route.ts`
+- `church-erp-web/src/app/api/auth/logout/route.ts`
+- `church-erp-web/src/app/api/auth/me/route.ts`
 - `church-erp-web/src/app/api/onboarding/initial-setup/route.ts`
-- `church-erp-web/src/features/auth/initial-setup.ts`
+- `church-erp-web/src/features/auth/auth-response.ts`
+- `church-erp-web/src/features/auth/initial-setup-response.js`
+- `church-erp-web/src/features/auth/session-constants.ts`
+- `church-erp-web/src/features/auth/session-types.ts`
+- `church-erp-web/src/features/auth/session.ts`
+- `church-erp-web/src/hooks/use-session-context.ts`
+- `church-erp-web/src/proxy.ts`
 - `church-erp-web/tests/bff-smoke.test.mjs`

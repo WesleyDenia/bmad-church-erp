@@ -91,8 +91,8 @@ export default function OnboardingPage() {
           </div>
 
           <div className="mt-8 rounded-2xl bg-white/12 p-4 text-sm leading-7 text-teal-50">
-            O browser envia estes dados ao BFF do Next.js, e o Laravel cria o
-            tenant com seguranca no backend.
+            Depois da confirmacao, a conta administradora podera acessar a
+            proxima etapa do sistema com os dados criados aqui.
           </div>
         </div>
 

@@ -6,21 +6,12 @@ use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class ResolveAuthenticatedSessionService
 {
-    private const DEV_INTERNAL_JWT_PUBLIC_KEY = <<<'PEM'
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsILZ5Q1rLHGiptu3j04m
-hPs3RBGn+FWOTNa4l9lG8vzAFCk3EGwSW0lY/VWPBoTHY6rD82oOr8kAQbGX6UM5
-DVOQJO8G+Z3GnJHIcHZ2IVjpy3VkKiX0juUQc4SyIi8Rl2YHYW0FhRNSgPi+EjtB
-bpUXFyIH2rYMn3CMnCHxS1yFowvpZO1oTaxNEnVt0rUrUL3Jl6CqIrSZmdkSSY6R
-1eYMz5l4U4h27NnBL3soJN8N+nQHEXyGx+PHW0+69KQgWuwI4TpbxAspUBNGh1Lf
-pJPU3Qj+eGjF2lYYLpmkWtsFF87bhyDymnssh6tfiP8u0UqFAn5MFi21pNKmkR7O
-mwIDAQAB
------END PUBLIC KEY-----
-PEM;
+    private const REVOKED_SESSION_CACHE_PREFIX = 'identity:revoked-session:';
 
     /**
      * @return array{
@@ -33,6 +24,8 @@ PEM;
     public function resolve(string $token): array
     {
         $claims = $this->decodeAndValidate($token);
+
+        $this->ensureSessionIsNotRevoked((string) $claims['session_id']);
 
         $user = User::query()->find($claims['user_id']);
         $church = Church::query()->find($claims['church_id']);
@@ -62,6 +55,28 @@ PEM;
             'session_id' => (string) $claims['session_id'],
             'permissions_version' => (int) ($claims['permissions_version'] ?? 1),
         ];
+    }
+
+    public function revoke(string $token): void
+    {
+        try {
+            $claims = $this->decodeAndValidate($token);
+        } catch (ValidationException) {
+            return;
+        }
+
+        $expiresAt = (int) $claims['exp'];
+        $ttlSeconds = $expiresAt - Carbon::now()->timestamp;
+
+        if ($ttlSeconds <= 0) {
+            return;
+        }
+
+        Cache::put(
+            $this->revokedSessionCacheKey((string) $claims['session_id']),
+            true,
+            $ttlSeconds,
+        );
     }
 
     /**
@@ -100,6 +115,15 @@ PEM;
         return $payload;
     }
 
+    private function ensureSessionIsNotRevoked(string $sessionId): void
+    {
+        if (Cache::has($this->revokedSessionCacheKey($sessionId))) {
+            throw ValidationException::withMessages([
+                'session' => ['Sessao invalida. Entre novamente.'],
+            ]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -126,12 +150,10 @@ PEM;
 
     private function verifySignature(string $signingInput, string $encodedSignature): void
     {
-        $publicKey = config('services.internal_jwt.public_key') ?: self::DEV_INTERNAL_JWT_PUBLIC_KEY;
+        $publicKey = config('services.internal_jwt.public_key');
 
         if (! is_string($publicKey) || $publicKey === '') {
-            throw ValidationException::withMessages([
-                'session' => ['Sessao invalida. Entre novamente.'],
-            ]);
+            throw new \RuntimeException('Missing required service config: services.internal_jwt.public_key');
         }
 
         $signature = base64_decode(strtr($encodedSignature, '-_', '+/').str_repeat('=', (4 - strlen($encodedSignature) % 4) % 4), true);
@@ -191,5 +213,10 @@ PEM;
                 'session' => ['Sessao invalida. Entre novamente.'],
             ]);
         }
+    }
+
+    private function revokedSessionCacheKey(string $sessionId): string
+    {
+        return self::REVOKED_SESSION_CACHE_PREFIX.$sessionId;
     }
 }

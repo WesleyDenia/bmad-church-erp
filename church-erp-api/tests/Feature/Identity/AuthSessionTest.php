@@ -44,6 +44,25 @@ XEJJWgIngdEz5TNE0enNhOA=
 -----END PRIVATE KEY-----
 PEM;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $privateKey = openssl_pkey_get_private(self::DEV_INTERNAL_JWT_PRIVATE_KEY);
+
+        if ($privateKey === false) {
+            $this->fail('Unable to load the internal JWT private key used by the test suite.');
+        }
+
+        $details = openssl_pkey_get_details($privateKey);
+
+        if (! is_array($details) || ! isset($details['key']) || ! is_string($details['key'])) {
+            $this->fail('Unable to derive the internal JWT public key used by the test suite.');
+        }
+
+        config()->set('services.internal_jwt.public_key', $details['key']);
+    }
+
     public function test_login_creates_session_context_for_valid_credentials(): void
     {
         $church = Church::query()->create([
@@ -158,6 +177,22 @@ PEM;
         $response
             ->assertOk()
             ->assertJsonPath('message', 'Sessao encerrada com sucesso.');
+    }
+
+    public function test_logout_revokes_the_session_token_for_future_requests(): void
+    {
+        [$user, $church] = $this->seedAuthenticatedMembership();
+        $token = $this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/v1/auth/logout')
+            ->assertOk();
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/auth/me')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Sessao invalida. Entre novamente.')
+            ->assertJsonValidationErrors(['session']);
     }
 
     /**

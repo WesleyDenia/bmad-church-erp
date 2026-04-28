@@ -1,4 +1,5 @@
 import { callLaravel } from "@/lib/api/client";
+import { normalizeInitialSetupResponse } from "@/features/auth/initial-setup-response";
 
 export async function POST(request: Request): Promise<Response> {
   const payload = await request.json();
@@ -11,9 +12,9 @@ export async function POST(request: Request): Promise<Response> {
     body: JSON.stringify(payload),
   });
 
-  const body = await response.json();
+  const { body, status } = await normalizeInitialSetupResponse(response);
 
   return Response.json(body, {
-    status: response.status,
+    status,
   });
 }
