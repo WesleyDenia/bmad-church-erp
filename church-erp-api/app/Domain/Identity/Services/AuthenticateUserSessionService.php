@@ -2,6 +2,7 @@
 
 namespace App\Domain\Identity\Services;
 
+use App\Domain\Identity\Models\ChurchUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -10,14 +11,13 @@ class AuthenticateUserSessionService
 {
     public function __construct(
         private readonly ResolveActiveChurchContextService $resolveActiveChurchContextService,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array{email: string, password: string}  $payload
      * @return array{
      *   user: User,
-     *   membership: \App\Domain\Identity\Models\ChurchUser
+     *   membership: ChurchUser
      * }
      */
     public function authenticate(array $payload): array

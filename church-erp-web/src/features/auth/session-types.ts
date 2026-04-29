@@ -1,3 +1,9 @@
+export type ChurchRole =
+  | "administrator"
+  | "treasurer"
+  | "secretary"
+  | "leadership";
+
 export type AuthSessionUser = {
   id: number;
   name: string;
@@ -18,8 +24,8 @@ export type LoginPayload = {
 export type AuthenticatedSessionData = {
   user: AuthSessionUser;
   church: AuthSessionChurch;
-  roles: string[];
-  role: string;
+  roles: ChurchRole[];
+  role: ChurchRole;
   permissions_version: number;
   message: string;
   session_id?: string;
@@ -37,7 +43,7 @@ export type AuthErrorResponse = {
 export type InternalJwtPayload = {
   user_id: number;
   church_id: number;
-  roles: string[];
+  roles: ChurchRole[];
   session_id: string;
   permissions_version: number;
   issuer: string;

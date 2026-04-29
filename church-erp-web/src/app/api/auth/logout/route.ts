@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server.js";
 import { callLaravel } from "@/lib/api/client";
 import {
   AUTH_SESSION_COOKIE_NAME,

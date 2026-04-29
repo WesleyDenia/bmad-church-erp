@@ -9,7 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
-class AuthSessionTest extends TestCase
+class BackofficeAreaAccessTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -63,142 +63,52 @@ PEM;
         config()->set('services.internal_jwt.public_key', $details['key']);
     }
 
-    public function test_login_creates_session_context_for_valid_credentials(): void
+    public function test_backoffice_access_allows_secretary_style_access_for_bootstrap_administrator(): void
     {
-        $church = Church::query()->create([
-            'name' => 'Igreja Central',
-            'slug' => 'igreja-central',
-        ]);
-
-        $user = User::query()->create([
-            'name' => 'Maria Silva',
-            'email' => 'maria@example.com',
-            'password' => 'secret-password',
-        ]);
-
-        ChurchUser::query()->create([
-            'church_id' => $church->id,
-            'user_id' => $user->id,
-            'role' => 'administrator',
-            'status' => 'active',
-        ]);
-
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'maria@example.com',
-            'password' => 'secret-password',
-        ]);
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('data.user.email', 'maria@example.com')
-            ->assertJsonPath('data.user.name', 'Maria Silva')
-            ->assertJsonPath('data.church.slug', 'igreja-central')
-            ->assertJsonPath('data.roles.0', 'administrator')
-            ->assertJsonPath('data.message', 'Sessao autenticada com sucesso.');
-    }
-
-    public function test_login_rejects_invalid_credentials(): void
-    {
-        User::query()->create([
-            'name' => 'Maria Silva',
-            'email' => 'maria@example.com',
-            'password' => 'secret-password',
-        ]);
-
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'maria@example.com',
-            'password' => 'wrong-password',
-        ]);
-
-        $response
-            ->assertUnprocessable()
-            ->assertJsonPath('message', 'Credenciais invalidas.')
-            ->assertJsonValidationErrors(['email']);
-    }
-
-    public function test_login_blocks_when_church_context_is_missing(): void
-    {
-        User::query()->create([
-            'name' => 'Maria Silva',
-            'email' => 'maria@example.com',
-            'password' => 'secret-password',
-        ]);
-
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => 'maria@example.com',
-            'password' => 'secret-password',
-        ]);
-
-        $response
-            ->assertUnprocessable()
-            ->assertJsonPath('message', 'Nao foi possivel aplicar a igreja correta.')
-            ->assertJsonValidationErrors(['church_id']);
-    }
-
-    public function test_current_session_returns_authenticated_context_for_valid_token(): void
-    {
-        [$user, $church] = $this->seedAuthenticatedMembership();
+        [$user, $church] = $this->seedMembership('administrator');
         $token = $this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123');
 
         $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/v1/auth/me');
+            ->getJson('/api/v1/backoffice/access/secretaria');
 
         $response
             ->assertOk()
-            ->assertJsonPath('data.user.email', 'maria@example.com')
-            ->assertJsonPath('data.church.slug', 'igreja-central')
-            ->assertJsonPath('data.session_id', 'session-123');
+            ->assertJsonPath('message', 'Acesso liberado.');
     }
 
-    public function test_current_session_blocks_when_church_context_is_no_longer_active(): void
+    public function test_backoffice_access_returns_forbidden_when_role_does_not_match_area(): void
     {
-        [$user, $church, $membership] = $this->seedAuthenticatedMembership(withMembership: true);
+        [$user, $church] = $this->seedMembership('leadership');
+        $token = $this->createInternalJwt($user->id, $church->id, ['leadership'], 'session-123');
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/backoffice/access/treasury');
+
+        $response
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Acesso negado para esta area.');
+    }
+
+    public function test_backoffice_access_rejects_inactive_membership_before_authorizing_area(): void
+    {
+        [$user, $church, $membership] = $this->seedMembership('secretary');
         $membership->update(['status' => 'inactive']);
 
-        $token = $this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123');
+        $token = $this->createInternalJwt($user->id, $church->id, ['secretary'], 'session-123');
 
         $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/v1/auth/me');
+            ->getJson('/api/v1/backoffice/access/communications');
 
         $response
             ->assertUnauthorized()
             ->assertJsonPath('message', 'Nao foi possivel aplicar a igreja correta.')
-            ->assertJsonMissingPath('errors');
-    }
-
-    public function test_logout_returns_simple_success_message(): void
-    {
-        [$user, $church] = $this->seedAuthenticatedMembership();
-        $token = $this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123');
-
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/v1/auth/logout');
-
-        $response
-            ->assertOk()
-            ->assertJsonPath('message', 'Sessao encerrada com sucesso.');
-    }
-
-    public function test_logout_revokes_the_session_token_for_future_requests(): void
-    {
-        [$user, $church] = $this->seedAuthenticatedMembership();
-        $token = $this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123');
-
-        $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/v1/auth/logout')
-            ->assertOk();
-
-        $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/v1/auth/me')
-            ->assertUnauthorized()
-            ->assertJsonPath('message', 'Sessao invalida. Entre novamente.')
             ->assertJsonMissingPath('errors');
     }
 
     /**
      * @return array{0: User, 1: Church, 2?: ChurchUser}
      */
-    private function seedAuthenticatedMembership(bool $withMembership = true): array
+    private function seedMembership(string $role): array
     {
         $church = Church::query()->create([
             'name' => 'Igreja Central',
@@ -211,14 +121,10 @@ PEM;
             'password' => 'secret-password',
         ]);
 
-        if (! $withMembership) {
-            return [$user, $church];
-        }
-
         $membership = ChurchUser::query()->create([
             'church_id' => $church->id,
             'user_id' => $user->id,
-            'role' => 'administrator',
+            'role' => $role,
             'status' => 'active',
         ]);
 

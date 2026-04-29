@@ -1,19 +1,22 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Middleware;
 
 use App\Domain\Identity\Services\ResolveAuthenticatedSessionService;
-use App\Http\Resources\AuthenticatedSessionResource;
-use Illuminate\Http\JsonResponse;
+use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
-class CurrentSessionController
+class ResolveInternalSession
 {
-    public function __invoke(
-        Request $request,
-        ResolveAuthenticatedSessionService $service,
-    ): JsonResponse {
+    public function __construct(
+        private readonly ResolveAuthenticatedSessionService $sessionService,
+    ) {}
+
+    public function handle(Request $request, Closure $next): Response
+    {
         $token = $request->bearerToken();
 
         if (! is_string($token) || $token === '') {
@@ -23,7 +26,7 @@ class CurrentSessionController
         }
 
         try {
-            $session = $service->resolve($token);
+            $session = $this->sessionService->resolve($token);
         } catch (ValidationException $exception) {
             return response()->json([
                 'message' => $exception->errors()['church_id'][0]
@@ -32,8 +35,10 @@ class CurrentSessionController
             ], 401);
         }
 
-        return (new AuthenticatedSessionResource($session))
-            ->response()
-            ->setStatusCode(200);
+        $request->attributes->set('authenticated_session', $session);
+        $request->setUserResolver(static fn () => $session['user']);
+        Auth::setUser($session['user']);
+
+        return $next($request);
     }
 }

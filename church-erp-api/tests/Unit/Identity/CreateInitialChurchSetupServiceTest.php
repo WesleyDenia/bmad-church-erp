@@ -12,7 +12,7 @@ class CreateInitialChurchSetupServiceTest extends TestCase
 {
     public function test_duplicate_constraint_detection_matches_sqlite_unique_violations(): void
     {
-        $service = new CreateInitialChurchSetupService();
+        $service = new CreateInitialChurchSetupService;
 
         $exception = $this->makeQueryException(
             'sqlite',
@@ -25,7 +25,7 @@ class CreateInitialChurchSetupServiceTest extends TestCase
 
     public function test_duplicate_constraint_detection_ignores_operational_failures(): void
     {
-        $service = new CreateInitialChurchSetupService();
+        $service = new CreateInitialChurchSetupService;
 
         $exception = $this->makeQueryException(
             'mysql',

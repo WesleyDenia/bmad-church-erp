@@ -1,6 +1,6 @@
 # Story 1.4: Controlar permissao basica por perfil e tenant
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,25 +18,25 @@ so that dados financeiros e pessoais fiquem protegidos desde o MVP.
 
 ## Tasks / Subtasks
 
-- [ ] Definir a matriz minima de acesso por perfil e area no Laravel, usando `church_user.role` e `church_id` como fonte de verdade (AC: 1, 2, 3)
-  - [ ] Registrar gates/policies leves para as areas do MVP, sem criar um subsistema separado de permissoes.
-  - [ ] Garantir que qualquer decisao de autorizacao revalide o tenant ativo antes de liberar a area.
-  - [ ] Manter controllers finos e delegar a decisao para `authorize()`, `Gate::authorize()` ou policies.
+- [x] Definir a matriz minima de acesso por perfil e area no Laravel, usando `church_user.role` e `church_id` como fonte de verdade (AC: 1, 2, 3)
+  - [x] Registrar gates/policies leves para as areas do MVP, sem criar um subsistema separado de permissoes.
+  - [x] Garantir que qualquer decisao de autorizacao revalide o tenant ativo antes de liberar a area.
+  - [x] Manter controllers finos e delegar a decisao para `authorize()`, `Gate::authorize()` ou policies.
 
-- [ ] Proteger os entrypoints HTTP e os fluxos autenticados do BFF com a mesma regra de acesso (AC: 1, 2, 3)
-  - [ ] Aplicar a autorizacao no backend Laravel, onde a decisao final sempre reside.
-  - [ ] Manter mensagens de negacao funcionais e curtas, sem detalhes de implementacao.
-  - [ ] Preservar o contrato `snake_case` e os responses idiomaticos do Laravel.
+- [x] Proteger os entrypoints HTTP e os fluxos autenticados do BFF com a mesma regra de acesso (AC: 1, 2, 3)
+  - [x] Aplicar a autorizacao no backend Laravel, onde a decisao final sempre reside.
+  - [x] Manter mensagens de negacao funcionais e curtas, sem detalhes de implementacao.
+  - [x] Preservar o contrato `snake_case` e os responses idiomaticos do Laravel.
 
-- [ ] Adaptar a experiencia Next.js por perfil sem transformar UI em fonte de verdade da autorizacao (AC: 1, 2)
-  - [ ] Usar `roles` e `role` do contexto autenticado para esconder ou desabilitar areas nao permitidas no shell.
-  - [ ] Exibir um estado claro de acesso negado quando o usuario entrar diretamente em uma rota bloqueada.
-  - [ ] Manter `src/proxy.ts` e os route handlers apenas como suporte de navegacao e boundary do BFF.
+- [x] Adaptar a experiencia Next.js por perfil sem transformar UI em fonte de verdade da autorizacao (AC: 1, 2)
+  - [x] Usar `roles` e `role` do contexto autenticado para esconder ou desabilitar areas nao permitidas no shell.
+  - [x] Exibir um estado claro de acesso negado quando o usuario entrar diretamente em uma rota bloqueada.
+  - [x] Manter `src/proxy.ts` e os route handlers apenas como suporte de navegacao e boundary do BFF.
 
-- [ ] Cobrir o comportamento com testes de backend e smoke tests do BFF (AC: 1, 2, 3)
-  - [ ] Adicionar Feature tests no Laravel para acesso permitido, acesso negado e tenant invalido.
-  - [ ] Cobrir o retorno `403` e a mensagem funcional em linguagem simples.
-  - [ ] Atualizar smoke tests web para refletir a navegacao por perfil e a boundary BFF.
+- [x] Cobrir o comportamento com testes de backend e smoke tests do BFF (AC: 1, 2, 3)
+  - [x] Adicionar Feature tests no Laravel para acesso permitido, acesso negado e tenant invalido.
+  - [x] Cobrir o retorno `403` e a mensagem funcional em linguagem simples.
+  - [x] Atualizar smoke tests web para refletir a navegacao por perfil e a boundary BFF.
 
 ## Dev Notes
 
@@ -174,11 +174,67 @@ GPT-5 Codex
 
 ### Completion Notes List
 
-- Story criada automaticamente como a proxima story da Epic 1.
-- A autorizacao real deve permanecer no Laravel; o frontend apenas adapta navegacao e feedback.
-- O contexto de sessao ja exposto em `/auth/me` deve ser reaproveitado para a navegacao por perfil.
-- Areas nao autorizadas continuam bloqueadas ate historias futuras definirem acesso explicito.
+- Implementado gate `access-backoffice-area` no Laravel com matriz minima por perfil e tenant revalidado via sessao interna.
+- Criado endpoint BFF `GET /api/backoffice/access/[area]` e guardas de pagina para exibir acesso negado sem expor detalhes tecnicos.
+- Shell do Next.js agora filtra areas por `role` autenticado e mantem o browser isolado do Laravel.
+- Cobertura validada com `php artisan test`, `npm test`, `npm run lint`, `npm run typecheck` e `./vendor/bin/pint --test` nos arquivos alterados.
+- Corrigido bloqueio server-side no `proxy.ts` com redirecionamento para `/acesso-negado` antes do render do browser.
+- Sanitizadas respostas 401 do BFF e do backend para remover `errors` e manter apenas mensagens funcionais.
+- Smoke tests do web passaram a validar helpers de acesso e normalizacao em comportamento real, nao apenas textos-fonte.
+- Corrigidos os ultimos achados da segunda revisao: sanitizacao do `from` para evitar open redirect, suporte a acesso por `roles` e mensagem operacional genérica para falhas inesperadas sem alterar o status code.
+- Corrigido o build do Next.js na rota `/login` com `Suspense` sem redirecionamento prematuro no fallback.
+- Reforcada a cobertura runtime do `/api/auth/me` para verificar o repasse do bearer token ao Laravel.
+- Adicionado gate `npm run verify` no web incluindo `build:smoke` com env minimo para capturar regressões de compilacao.
 
 ### File List
 
-- Nenhum arquivo de implementacao alterado ainda. Esta story esta pronta para dev.
+- church-erp-api/app/Domain/Identity/Services/ResolveBackofficeAreaAccessService.php
+- church-erp-api/app/Http/Controllers/Api/V1/BackofficeAreaAccessController.php
+- church-erp-api/app/Http/Controllers/Api/V1/CurrentSessionController.php
+- church-erp-api/app/Http/Middleware/ResolveInternalSession.php
+- church-erp-api/app/Policies/BackofficeAreaPolicy.php
+- church-erp-api/app/Providers/AppServiceProvider.php
+- church-erp-api/bootstrap/app.php
+- church-erp-api/routes/api.php
+- church-erp-api/tests/Feature/Identity/BackofficeAreaAccessTest.php
+- church-erp-api/tests/Feature/Identity/AuthSessionTest.php
+- church-erp-api/app/Domain/Identity/Services/AuthenticateUserSessionService.php
+- church-erp-api/app/Http/Controllers/Api/V1/LogoutController.php
+- church-erp-api/tests/Unit/Identity/CreateInitialChurchSetupServiceTest.php
+- church-erp-web/src/app/acesso-negado/page.tsx
+- church-erp-web/src/app/api/auth/me/route.ts
+- church-erp-web/src/app/(auth)/login/page.tsx
+- church-erp-web/src/app/api/backoffice/access/[area]/route.ts
+- church-erp-web/src/app/communications/page.tsx
+- church-erp-web/src/app/leadership/page.tsx
+- church-erp-web/src/app/page.tsx
+- church-erp-web/src/app/secretaria/page.tsx
+- church-erp-web/src/app/treasury/page.tsx
+- church-erp-web/package.json
+- church-erp-web/src/components/operational/access-denied-panel.tsx
+- church-erp-web/src/components/operational/area-guard.tsx
+- church-erp-web/src/features/app-shell/navigation.ts
+- church-erp-web/src/features/app-shell/navigation-policy.js
+- church-erp-web/src/features/auth/navigation-runtime.js
+- church-erp-web/src/features/auth/access-response-runtime.js
+- church-erp-web/src/features/auth/access-response.ts
+- church-erp-web/src/features/auth/navigation.ts
+- church-erp-web/src/features/auth/session-types.ts
+- church-erp-web/src/features/auth/session.ts
+- church-erp-web/src/proxy.ts
+- church-erp-web/tests/bff-smoke.test.mjs
+- church-erp-web/tests/node-alias-loader.mjs
+
+## Change Log
+
+- Added Laravel gate/policy, internal-session middleware, and a protected access-check endpoint for MVP areas.
+- Added Next.js BFF access route, role-aware shell filtering, and direct-route access denied states.
+- Added backend feature tests and updated web smoke coverage for role-based navigation and BFF boundaries.
+- 2026-04-29 - BMAD code review identified remaining gaps in server-side route protection, technical detail leakage in 401 responses, smoke test depth, and File List completeness.
+- 2026-04-29 - Fixed server-side route protection, sanitized browser-facing 401 responses, upgraded smoke tests to runtime helpers, and aligned story tracking with the final implementation.
+- 2026-04-30 - Fixed open redirect sanitization, role-array aware navigation, and neutral operational messaging for unexpected access failures while preserving status codes.
+- 2026-04-30 - Fixed the login build regression with `Suspense`, strengthened runtime coverage for `/api/auth/me`, updated BMAD tracking, and added a web verification gate with `build:smoke`.
+
+## Senior Developer Review (AI)
+
+- Revisao final de 2026-04-30: achados de build do login, cobertura runtime do `/api/auth/me` e rastreabilidade BMAD corrigidos; validacao web concluida com `npm run verify`.

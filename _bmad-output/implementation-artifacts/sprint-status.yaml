@@ -44,7 +44,7 @@ development_status:
   1-1-inicializar-a-fundacao-do-projeto-com-backend-e-frontend-desacoplados: done
   1-2-criar-igreja-e-conta-administradora-inicial: done
   1-3-autenticar-usuario-via-bff-e-aplicar-contexto-da-igreja: done
-  1-4-controlar-permissao-basica-por-perfil-e-tenant: ready-for-dev
+  1-4-controlar-permissao-basica-por-perfil-e-tenant: done
   1-5-configurar-categorias-minimas-iniciais: backlog
   epic-1-retrospective: optional
 

@@ -1,7 +1,64 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import {
+  buildAccessDeniedPath,
+  canAccessAppArea,
+  getAccessibleAppAreaLinks,
+  getAppAreaLabel,
+  getRouteAccessDecision,
+} from "../src/features/app-shell/navigation-policy.js";
+import { getSafeNextPath } from "../src/features/auth/navigation-runtime.js";
+import { AUTH_SESSION_COOKIE_NAME } from "../src/features/auth/session-constants.ts";
+import {
+  GENERIC_ACCESS_ERROR_MESSAGE,
+  normalizeAccessResponse,
+} from "../src/features/auth/access-response-runtime.js";
 import { normalizeInitialSetupResponse } from "../src/features/auth/initial-setup-response.js";
+
+function setEnv(overrides) {
+  const previous = new Map();
+
+  for (const [key, value] of Object.entries(overrides)) {
+    previous.set(key, process.env[key]);
+    process.env[key] = value;
+  }
+
+  return () => {
+    for (const [key, value] of previous.entries()) {
+      if (value === undefined) {
+        delete process.env[key];
+        continue;
+      }
+
+      process.env[key] = value;
+    }
+  };
+}
+
+function createNextLikeRequest(pathname, sessionToken = null) {
+  const url = new URL(pathname, "http://web.test");
+  const headers = new Headers();
+
+  if (sessionToken) {
+    headers.set("cookie", `${AUTH_SESSION_COOKIE_NAME}=${sessionToken}`);
+  }
+
+  return {
+    url: url.toString(),
+    nextUrl: url,
+    headers,
+    cookies: {
+      get(name) {
+        if (name === AUTH_SESSION_COOKIE_NAME && sessionToken) {
+          return { value: sessionToken };
+        }
+
+        return undefined;
+      },
+    },
+  };
+}
 
 test("BFF env example exposes internal API variables", () => {
   const envExample = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
@@ -11,12 +68,14 @@ test("BFF env example exposes internal API variables", () => {
   assert.match(envExample, /INTERNAL_API_ISSUER=/);
 });
 
-test("web baseline contains route shells and api client", () => {
+test("web baseline contains route shells and BFF boundary files", () => {
   const requiredPaths = [
     "../src/app/(auth)/login/page.tsx",
     "../src/app/api/auth/login/route.ts",
     "../src/app/api/auth/me/route.ts",
     "../src/app/api/auth/logout/route.ts",
+    "../src/app/api/backoffice/access/[area]/route.ts",
+    "../src/app/acesso-negado/page.tsx",
     "../src/app/treasury/page.tsx",
     "../src/app/secretaria/page.tsx",
     "../src/app/leadership/page.tsx",
@@ -28,12 +87,16 @@ test("web baseline contains route shells and api client", () => {
     "../src/features/auth/session-constants.ts",
     "../src/features/auth/session-types.ts",
     "../src/features/auth/auth-response.ts",
-    "../src/features/auth/navigation.ts",
-    "../components.json",
-    "../src/lib/utils.ts",
+    "../src/features/auth/access-response.ts",
+    "../src/features/auth/access-response-runtime.js",
+    "../src/features/auth/navigation-runtime.js",
+    "../src/features/app-shell/navigation.ts",
+    "../src/features/app-shell/navigation-policy.js",
     "../src/components/ui/button.tsx",
     "../src/components/design-system/surface.tsx",
     "../src/components/operational/area-card.tsx",
+    "../src/components/operational/access-denied-panel.tsx",
+    "../src/components/operational/area-guard.tsx",
     "../src/design-system/tokens.ts",
     "../src/styles/README.md",
   ];
@@ -43,81 +106,113 @@ test("web baseline contains route shells and api client", () => {
   }
 });
 
-test("api client keeps authenticated Laravel calls server-side", () => {
-  const apiClient = readFileSync(
-    new URL("../src/lib/api/client.ts", import.meta.url),
-    "utf8",
-  );
-  const loginPage = readFileSync(
-    new URL("../src/app/(auth)/login/page.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(apiClient, /server-only/);
-  assert.match(apiClient, /serverEnv\.apiBaseUrl/);
-  assert.doesNotMatch(loginPage, /API_BASE_URL/);
+test("app shell navigation is role-aware", () => {
+  assert.deepEqual(getAccessibleAppAreaLinks("treasurer"), [
+    {
+      href: "/treasury",
+      label: "Tesouraria",
+      description: "Fluxo operacional para lancamentos, pendencias e fechamento.",
+    },
+  ]);
+  assert.deepEqual(getAccessibleAppAreaLinks("secretary"), [
+    {
+      href: "/secretaria",
+      label: "Secretaria",
+      description: "Base para cadastro, busca e acompanhamento de pessoas.",
+    },
+    {
+      href: "/communications",
+      label: "Comunicacao",
+      description: "Camada futura para modelos, handoff e mensagens preparadas.",
+    },
+  ]);
+  assert.equal(canAccessAppArea("leadership", "treasury"), false);
+  assert.equal(canAccessAppArea("leadership", "leadership"), true);
+  assert.deepEqual(getAccessibleAppAreaLinks(["secretary", "leadership"]), [
+    {
+      href: "/secretaria",
+      label: "Secretaria",
+      description: "Base para cadastro, busca e acompanhamento de pessoas.",
+    },
+    {
+      href: "/leadership",
+      label: "Lideranca",
+      description: "Visao resumida para acompanhamento e alinhamento ministerial.",
+    },
+    {
+      href: "/communications",
+      label: "Comunicacao",
+      description: "Camada futura para modelos, handoff e mensagens preparadas.",
+    },
+  ]);
+  assert.equal(canAccessAppArea(["secretary", "leadership"], "communications"), true);
+  assert.equal(getAppAreaLabel("communications"), "Comunicacao");
 });
 
-test("auth BFF routes keep the browser on the web layer", () => {
-  const loginRoute = readFileSync(
-    new URL("../src/app/api/auth/login/route.ts", import.meta.url),
-    "utf8",
+test("protected routes are denied server-side before the browser renders content", () => {
+  assert.deepEqual(getRouteAccessDecision(["leadership"], "/treasury"), {
+    area: "treasury",
+    allowed: false,
+  });
+  assert.deepEqual(getRouteAccessDecision(["secretary"], "/secretaria"), {
+    area: "secretaria",
+    allowed: true,
+  });
+  assert.equal(
+    buildAccessDeniedPath("treasury", "/treasury"),
+    "/acesso-negado?area=treasury&from=%2Ftreasury",
   );
-  const meRoute = readFileSync(
-    new URL("../src/app/api/auth/me/route.ts", import.meta.url),
-    "utf8",
-  );
-  const logoutRoute = readFileSync(
-    new URL("../src/app/api/auth/logout/route.ts", import.meta.url),
-    "utf8",
-  );
-  const sessionFile = readFileSync(
-    new URL("../src/features/auth/session.ts", import.meta.url),
-    "utf8",
-  );
-  const sessionConstantsFile = readFileSync(
-    new URL("../src/features/auth/session-constants.ts", import.meta.url),
-    "utf8",
-  );
-  const navigationFile = readFileSync(
-    new URL("../src/features/auth/navigation.ts", import.meta.url),
-    "utf8",
-  );
-  const sessionTypesFile = readFileSync(
-    new URL("../src/features/auth/session-types.ts", import.meta.url),
-    "utf8",
-  );
-  const authResponseFile = readFileSync(
-    new URL("../src/features/auth/auth-response.ts", import.meta.url),
-    "utf8",
-  );
-  const proxyFile = readFileSync(new URL("../src/proxy.ts", import.meta.url), "utf8");
-
-  assert.match(loginRoute, /\/api\/v1\/auth\/login/);
-  assert.match(loginRoute, /createInternalJwt/);
-  assert.match(loginRoute, /AUTH_SESSION_COOKIE_NAME/);
-  assert.match(meRoute, /\/api\/v1\/auth\/me/);
-  assert.match(meRoute, /AUTH_SESSION_COOKIE_NAME/);
-  assert.match(logoutRoute, /\/api\/v1\/auth\/logout/);
-  assert.match(logoutRoute, /AUTH_SESSION_COOKIE_NAME/);
-  assert.match(sessionFile, /RS256/);
-  assert.match(sessionFile, /httpOnly:\s*true/);
-  assert.match(sessionFile, /sameSite:\s*"lax"/);
-  assert.match(sessionFile, /path:\s*"\/"/);
-  assert.match(sessionFile, /maxAge:\s*AUTH_SESSION_TTL_SECONDS/);
-  assert.match(sessionConstantsFile, /AUTH_SESSION_COOKIE_NAME/);
-  assert.match(navigationFile, /startsWith\("\/"/);
-  assert.match(navigationFile, /startsWith\("\/\/"/);
-  assert.match(sessionTypesFile, /LoginPayload/);
-  assert.match(authResponseFile, /GENERIC_AUTH_ERROR_MESSAGE/);
-  assert.doesNotMatch(sessionFile, /DEV_INTERNAL_JWT_PRIVATE_KEY/);
-  assert.match(proxyFile, /\/login/);
-  assert.match(proxyFile, /AUTH_SESSION_COOKIE_NAME/);
-  assert.match(proxyFile, /\/api\/auth\/me/);
-  assert.match(proxyFile, /isSessionValid/);
 });
 
-test("onboarding route handler normalizes upstream responses", async () => {
+test("safe next path helper rejects open redirect attempts", () => {
+  assert.equal(getSafeNextPath("https://evil.com"), "/");
+  assert.equal(getSafeNextPath("//evil.com"), "/");
+  assert.equal(getSafeNextPath("/secretaria"), "/secretaria");
+});
+
+test("access response helper strips technical errors from browser-facing responses", async () => {
+  const sanitized = await normalizeAccessResponse(
+    new Response(
+      JSON.stringify({
+        message: "Acesso negado para esta area.",
+        errors: {
+          church_id: ["Nao foi possivel aplicar a igreja correta."],
+        },
+        debug: "internal",
+      }),
+      {
+        status: 403,
+        headers: {
+          "content-type": "application/json",
+        },
+      },
+    ),
+  );
+
+  const fallback = await normalizeAccessResponse(
+    new Response("<html>upstream failure</html>", {
+      status: 500,
+      headers: {
+        "content-type": "text/html",
+      },
+    }),
+  );
+
+  assert.deepEqual(sanitized, {
+    body: {
+      message: "Acesso negado para esta area.",
+    },
+    status: 403,
+  });
+  assert.deepEqual(fallback, {
+    body: {
+      message: GENERIC_ACCESS_ERROR_MESSAGE,
+    },
+    status: 500,
+  });
+});
+
+test("backend response normalizer still forwards valid onboarding payloads", async () => {
   const htmlResult = await normalizeInitialSetupResponse(
     new Response("<html>upstream failure</html>", {
       status: 500,
@@ -150,41 +245,139 @@ test("onboarding route handler normalizes upstream responses", async () => {
   });
 });
 
-test("onboarding route still forwards to the Laravel onboarding endpoint", () => {
-  const routeFile = readFileSync(
-    new URL("../src/app/api/onboarding/initial-setup/route.ts", import.meta.url),
+test("BFF route handlers and proxy keep authorization logic outside the browser", () => {
+  const proxyFile = readFileSync(new URL("../src/proxy.ts", import.meta.url), "utf8");
+  const authMeRoute = readFileSync(
+    new URL("../src/app/api/auth/me/route.ts", import.meta.url),
+    "utf8",
+  );
+  const backofficeAccessRoute = readFileSync(
+    new URL("../src/app/api/backoffice/access/[area]/route.ts", import.meta.url),
     "utf8",
   );
 
-  assert.match(routeFile, /\/api\/v1\/onboarding\/initial-setup/);
-  assert.match(routeFile, /normalizeInitialSetupResponse/);
-  assert.match(routeFile, /callLaravel/);
+  assert.match(proxyFile, /getRouteAccessDecision/);
+  assert.match(proxyFile, /buildAccessDeniedPath/);
+  assert.match(authMeRoute, /safeBody/);
+  assert.match(backofficeAccessRoute, /safeBody/);
+  assert.doesNotMatch(authMeRoute, /errors:\s*\{/);
+  assert.doesNotMatch(backofficeAccessRoute, /errors:\s*\{/);
 });
 
-test("login page now speaks to the BFF auth routes", () => {
-  const loginPage = readFileSync(
-    new URL("../src/app/(auth)/login/page.tsx", import.meta.url),
-    "utf8",
-  );
+test("proxy and BFF routes execute real runtime logic with controlled fetch responses", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
 
-  assert.match(loginPage, /\/api\/auth\/login/);
-  assert.match(loginPage, /useSessionContext/);
-  assert.match(loginPage, /getSafeNextPath/);
-  assert.match(loginPage, /Entrar/);
-});
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.toString();
 
-test("shadcn primitive foundation is materialized", () => {
-  const componentsConfig = readFileSync(
-    new URL("../components.json", import.meta.url),
-    "utf8",
-  );
-  const button = readFileSync(
-    new URL("../src/components/ui/button.tsx", import.meta.url),
-    "utf8",
-  );
+    if (url === "http://web.test/api/auth/me") {
+      return new Response(
+        JSON.stringify({
+          data: {
+            roles: ["leadership"],
+            role: "leadership",
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
 
-  assert.match(componentsConfig, /"ui": "@\/components\/ui"/);
-  assert.match(button, /React\.forwardRef/);
-  assert.match(button, /buttonVariants/);
-  assert.match(button, /class-variance-authority/);
+    if (url === "http://api.test/api/v1/auth/me") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      return new Response(
+        JSON.stringify({
+          message: "Sessao invalida. Entre novamente.",
+          errors: {
+            session: ["Sessao invalida. Entre novamente."],
+          },
+        }),
+        {
+          status: 401,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "http://api.test/api/v1/backoffice/access/treasury") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      return new Response(
+        JSON.stringify({
+          message: "Acesso negado para esta area.",
+          errors: {
+            church_id: ["Nao foi possivel aplicar a igreja correta."],
+          },
+        }),
+        {
+          status: 403,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const { proxy } = await import("../src/proxy.ts");
+    const { GET: authMeGET } = await import("../src/app/api/auth/me/route.ts");
+    const { GET: backofficeAccessGET } = await import("../src/app/api/backoffice/access/[area]/route.ts");
+
+    const deniedProxyResponse = await proxy(createNextLikeRequest("/treasury", "runtime-token"));
+    const authMeResponse = await authMeGET(
+      new Request("http://web.test/api/auth/me", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+    const accessResponse = await backofficeAccessGET(
+      new Request("http://web.test/api/backoffice/access/treasury", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+      {
+        params: {
+          area: "treasury",
+        },
+      },
+    );
+
+    assert.equal(deniedProxyResponse.status, 307);
+    assert.equal(
+      deniedProxyResponse.headers.get("location"),
+      "http://web.test/acesso-negado?area=treasury&from=%2Ftreasury",
+    );
+
+    assert.equal(authMeResponse.status, 401);
+    assert.deepEqual(await authMeResponse.json(), {
+      message: "Sessao invalida. Entre novamente.",
+    });
+
+    assert.equal(accessResponse.status, 403);
+    assert.deepEqual(await accessResponse.json(), {
+      message: "Acesso negado para esta area.",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
 });

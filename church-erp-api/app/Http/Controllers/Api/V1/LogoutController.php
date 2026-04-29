@@ -11,8 +11,7 @@ class LogoutController
     public function __invoke(
         Request $request,
         ResolveAuthenticatedSessionService $service,
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $token = $request->bearerToken();
 
         if (is_string($token) && $token !== '') {

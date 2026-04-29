@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from "next/server.js";
 import { callLaravel } from "@/lib/api/client";
 import {
   AUTH_SESSION_COOKIE_NAME,
@@ -32,7 +32,16 @@ export async function GET(request: Request): Promise<Response> {
   const { body, status } = await normalizeAuthResponse(response);
 
   if (!response.ok) {
-    const nextResponse = NextResponse.json(body, { status });
+    const safeBody =
+      status === 401
+        ? {
+            message:
+              typeof body.message === "string"
+                ? body.message
+                : "Sessao invalida. Entre novamente.",
+          }
+        : body;
+    const nextResponse = NextResponse.json(safeBody, { status });
     nextResponse.cookies.set(AUTH_SESSION_COOKIE_NAME, "", {
       ...buildSessionCookieOptions(),
       maxAge: 0,

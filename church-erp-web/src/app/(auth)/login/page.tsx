@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +16,16 @@ const initialForm: LoginPayload = {
   password: "",
 };
 
-export default function LoginPage() {
+type LoginPageContentProps = {
+  allowAuthenticatedRedirect?: boolean;
+  nextPath: string;
+};
+
+function LoginPageContent({
+  allowAuthenticatedRedirect = true,
+  nextPath,
+}: LoginPageContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const session = useSessionContext();
   const [form, setForm] = useState<LoginPayload>(initialForm);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -26,13 +33,22 @@ export default function LoginPage() {
     {},
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const nextPath = getSafeNextPath(searchParams.get("next"));
 
   useEffect(() => {
-    if (session.status === "authenticated" && session.context) {
+    if (
+      allowAuthenticatedRedirect &&
+      session.status === "authenticated" &&
+      session.context
+    ) {
       router.replace(nextPath);
     }
-  }, [nextPath, router, session.context, session.status]);
+  }, [
+    allowAuthenticatedRedirect,
+    nextPath,
+    router,
+    session.context,
+    session.status,
+  ]);
 
   function updateField(field: keyof LoginPayload, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -169,5 +185,26 @@ export default function LoginPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function LoginPageContentWithSearchParams() {
+  const searchParams = useSearchParams();
+
+  return <LoginPageContent nextPath={getSafeNextPath(searchParams.get("next"))} />;
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <LoginPageContent
+          allowAuthenticatedRedirect={false}
+          nextPath="/"
+        />
+      }
+    >
+      <LoginPageContentWithSearchParams />
+    </Suspense>
   );
 }
