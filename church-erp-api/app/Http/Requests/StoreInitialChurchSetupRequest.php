@@ -21,7 +21,7 @@ class StoreInitialChurchSetupRequest extends FormRequest
         return [
             'church_name' => ['required', 'string', 'max:160'],
             'admin_name' => ['required', 'string', 'max:160'],
-            'admin_email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'admin_email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }
@@ -38,7 +38,6 @@ class StoreInitialChurchSetupRequest extends FormRequest
             'admin_name.max' => 'Use um nome com ate 160 caracteres.',
             'admin_email.required' => 'Informe o email da pessoa administradora.',
             'admin_email.email' => 'Informe um email valido.',
-            'admin_email.unique' => 'Este email ja esta em uso.',
             'password.required' => 'Informe uma senha.',
             'password.min' => 'Use uma senha com pelo menos 8 caracteres.',
             'password.confirmed' => 'A confirmacao da senha precisa ser igual a senha.',
