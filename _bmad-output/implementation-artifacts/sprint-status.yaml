@@ -51,7 +51,7 @@ development_status:
   epic-2: in-progress
   2-1-exibir-home-operacional-do-tesoureiro: done
   2-2-registrar-receita-ou-despesa-com-campos-minimos: done
-  2-3-criar-contraparte-inline-durante-o-lancamento: backlog
+  2-3-criar-contraparte-inline-durante-o-lancamento: done
   2-4-editar-lancamento-com-motivo-e-trilha-de-auditoria: backlog
   2-5-sinalizar-e-resolver-pendencias-financeiras: backlog
   epic-2-retrospective: optional

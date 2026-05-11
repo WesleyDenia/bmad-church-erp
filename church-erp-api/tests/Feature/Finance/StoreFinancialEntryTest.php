@@ -3,6 +3,7 @@
 namespace Tests\Feature\Finance;
 
 use App\Domain\Finance\Models\FinancialCategory;
+use App\Domain\Finance\Models\FinancialCounterparty;
 use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Models\User;
@@ -68,6 +69,7 @@ PEM;
     {
         [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
         $category = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
 
         $response = $this
             ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
@@ -75,7 +77,7 @@ PEM;
                 'entry_type' => 'income',
                 'amount' => '125.40',
                 'financial_category_id' => $category->id,
-                'counterparty_name' => 'Maria Souza',
+                'counterparty_id' => $counterparty->id,
                 'cost_center_name' => 'Cultos de domingo',
             ]);
 
@@ -84,6 +86,7 @@ PEM;
             ->assertJsonPath('data.entry_type', 'income')
             ->assertJsonPath('data.amount', '125.40')
             ->assertJsonPath('data.financial_category_id', $category->id)
+            ->assertJsonPath('data.counterparty_id', $counterparty->id)
             ->assertJsonPath('data.counterparty_name', 'Maria Souza')
             ->assertJsonPath('data.cost_center_name', 'Cultos de domingo')
             ->assertJsonPath('data.message', 'Lancamento salvo com sucesso.')
@@ -93,6 +96,7 @@ PEM;
                     'entry_type',
                     'amount',
                     'financial_category_id',
+                    'counterparty_id',
                     'counterparty_name',
                     'cost_center_name',
                     'created_at',
@@ -105,6 +109,7 @@ PEM;
             'entry_type' => 'income',
             'amount' => '125.40',
             'financial_category_id' => $category->id,
+            'counterparty_id' => $counterparty->id,
             'counterparty_name' => 'Maria Souza',
             'cost_center_name' => 'Cultos de domingo',
         ]);
@@ -125,7 +130,7 @@ PEM;
                 'entry_type',
                 'amount',
                 'financial_category_id',
-                'counterparty_name',
+                'counterparty_id',
                 'cost_center_name',
             ]);
     }
@@ -136,7 +141,7 @@ PEM;
             'entry_type' => 'income',
             'amount' => '125.40',
             'financial_category_id' => 1,
-            'counterparty_name' => 'Maria Souza',
+            'counterparty_id' => 1,
             'cost_center_name' => 'Cultos de domingo',
         ]);
 
@@ -149,6 +154,7 @@ PEM;
     {
         [$user, $church] = $this->seedMembership('leadership', 'lideranca@example.com', 'igreja-central');
         $category = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
 
         $response = $this
             ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['leadership'], 'session-123'))
@@ -156,7 +162,7 @@ PEM;
                 'entry_type' => 'income',
                 'amount' => '125.40',
                 'financial_category_id' => $category->id,
-                'counterparty_name' => 'Maria Souza',
+                'counterparty_id' => $counterparty->id,
                 'cost_center_name' => 'Cultos de domingo',
             ]);
 
@@ -165,11 +171,35 @@ PEM;
             ->assertJsonPath('message', 'Acesso negado para esta area.');
     }
 
+    public function test_it_blocks_entry_validation_feedback_for_users_without_treasury_access(): void
+    {
+        [$user, $church] = $this->seedMembership('leadership', 'lideranca@example.com', 'igreja-central');
+        [, $otherChurch] = $this->seedMembership('treasurer', 'tesoureiro2@example.com', 'igreja-esperanca');
+        $category = $this->createCategory($otherChurch->id, 'Oferta livre', 'oferta-livre', 'income');
+        $counterparty = $this->createCounterparty($otherChurch->id, 'Maria Souza', 'maria-souza');
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['leadership'], 'session-123'))
+            ->postJson('/api/v1/finance/entries', [
+                'entry_type' => 'income',
+                'amount' => '125.40',
+                'financial_category_id' => $category->id,
+                'counterparty_id' => $counterparty->id,
+                'cost_center_name' => 'Cultos de domingo',
+            ]);
+
+        $response
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Acesso negado para esta area.')
+            ->assertJsonMissingPath('errors');
+    }
+
     public function test_it_rejects_categories_from_another_tenant(): void
     {
         [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
         [, $otherChurch] = $this->seedMembership('treasurer', 'tesoureiro2@example.com', 'igreja-esperanca');
         $category = $this->createCategory($otherChurch->id, 'Oferta livre', 'oferta-livre', 'income');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
 
         $response = $this
             ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
@@ -177,7 +207,7 @@ PEM;
                 'entry_type' => 'income',
                 'amount' => '125.40',
                 'financial_category_id' => $category->id,
-                'counterparty_name' => 'Maria Souza',
+                'counterparty_id' => $counterparty->id,
                 'cost_center_name' => 'Cultos de domingo',
             ]);
 
@@ -192,6 +222,7 @@ PEM;
     {
         [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
         $category = $this->createCategory($church->id, 'Acao social', 'acao-social', 'expense');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
 
         $response = $this
             ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
@@ -199,7 +230,7 @@ PEM;
                 'entry_type' => 'income',
                 'amount' => '125.40',
                 'financial_category_id' => $category->id,
-                'counterparty_name' => 'Maria Souza',
+                'counterparty_id' => $counterparty->id,
                 'cost_center_name' => 'Cultos de domingo',
             ]);
 
@@ -214,6 +245,7 @@ PEM;
     {
         [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
         $category = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
 
         $response = $this
             ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
@@ -221,9 +253,58 @@ PEM;
                 'entry_type' => 'income',
                 'amount' => '125.40',
                 'financial_category_id' => $category->id,
-                'counterparty_name' => 'Maria Souza',
+                'counterparty_id' => $counterparty->id,
                 'cost_center_name' => 'Cultos de domingo',
                 'church_id' => 999,
+            ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Envie apenas os campos do lancamento rapido.')
+            ->assertJsonValidationErrors(['payload']);
+
+        $this->assertDatabaseCount('financial_entries', 0);
+    }
+
+    public function test_it_rejects_counterparties_from_another_tenant(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        [, $otherChurch] = $this->seedMembership('treasurer', 'tesoureiro2@example.com', 'igreja-esperanca');
+        $category = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $counterparty = $this->createCounterparty($otherChurch->id, 'Maria Souza', 'maria-souza');
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->postJson('/api/v1/finance/entries', [
+                'entry_type' => 'income',
+                'amount' => '125.40',
+                'financial_category_id' => $category->id,
+                'counterparty_id' => $counterparty->id,
+                'cost_center_name' => 'Cultos de domingo',
+            ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['counterparty_id']);
+
+        $this->assertDatabaseCount('financial_entries', 0);
+    }
+
+    public function test_it_rejects_payload_fields_outside_the_updated_contract(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        $category = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->postJson('/api/v1/finance/entries', [
+                'entry_type' => 'income',
+                'amount' => '125.40',
+                'financial_category_id' => $category->id,
+                'counterparty_id' => $counterparty->id,
+                'counterparty_name' => 'Texto livre indevido',
+                'cost_center_name' => 'Cultos de domingo',
             ]);
 
         $response
@@ -268,6 +349,15 @@ PEM;
             'slug' => $slug,
             'kind' => $kind,
             'is_default' => false,
+        ]);
+    }
+
+    private function createCounterparty(int $churchId, string $name, string $slug): FinancialCounterparty
+    {
+        return FinancialCounterparty::query()->withoutGlobalScopes()->create([
+            'church_id' => $churchId,
+            'name' => $name,
+            'slug' => $slug,
         ]);
     }
 

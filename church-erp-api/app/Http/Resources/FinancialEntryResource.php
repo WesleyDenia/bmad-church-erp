@@ -21,6 +21,7 @@ class FinancialEntryResource extends JsonResource
             'entry_type' => $resource->entry_type,
             'amount' => $resource->amount,
             'financial_category_id' => $resource->financial_category_id,
+            'counterparty_id' => $resource->counterparty_id,
             'counterparty_name' => $resource->counterparty_name,
             'cost_center_name' => $resource->cost_center_name,
             'created_at' => $resource->created_at?->toISOString(),

@@ -31,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
     entry_type: requestBody.entry_type as FinancialEntryPayload["entry_type"],
     amount: requestBody.amount ?? "",
     financial_category_id: Number(requestBody.financial_category_id),
-    counterparty_name: requestBody.counterparty_name ?? "",
+    counterparty_id: Number(requestBody.counterparty_id),
     cost_center_name: requestBody.cost_center_name ?? "",
   };
   const response = await callLaravel("/api/v1/finance/entries", {

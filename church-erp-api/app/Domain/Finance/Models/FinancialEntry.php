@@ -19,6 +19,7 @@ class FinancialEntry extends Model
         'entry_type',
         'amount',
         'financial_category_id',
+        'counterparty_id',
         'counterparty_name',
         'cost_center_name',
     ];
@@ -47,5 +48,13 @@ class FinancialEntry extends Model
     public function financialCategory(): BelongsTo
     {
         return $this->belongsTo(FinancialCategory::class);
+    }
+
+    /**
+     * @return BelongsTo<FinancialCounterparty, $this>
+     */
+    public function counterparty(): BelongsTo
+    {
+        return $this->belongsTo(FinancialCounterparty::class, 'counterparty_id');
     }
 }
