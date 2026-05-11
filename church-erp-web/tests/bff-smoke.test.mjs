@@ -76,6 +76,8 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/app/api/auth/logout/route.ts",
     "../src/app/api/backoffice/access/[area]/route.ts",
     "../src/app/api/categories/defaults/route.ts",
+    "../src/app/api/finance/categories/route.ts",
+    "../src/app/api/finance/entries/route.ts",
     "../src/app/acesso-negado/page.tsx",
     "../src/app/treasury/page.tsx",
     "../src/app/secretaria/page.tsx",
@@ -88,6 +90,8 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/features/auth/session-constants.ts",
     "../src/features/auth/session-types.ts",
     "../src/features/categories/defaults.ts",
+    "../src/features/finance/financial-entry.ts",
+    "../src/features/finance/amount.ts",
     "../src/features/treasury/home-view-model.ts",
     "../src/features/auth/auth-response.ts",
     "../src/features/auth/access-response.ts",
@@ -96,10 +100,14 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/features/app-shell/navigation.ts",
     "../src/features/app-shell/navigation-policy.js",
     "../src/components/ui/button.tsx",
+    "../src/components/ui/input.tsx",
+    "../src/components/ui/label.tsx",
+    "../src/components/ui/select.tsx",
     "../src/components/design-system/surface.tsx",
     "../src/components/operational/area-card.tsx",
     "../src/components/operational/access-denied-panel.tsx",
     "../src/components/operational/area-guard.tsx",
+    "../src/components/operational/treasury-entry-form.tsx",
     "../src/components/operational/treasury-home-shell.tsx",
     "../src/components/operational/weekly-priority-block.tsx",
     "../src/components/operational/quick-action-rail.tsx",
@@ -268,15 +276,53 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
     new URL("../src/app/api/categories/defaults/route.ts", import.meta.url),
     "utf8",
   );
+  const financeCategoriesRoute = readFileSync(
+    new URL("../src/app/api/finance/categories/route.ts", import.meta.url),
+    "utf8",
+  );
+  const financeEntriesRoute = readFileSync(
+    new URL("../src/app/api/finance/entries/route.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(proxyFile, /getRouteAccessDecision/);
   assert.match(proxyFile, /buildAccessDeniedPath/);
   assert.match(authMeRoute, /safeBody/);
   assert.match(backofficeAccessRoute, /safeBody/);
   assert.match(categoryDefaultsRoute, /safeBody/);
+  assert.match(financeCategoriesRoute, /callLaravel/);
+  assert.match(financeEntriesRoute, /callLaravel/);
+  assert.match(financeEntriesRoute, /financial_category_id/);
   assert.doesNotMatch(authMeRoute, /errors:\s*\{/);
   assert.doesNotMatch(backofficeAccessRoute, /errors:\s*\{/);
   assert.doesNotMatch(categoryDefaultsRoute, /errors:\s*\{/);
+  assert.doesNotMatch(financeCategoriesRoute, /errors:\s*\{/);
+});
+
+test("finance BFF routes stay on the web boundary and keep snake_case contracts", () => {
+  const financeCategoriesRoute = readFileSync(
+    new URL("../src/app/api/finance/categories/route.ts", import.meta.url),
+    "utf8",
+  );
+  const financeEntriesRoute = readFileSync(
+    new URL("../src/app/api/finance/entries/route.ts", import.meta.url),
+    "utf8",
+  );
+  const financeContracts = readFileSync(
+    new URL("../src/features/finance/financial-entry.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(financeCategoriesRoute, /callLaravel\("\/api\/v1\/finance\/categories"/);
+  assert.match(financeEntriesRoute, /callLaravel\("\/api\/v1\/finance\/entries"/);
+  assert.match(financeEntriesRoute, /counterparty_name/);
+  assert.match(financeEntriesRoute, /cost_center_name/);
+  assert.match(financeContracts, /entry_type/);
+  assert.match(financeContracts, /financial_category_id/);
+  assert.match(financeContracts, /counterparty_name/);
+  assert.match(financeContracts, /cost_center_name/);
+  assert.doesNotMatch(financeEntriesRoute, /apiBaseUrl/);
+  assert.doesNotMatch(financeEntriesRoute, /church_id/);
 });
 
 test("treasury page keeps AreaGuard as the access boundary for the operational home shell", () => {
@@ -311,7 +357,131 @@ test("treasury home shell composes the five operational blocks without dashboard
   assert.match(treasuryHomeShell, /<OperationalPendingBlock/);
   assert.match(treasuryHomeShell, /<ClosingStatusBlock/);
   assert.match(treasuryHomeShell, /<PayablesReceivablesBlock/);
+  assert.match(treasuryHomeShell, /<TreasuryEntryForm/);
   assert.doesNotMatch(treasuryHomeShell, /DashboardCard|GenericPanel|Widget/i);
+});
+
+test("treasury quick entry form stays inside the existing home anchor and only calls the web BFF", () => {
+  const treasuryHomeShell = readFileSync(
+    new URL("../src/components/operational/treasury-home-shell.tsx", import.meta.url),
+    "utf8",
+  );
+  const treasuryEntryForm = readFileSync(
+    new URL("../src/components/operational/treasury-entry-form.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(treasuryHomeShell, /id="lancamento-rapido"/);
+  assert.match(treasuryHomeShell, /TreasuryEntryForm/);
+  assert.match(treasuryEntryForm, /fetch\("\/api\/finance\/categories"/);
+  assert.match(treasuryEntryForm, /fetch\("\/api\/finance\/entries"/);
+  assert.match(treasuryEntryForm, /blocked_categories_missing/);
+  assert.match(treasuryEntryForm, /server_error/);
+  assert.match(treasuryEntryForm, /financial_category_id/);
+  assert.match(treasuryEntryForm, /counterparty_name/);
+  assert.match(treasuryEntryForm, /cost_center_name/);
+  assert.match(treasuryEntryForm, /Subtipo/);
+  assert.match(treasuryEntryForm, /Contraparte/);
+  assert.match(treasuryEntryForm, /Centro de custo/);
+  assert.doesNotMatch(treasuryEntryForm, /api\/v1/);
+  assert.doesNotMatch(treasuryEntryForm, /API_BASE_URL/);
+});
+
+test("finance BFF routes sanitize upstream 500 errors as Server error", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.toString();
+
+    if (url === "http://api.test/api/v1/finance/categories") {
+      assert.equal(init?.headers instanceof Headers, true);
+
+      return new Response(
+        JSON.stringify({
+          message: "database exploded",
+          debug: "stack-trace",
+        }),
+        {
+          status: 500,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "http://api.test/api/v1/finance/entries") {
+      assert.equal(init?.headers instanceof Headers, true);
+
+      return new Response(
+        JSON.stringify({
+          message: "sql error",
+          errors: {
+            server: ["internal details"],
+          },
+        }),
+        {
+          status: 500,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const { GET: financeCategoriesGET } = await import(
+      "../src/app/api/finance/categories/route.ts"
+    );
+    const { POST: financeEntriesPOST } = await import(
+      "../src/app/api/finance/entries/route.ts"
+    );
+
+    const financeCategoriesResponse = await financeCategoriesGET(
+      new Request("http://web.test/api/finance/categories", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+    const financeEntriesResponse = await financeEntriesPOST(
+      new Request("http://web.test/api/finance/entries", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          entry_type: "income",
+          amount: "125.40",
+          financial_category_id: 7,
+          counterparty_name: "Maria Souza",
+          cost_center_name: "Cultos de domingo",
+        }),
+      }),
+    );
+
+    assert.equal(financeCategoriesResponse.status, 500);
+    assert.deepEqual(await financeCategoriesResponse.json(), {
+      message: "Server error",
+    });
+
+    assert.equal(financeEntriesResponse.status, 500);
+    assert.deepEqual(await financeEntriesResponse.json(), {
+      message: "Server error",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
 });
 
 test("treasury home links only to anchors that exist in the shell", () => {
@@ -506,6 +676,69 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       );
     }
 
+    if (url === "http://api.test/api/v1/finance/categories") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            financial_categories: [
+              {
+                id: 7,
+                name: "Oferta especial",
+                slug: "oferta-especial",
+                kind: "income",
+              },
+            ],
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "http://api.test/api/v1/finance/entries") {
+      assert.equal(init?.method, "POST");
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      const payload = JSON.parse(init?.body ?? "{}");
+
+      assert.deepEqual(payload, {
+        entry_type: "income",
+        amount: "125.40",
+        financial_category_id: 7,
+        counterparty_name: "Maria Souza",
+        cost_center_name: "Cultos de domingo",
+      });
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            id: 15,
+            entry_type: "income",
+            amount: "125.40",
+            financial_category_id: 7,
+            counterparty_name: "Maria Souza",
+            cost_center_name: "Cultos de domingo",
+            created_at: "2026-05-06T18:30:00.000000Z",
+            message: "Lancamento salvo com sucesso.",
+          },
+        }),
+        {
+          status: 201,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
     throw new Error(`Unexpected fetch: ${url}`);
   };
 
@@ -515,6 +748,12 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
     const { GET: backofficeAccessGET } = await import("../src/app/api/backoffice/access/[area]/route.ts");
     const { GET: categoryDefaultsGET } = await import(
       "../src/app/api/categories/defaults/route.ts"
+    );
+    const { GET: financeCategoriesGET } = await import(
+      "../src/app/api/finance/categories/route.ts"
+    );
+    const { POST: financeEntriesPOST } = await import(
+      "../src/app/api/finance/entries/route.ts"
     );
 
     const deniedProxyResponse = await proxy(createNextLikeRequest("/treasury", "runtime-token"));
@@ -542,6 +781,29 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
         headers: {
           cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
         },
+      }),
+    );
+    const financeCategoriesResponse = await financeCategoriesGET(
+      new Request("http://web.test/api/finance/categories", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+    const financeEntriesResponse = await financeEntriesPOST(
+      new Request("http://web.test/api/finance/entries", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          entry_type: "income",
+          amount: "125.40",
+          financial_category_id: 7,
+          counterparty_name: "Maria Souza",
+          cost_center_name: "Cultos de domingo",
+        }),
       }),
     );
 
@@ -579,6 +841,34 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
             slug: "membros",
           },
         ],
+      },
+    });
+
+    assert.equal(financeCategoriesResponse.status, 200);
+    assert.deepEqual(await financeCategoriesResponse.json(), {
+      data: {
+        financial_categories: [
+          {
+            id: 7,
+            name: "Oferta especial",
+            slug: "oferta-especial",
+            kind: "income",
+          },
+        ],
+      },
+    });
+
+    assert.equal(financeEntriesResponse.status, 201);
+    assert.deepEqual(await financeEntriesResponse.json(), {
+      data: {
+        id: 15,
+        entry_type: "income",
+        amount: "125.40",
+        financial_category_id: 7,
+        counterparty_name: "Maria Souza",
+        cost_center_name: "Cultos de domingo",
+        created_at: "2026-05-06T18:30:00.000000Z",
+        message: "Lancamento salvo com sucesso.",
       },
     });
   } finally {

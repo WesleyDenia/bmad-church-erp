@@ -2,6 +2,7 @@ import { ClosingStatusBlock } from "@/components/operational/closing-status-bloc
 import { OperationalPendingBlock } from "@/components/operational/operational-pending-block";
 import { PayablesReceivablesBlock } from "@/components/operational/payables-receivables-block";
 import { QuickActionRail } from "@/components/operational/quick-action-rail";
+import { TreasuryEntryForm } from "@/components/operational/treasury-entry-form";
 import { WeeklyPriorityBlock } from "@/components/operational/weekly-priority-block";
 import { treasury_home_view_model } from "@/features/treasury/home-view-model";
 
@@ -35,7 +36,7 @@ export function TreasuryHomeShell() {
           }
         />
 
-        <div id="lancamento-rapido">
+        <div id="lancamento-rapido" className="space-y-6">
           <QuickActionRail
             actions={quickActions}
             empty_state={quickActionRail?.empty_state ?? {
@@ -44,6 +45,7 @@ export function TreasuryHomeShell() {
               href: "/treasury#lancamento-rapido"
             }}
           />
+          <TreasuryEntryForm />
         </div>
       </section>
 

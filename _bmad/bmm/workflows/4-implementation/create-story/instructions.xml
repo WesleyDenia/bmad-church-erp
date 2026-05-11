@@ -9,6 +9,7 @@
     EVERYTHING needed for flawless implementation</critical>
   <critical>COMMON LLM MISTAKES TO PREVENT: reinventing wheels, wrong libraries, wrong file locations, breaking regressions, ignoring UX,
     vague implementations, lying about completion, not learning from past work</critical>
+  <critical>WRITE TO PREVENT REVIEW CASCADES: make the story prescriptive about what to do, what NOT to do, where to implement, how to validate, and what must exist before review</critical>
   <critical>🚨 EXHAUSTIVE ANALYSIS REQUIRED: You must thoroughly analyze ALL artifacts to extract critical context - do NOT be lazy or skim!
     This is the most important function in the entire development process!</critical>
   <critical>🔬 UTILIZE SUBPROCESSES AND SUBAGENTS: Use research subagents, subprocesses or parallel processing if available to thoroughly
@@ -190,13 +191,14 @@
     original documents <!-- Extract specific story requirements -->
     <action>Extract our story ({{epic_num}}-{{story_num}}) details:</action> **STORY FOUNDATION:** - User story statement
     (As a, I want, so that) - Detailed acceptance criteria (already BDD formatted) - Technical requirements specific to this story -
-    Business context and value - Success criteria <!-- Previous story analysis for context continuity -->
+    Business context and value - Success criteria - Explicit implementation boundaries - Explicit non-goals / prohibited approaches <!-- Previous story analysis for context continuity -->
     <check if="story_num > 1">
       <action>Find {{previous_story_num}}: scan {implementation_artifacts} for the story file in epic {{epic_num}} with the highest story number less than {{story_num}}</action>
       <action>Load previous story file: {implementation_artifacts}/{{epic_num}}-{{previous_story_num}}-*.md</action> **PREVIOUS STORY INTELLIGENCE:** -
     Dev notes and learnings from previous story - Review feedback and corrections needed - Files that were created/modified and their
-    patterns - Testing approaches that worked/didn't work - Problems encountered and solutions found - Code patterns established <action>Extract
+      patterns - Testing approaches that worked/didn't work - Problems encountered and solutions found - Code patterns established <action>Extract
     all learnings that could impact current story implementation</action>
+      <action>Promote recurring review findings into explicit guardrails, prohibited approaches, and pre-review checks for the current story</action>
     </check>
 
     <!-- Git intelligence for previous work patterns -->
@@ -233,6 +235,7 @@
     processes - **Integration Patterns:** External service integrations, data flows <action>Extract any story-specific requirements that the
     developer MUST follow</action>
     <action>Identify any architectural decisions that override previous patterns</action>
+    <action>Extract explicit file-location guidance, mandatory layering decisions, and prohibited implementation shortcuts that would otherwise surface only during review</action>
   </step>
 
   <step n="4" goal="Web research for latest technical specifics">
@@ -303,6 +306,9 @@
     <!-- Final status update -->
     <template-output file="{default_output_file}">
     story_completion_status</template-output>
+
+    <action>Ensure the final story includes: explicit guardrails, explicit prohibited approaches, probable file paths, required states, required tests, and a pre-review checklist</action>
+    <action>Ensure repeated review pain from previous stories is converted into concrete instructions, not vague reminders</action>
 
     <!-- CRITICAL: Set status to ready-for-dev -->
     <action>Set story Status to: "ready-for-dev"</action>
