@@ -23,18 +23,53 @@ so that {{benefit}}.
 
 ## Dev Notes
 
-- Relevant architecture patterns and constraints
-- Source tree components to touch
-- Testing standards summary
+### Contexto funcional e objetivo desta story
+
+- [Explique o objetivo real da entrega, o fluxo principal que ela habilita e o que a story nao esta tentando resolver]
+
+### Guardrails de implementacao obrigatorios
+
+- [Liste os boundaries, entrypoints e estruturas existentes que DEV deve estender e preservar]
+
+### Abordagens proibidas
+
+- [Liste explicitamente o que nao pode ser feito para evitar reinvencao, arquitetura paralela e regressao]
+
+### Arquivos provaveis a alterar ou criar
+
+- [Liste os paths mais provaveis para reduzir ambiguidade de implementacao]
+
+### Estados obrigatorios da UI ou do fluxo
+
+- [Liste loading, empty, denied, success, error ou outros estados que DEV nao pode esquecer]
+
+### Requisitos tecnicos obrigatorios
+
+- [Liste versoes, contratos, APIs, bibliotecas e detalhes tecnicos que DEV precisa seguir]
+
+### Compliance de arquitetura
+
+- [Liste regras obrigatorias de camadas, naming, BFF, tenancy, resources, policies, etc.]
+
+### Requisitos de teste
+
+- [Liste os testes minimos obrigatorios e os comandos que devem passar antes de review]
+
+### Licoes de stories ou reviews anteriores
+
+- [Liste erros recorrentes que esta story precisa prevenir explicitamente]
 
 ### Project Structure Notes
 
-- Alignment with unified project structure (paths, modules, naming)
-- Detected conflicts or variances (with rationale)
+- [Explique alinhamento com a estrutura atual do projeto e conflitos detectados, se houver]
 
 ### References
 
-- Cite all technical details with source paths and sections, e.g. [Source: docs/<file>.md#Section]
+- [Cite todas as decisoes tecnicas com caminhos e secoes especificas]
+
+### Checklist pre-review
+
+- [Liste validacoes objetivas que DEV deve confirmar antes de pedir review]
 
 ## Dev Agent Record
 
