@@ -3,11 +3,14 @@
 namespace Tests\Feature\Finance;
 
 use App\Domain\Finance\Models\FinancialCounterparty;
+use App\Domain\Finance\Services\CreateFinancialCounterpartyService;
+use App\Domain\Finance\Services\ListFinancialCounterpartiesService;
 use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class FinancialCounterpartyApiTest extends TestCase
@@ -217,6 +220,50 @@ PEM;
             ->assertForbidden()
             ->assertJsonPath('message', 'Acesso negado para esta area.')
             ->assertJsonMissingPath('errors');
+    }
+
+    public function test_counterparty_services_use_explicit_church_scope_without_an_authenticated_request(): void
+    {
+        $church = Church::query()->create([
+            'name' => 'Igreja Central',
+            'slug' => 'igreja-central',
+        ]);
+        $otherChurch = Church::query()->create([
+            'name' => 'Igreja Esperanca',
+            'slug' => 'igreja-esperanca',
+        ]);
+
+        $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
+        $this->createCounterparty($otherChurch->id, 'Visitante', 'visitante');
+
+        $listService = new ListFinancialCounterpartiesService;
+
+        $listed = $listService->list($church->id);
+
+        $this->assertSame([
+            [
+                'id' => 1,
+                'name' => 'Maria Souza',
+                'slug' => 'maria-souza',
+            ],
+        ], $listed['financial_counterparties']);
+
+        $createService = new CreateFinancialCounterpartyService;
+        $created = $createService->create([
+            'church_id' => $otherChurch->id,
+            'name' => '  Maria   Souza  ',
+        ]);
+
+        $this->assertSame($otherChurch->id, $created->church_id);
+        $this->assertSame('Maria Souza', $created->name);
+        $this->assertSame('maria-souza', $created->slug);
+
+        $this->expectException(ValidationException::class);
+
+        $createService->create([
+            'church_id' => $church->id,
+            'name' => ' maria souza ',
+        ]);
     }
 
     /**

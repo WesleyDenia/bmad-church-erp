@@ -28,6 +28,13 @@ function buildUnauthorizedResponse(): Response {
   );
 }
 
+function buildInvalidJsonResponse(): Response {
+  return NextResponse.json(
+    { message: "Envie um JSON valido." },
+    { status: 400 },
+  );
+}
+
 export async function GET(request: Request): Promise<Response> {
   const token = getSessionToken(request);
 
@@ -79,7 +86,14 @@ export async function POST(request: Request): Promise<Response> {
     return buildUnauthorizedResponse();
   }
 
-  const requestBody = (await request.json()) as Partial<CreateFinancialCounterpartyPayload>;
+  let requestBody: Partial<CreateFinancialCounterpartyPayload>;
+
+  try {
+    requestBody = (await request.json()) as Partial<CreateFinancialCounterpartyPayload>;
+  } catch {
+    return buildInvalidJsonResponse();
+  }
+
   const payload: CreateFinancialCounterpartyPayload = {
     name: requestBody.name ?? "",
   };

@@ -14,7 +14,9 @@ class CreateFinancialEntryService
      */
     public function create(array $payload): FinancialEntry
     {
-        $counterparty = FinancialCounterparty::query()->find($payload['counterparty_id']);
+        $counterparty = FinancialCounterparty::query()
+            ->forChurch($payload['church_id'])
+            ->find($payload['counterparty_id']);
 
         if ($counterparty === null) {
             throw ValidationException::withMessages([

@@ -331,6 +331,7 @@ GPT-5 Codex
 - O web app agora lista contrapartes tenant-scoped via BFF, abre cadastro inline no mesmo formulario, seleciona automaticamente a contraparte criada e preserva os demais campos quando o overlay falha ou e cancelado.
 - A cobertura passou a proteger tenancy, duplicidade normalizada, boundary BFF, contrato `counterparty_id`, sanitizacao de `500` e permanencia do fluxo na home da tesouraria.
 - O hardening final do review garante que utilizadores sem acesso a `treasury` recebem `403` antes de qualquer detalhe de validacao e que o dialog inline promove `401/403` para o estado principal `denied_or_session_invalid` sem mascarar isso como erro generico.
+- O endurecimento pos-review passou a aplicar `church_id` explicito nos services de contrapartes/lancamentos, rejeitar JSON invalido nas rotas BFF antes do upstream e cobrir com testes puros a preservacao do formulario principal no fluxo inline.
 
 ### File List
 
@@ -363,15 +364,18 @@ GPT-5 Codex
 - church-erp-web/src/features/finance/counterparty.ts
 - church-erp-web/src/features/finance/counterparty-inline-state.ts
 - church-erp-web/src/features/finance/financial-entry.ts
+- church-erp-web/src/features/finance/treasury-entry-form-state.ts
 - church-erp-web/package.json
 - church-erp-web/package-lock.json
 - church-erp-web/tests/bff-smoke.test.mjs
 - church-erp-web/tests/counterparty-inline-state.test.mjs
+- church-erp-web/tests/treasury-entry-form-state.test.mjs
 
 ### Change Log
 
 - 2026-05-11: implementado catalogo tenant-scoped de contrapartes financeiras, evolucao do contrato de `finance/entries` para `counterparty_id`, BFF de contrapartes, dialog inline no `TreasuryEntryForm` e ampliacao da cobertura backend/web com validacoes finais verdes.
 - 2026-05-12: code review adversarial corrigiu leaks de autorizacao pre-validacao, substituiu o dialog manual por primitive Radix compatível com `shadcn/ui`, estabilizou o estado de sucesso/cancelamento do fluxo inline e ampliou a cobertura de testes backend/web para o boundary e para a maquina de estados do formulario.
+- 2026-05-13: hardening pos-review tornou os services independentes do contexto implícito da request via `church_id` explicito, blindou as rotas BFF contra JSON invalido e adicionou cobertura de preservacao do formulario principal no fluxo inline.
 
 ## Senior Developer Review (AI)
 

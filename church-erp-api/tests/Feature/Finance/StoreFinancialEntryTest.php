@@ -4,11 +4,13 @@ namespace Tests\Feature\Finance;
 
 use App\Domain\Finance\Models\FinancialCategory;
 use App\Domain\Finance\Models\FinancialCounterparty;
+use App\Domain\Finance\Services\CreateFinancialEntryService;
 use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class StoreFinancialEntryTest extends TestCase
@@ -313,6 +315,54 @@ PEM;
             ->assertJsonValidationErrors(['payload']);
 
         $this->assertDatabaseCount('financial_entries', 0);
+    }
+
+    public function test_create_financial_entry_service_uses_explicit_church_scope_without_an_authenticated_request(): void
+    {
+        $church = Church::query()->create([
+            'name' => 'Igreja Central',
+            'slug' => 'igreja-central',
+        ]);
+        $otherChurch = Church::query()->create([
+            'name' => 'Igreja Esperanca',
+            'slug' => 'igreja-esperanca',
+        ]);
+
+        $category = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $counterparty = $this->createCounterparty($church->id, 'Maria Souza', 'maria-souza');
+        $otherCounterparty = $this->createCounterparty($otherChurch->id, 'Visitante', 'visitante');
+
+        $service = new CreateFinancialEntryService;
+
+        $entry = $service->create([
+            'church_id' => $church->id,
+            'entry_type' => 'income',
+            'amount' => '125.40',
+            'financial_category_id' => $category->id,
+            'counterparty_id' => $counterparty->id,
+            'cost_center_name' => 'Cultos de domingo',
+        ]);
+
+        $this->assertSame($church->id, $entry->church_id);
+        $this->assertSame($counterparty->id, $entry->counterparty_id);
+        $this->assertSame('Maria Souza', $entry->counterparty_name);
+
+        try {
+            $service->create([
+                'church_id' => $church->id,
+                'entry_type' => 'income',
+                'amount' => '125.40',
+                'financial_category_id' => $category->id,
+                'counterparty_id' => $otherCounterparty->id,
+                'cost_center_name' => 'Cultos de domingo',
+            ]);
+
+            $this->fail('Expected the service to reject counterparties from another tenant.');
+        } catch (ValidationException $exception) {
+            $this->assertSame([
+                'counterparty_id' => ['Escolha uma contraparte valida da igreja atual.'],
+            ], $exception->errors());
+        }
     }
 
     /**

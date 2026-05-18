@@ -19,6 +19,7 @@ class CreateFinancialCounterpartyService
 
         if (
             FinancialCounterparty::query()
+                ->forChurch($payload['church_id'])
                 ->where('slug', $slug)
                 ->exists()
         ) {

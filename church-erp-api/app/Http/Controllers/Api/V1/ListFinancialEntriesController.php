@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Domain\Finance\Services\ListFinancialCounterpartiesService;
-use App\Http\Resources\FinancialCounterpartyListResource;
+use App\Domain\Finance\Services\ListFinancialEntriesService;
+use App\Http\Resources\FinancialEntryListResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
-class ListFinancialCounterpartiesController
+class ListFinancialEntriesController
 {
     public function __invoke(
         Request $request,
-        ListFinancialCounterpartiesService $service,
+        ListFinancialEntriesService $service,
     ): JsonResponse {
         $user = $request->user();
 
@@ -32,7 +32,7 @@ class ListFinancialCounterpartiesController
             ], 401);
         }
 
-        return (new FinancialCounterpartyListResource($service->list($churchId)))
+        return (new FinancialEntryListResource($service->list($churchId)))
             ->response()
             ->setStatusCode(200);
     }

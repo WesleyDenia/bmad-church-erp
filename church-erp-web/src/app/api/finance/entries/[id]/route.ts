@@ -2,11 +2,9 @@ import { NextResponse } from "next/server.js";
 import { callLaravel } from "@/lib/api/client";
 import { normalizeAuthResponse } from "@/features/auth/auth-response";
 import type {
-  FinancialEntriesErrorResponse,
-  FinancialEntriesResponse,
   FinancialEntryErrorResponse,
-  FinancialEntryPayload,
   FinancialEntryResponse,
+  UpdateFinancialEntryPayload,
 } from "@/features/finance/financial-entry";
 import {
   AUTH_SESSION_COOKIE_NAME,
@@ -21,7 +19,7 @@ function buildInvalidJsonResponse(): Response {
   );
 }
 
-function readSessionToken(request: Request): string | null {
+function readToken(request: Request): string | null {
   return readSessionTokenFromCookieValue(
     request.headers.get("cookie")?.match(
       new RegExp(`${AUTH_SESSION_COOKIE_NAME}=([^;]+)`),
@@ -44,15 +42,19 @@ function buildSafeBody(
 
   if (status >= 500) {
     return {
-      message: "Server error",
+      message: "Nao foi possivel concluir a solicitacao agora.",
     };
   }
 
   return body;
 }
 
-export async function GET(request: Request): Promise<Response> {
-  const token = readSessionToken(request);
+async function forwardUpdate(
+  request: Request,
+  params: Promise<{ id: string }>,
+  method: "PUT" | "PATCH",
+): Promise<Response> {
+  const token = readToken(request);
 
   if (!token) {
     return NextResponse.json(
@@ -61,59 +63,26 @@ export async function GET(request: Request): Promise<Response> {
     );
   }
 
-  const response = await callLaravel("/api/v1/finance/entries", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  const { body, status } = await normalizeAuthResponse(response);
-  const nextResponse = NextResponse.json(
-    response.ok
-      ? (body as FinancialEntriesResponse)
-      : (buildSafeBody(status, body) as FinancialEntriesErrorResponse),
-    { status },
-  );
-
-  if (status === 401) {
-    nextResponse.cookies.set(AUTH_SESSION_COOKIE_NAME, "", {
-      ...buildSessionCookieOptions(),
-      maxAge: 0,
-    });
-  }
-
-  return nextResponse;
-}
-
-export async function POST(request: Request): Promise<Response> {
-  const token = readSessionToken(request);
-
-  if (!token) {
-    return NextResponse.json(
-      { message: "Sessao invalida. Entre novamente." },
-      { status: 401 },
-    );
-  }
-
-  let requestBody: Partial<FinancialEntryPayload>;
+  let requestBody: Partial<UpdateFinancialEntryPayload>;
 
   try {
-    requestBody = (await request.json()) as Partial<FinancialEntryPayload>;
+    requestBody = (await request.json()) as Partial<UpdateFinancialEntryPayload>;
   } catch {
     return buildInvalidJsonResponse();
   }
 
-  const payload: FinancialEntryPayload = {
-    entry_type: requestBody.entry_type as FinancialEntryPayload["entry_type"],
+  const { id } = await params;
+  const payload: UpdateFinancialEntryPayload = {
+    entry_type: requestBody.entry_type as UpdateFinancialEntryPayload["entry_type"],
     amount: requestBody.amount ?? "",
     financial_category_id: Number(requestBody.financial_category_id),
     counterparty_id: Number(requestBody.counterparty_id),
     cost_center_name: requestBody.cost_center_name ?? "",
+    reason: requestBody.reason ?? "",
   };
-  const response = await callLaravel("/api/v1/finance/entries", {
-    method: "POST",
+
+  const response = await callLaravel(`/api/v1/finance/entries/${id}`, {
+    method,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -137,4 +106,18 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return nextResponse;
+}
+
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  return forwardUpdate(request, context.params, "PUT");
+}
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  return forwardUpdate(request, context.params, "PATCH");
 }

@@ -1,7 +1,11 @@
 export type TreasuryEntryFormStatus =
   | "loading_categories"
   | "loading_counterparties"
+  | "loading_entries"
   | "ready"
+  | "editing"
+  | "reason_required_error"
+  | "success"
   | "counterparty_dialog_open"
   | "counterparty_dialog_cancelled"
   | "inline_success_selected"

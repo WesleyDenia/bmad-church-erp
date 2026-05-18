@@ -9,10 +9,11 @@ class ListFinancialCounterpartiesService
     /**
      * @return array{financial_counterparties: list<array{id: int, name: string, slug: string}>}
      */
-    public function list(): array
+    public function list(int $churchId): array
     {
         return [
             'financial_counterparties' => FinancialCounterparty::query()
+                ->forChurch($churchId)
                 ->orderBy('slug')
                 ->get()
                 ->map(fn (FinancialCounterparty $counterparty): array => [
