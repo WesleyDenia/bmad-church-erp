@@ -6,6 +6,8 @@ use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\Concerns\BelongsToAuthenticatedChurch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class FinancialEntry extends Model
 {
@@ -19,6 +21,7 @@ class FinancialEntry extends Model
         'entry_type',
         'amount',
         'financial_category_id',
+        'counterparty_id',
         'counterparty_name',
         'cost_center_name',
     ];
@@ -47,5 +50,29 @@ class FinancialEntry extends Model
     public function financialCategory(): BelongsTo
     {
         return $this->belongsTo(FinancialCategory::class);
+    }
+
+    /**
+     * @return BelongsTo<FinancialCounterparty, $this>
+     */
+    public function counterparty(): BelongsTo
+    {
+        return $this->belongsTo(FinancialCounterparty::class, 'counterparty_id');
+    }
+
+    /**
+     * @return HasMany<FinancialEntryAudit, $this>
+     */
+    public function audits(): HasMany
+    {
+        return $this->hasMany(FinancialEntryAudit::class);
+    }
+
+    /**
+     * @return HasOne<FinancialEntryAudit, $this>
+     */
+    public function latestAudit(): HasOne
+    {
+        return $this->hasOne(FinancialEntryAudit::class)->latestOfMany();
     }
 }

@@ -77,7 +77,10 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/app/api/backoffice/access/[area]/route.ts",
     "../src/app/api/categories/defaults/route.ts",
     "../src/app/api/finance/categories/route.ts",
+    "../src/app/api/finance/counterparties/route.ts",
     "../src/app/api/finance/entries/route.ts",
+    "../src/app/api/finance/entries/[id]/route.ts",
+    "../src/app/api/finance/entries/[id]/audits/route.ts",
     "../src/app/acesso-negado/page.tsx",
     "../src/app/treasury/page.tsx",
     "../src/app/secretaria/page.tsx",
@@ -91,6 +94,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/features/auth/session-types.ts",
     "../src/features/categories/defaults.ts",
     "../src/features/finance/financial-entry.ts",
+    "../src/features/finance/counterparty.ts",
     "../src/features/finance/amount.ts",
     "../src/features/treasury/home-view-model.ts",
     "../src/features/auth/auth-response.ts",
@@ -100,13 +104,17 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/features/app-shell/navigation.ts",
     "../src/features/app-shell/navigation-policy.js",
     "../src/components/ui/button.tsx",
+    "../src/components/ui/dialog.tsx",
     "../src/components/ui/input.tsx",
     "../src/components/ui/label.tsx",
     "../src/components/ui/select.tsx",
+    "../src/components/ui/textarea.tsx",
     "../src/components/design-system/surface.tsx",
     "../src/components/operational/area-card.tsx",
     "../src/components/operational/access-denied-panel.tsx",
     "../src/components/operational/area-guard.tsx",
+    "../src/components/operational/counterparty-inline-dialog.tsx",
+    "../src/components/operational/financial-entry-history-dialog.tsx",
     "../src/components/operational/treasury-entry-form.tsx",
     "../src/components/operational/treasury-home-shell.tsx",
     "../src/components/operational/weekly-priority-block.tsx",
@@ -280,6 +288,10 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
     new URL("../src/app/api/finance/categories/route.ts", import.meta.url),
     "utf8",
   );
+  const financeCounterpartiesRoute = readFileSync(
+    new URL("../src/app/api/finance/counterparties/route.ts", import.meta.url),
+    "utf8",
+  );
   const financeEntriesRoute = readFileSync(
     new URL("../src/app/api/finance/entries/route.ts", import.meta.url),
     "utf8",
@@ -291,12 +303,14 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
   assert.match(backofficeAccessRoute, /safeBody/);
   assert.match(categoryDefaultsRoute, /safeBody/);
   assert.match(financeCategoriesRoute, /callLaravel/);
+  assert.match(financeCounterpartiesRoute, /callLaravel/);
   assert.match(financeEntriesRoute, /callLaravel/);
   assert.match(financeEntriesRoute, /financial_category_id/);
   assert.doesNotMatch(authMeRoute, /errors:\s*\{/);
   assert.doesNotMatch(backofficeAccessRoute, /errors:\s*\{/);
   assert.doesNotMatch(categoryDefaultsRoute, /errors:\s*\{/);
   assert.doesNotMatch(financeCategoriesRoute, /errors:\s*\{/);
+  assert.doesNotMatch(financeCounterpartiesRoute, /errors:\s*\{/);
 });
 
 test("finance BFF routes stay on the web boundary and keep snake_case contracts", () => {
@@ -304,25 +318,50 @@ test("finance BFF routes stay on the web boundary and keep snake_case contracts"
     new URL("../src/app/api/finance/categories/route.ts", import.meta.url),
     "utf8",
   );
+  const financeCounterpartiesRoute = readFileSync(
+    new URL("../src/app/api/finance/counterparties/route.ts", import.meta.url),
+    "utf8",
+  );
   const financeEntriesRoute = readFileSync(
     new URL("../src/app/api/finance/entries/route.ts", import.meta.url),
+    "utf8",
+  );
+  const treasuryEntryForm = readFileSync(
+    new URL("../src/components/operational/treasury-entry-form.tsx", import.meta.url),
+    "utf8",
+  );
+  const counterpartyDialog = readFileSync(
+    new URL("../src/components/operational/counterparty-inline-dialog.tsx", import.meta.url),
     "utf8",
   );
   const financeContracts = readFileSync(
     new URL("../src/features/finance/financial-entry.ts", import.meta.url),
     "utf8",
   );
+  const counterpartyContracts = readFileSync(
+    new URL("../src/features/finance/counterparty.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(financeCategoriesRoute, /callLaravel\("\/api\/v1\/finance\/categories"/);
+  assert.match(financeCounterpartiesRoute, /callLaravel\("\/api\/v1\/finance\/counterparties"/);
   assert.match(financeEntriesRoute, /callLaravel\("\/api\/v1\/finance\/entries"/);
-  assert.match(financeEntriesRoute, /counterparty_name/);
+  assert.match(financeCounterpartiesRoute, /safeBody/);
+  assert.match(financeEntriesRoute, /counterparty_id/);
   assert.match(financeEntriesRoute, /cost_center_name/);
   assert.match(financeContracts, /entry_type/);
   assert.match(financeContracts, /financial_category_id/);
+  assert.match(financeContracts, /counterparty_id/);
   assert.match(financeContracts, /counterparty_name/);
   assert.match(financeContracts, /cost_center_name/);
+  assert.match(counterpartyContracts, /financial_counterparties/);
+  assert.match(treasuryEntryForm, /\/api\/finance\/counterparties/);
+  assert.match(treasuryEntryForm, /CounterpartyInlineDialog/);
+  assert.match(treasuryEntryForm, /counterparty_id/);
+  assert.match(counterpartyDialog, /DialogContent/);
   assert.doesNotMatch(financeEntriesRoute, /apiBaseUrl/);
   assert.doesNotMatch(financeEntriesRoute, /church_id/);
+  assert.doesNotMatch(treasuryEntryForm, /\/api\/v1\/finance\//);
 });
 
 test("treasury page keeps AreaGuard as the access boundary for the operational home shell", () => {
@@ -415,6 +454,25 @@ test("finance BFF routes sanitize upstream 500 errors as Server error", async ()
       );
     }
 
+    if (url === "http://api.test/api/v1/finance/counterparties") {
+      assert.equal(init?.headers instanceof Headers, true);
+
+      return new Response(
+        JSON.stringify({
+          message: "duplicate key",
+          errors: {
+            name: ["internal details"],
+          },
+        }),
+        {
+          status: 500,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
     if (url === "http://api.test/api/v1/finance/entries") {
       assert.equal(init?.headers instanceof Headers, true);
 
@@ -441,6 +499,9 @@ test("finance BFF routes sanitize upstream 500 errors as Server error", async ()
     const { GET: financeCategoriesGET } = await import(
       "../src/app/api/finance/categories/route.ts"
     );
+    const {
+      POST: financeCounterpartiesPOST,
+    } = await import("../src/app/api/finance/counterparties/route.ts");
     const { POST: financeEntriesPOST } = await import(
       "../src/app/api/finance/entries/route.ts"
     );
@@ -463,8 +524,21 @@ test("finance BFF routes sanitize upstream 500 errors as Server error", async ()
           entry_type: "income",
           amount: "125.40",
           financial_category_id: 7,
-          counterparty_name: "Maria Souza",
+          counterparty_id: 11,
           cost_center_name: "Cultos de domingo",
+        }),
+      }),
+    );
+    const financeCounterpartiesResponse = await financeCounterpartiesPOST(
+      new Request("http://web.test/api/finance/counterparties", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          name: "Maria Souza",
+          church_id: 999,
         }),
       }),
     );
@@ -477,6 +551,386 @@ test("finance BFF routes sanitize upstream 500 errors as Server error", async ()
     assert.equal(financeEntriesResponse.status, 500);
     assert.deepEqual(await financeEntriesResponse.json(), {
       message: "Server error",
+    });
+
+    assert.equal(financeCounterpartiesResponse.status, 500);
+    assert.deepEqual(await financeCounterpartiesResponse.json(), {
+      message: "Server error",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("finance edit and audit BFF routes preserve snake_case contracts and sanitize failures", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.toString();
+
+    if (url === "http://api.test/api/v1/finance/entries/15" && init?.method === "PUT") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      const payload = JSON.parse(init?.body ?? "{}");
+
+      assert.deepEqual(payload, {
+        entry_type: "income",
+        amount: "250.75",
+        financial_category_id: 7,
+        counterparty_id: 11,
+        cost_center_name: "Missoes",
+        reason: "Corrigir subtipo e contraparte apos conferencia.",
+      });
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            id: 15,
+            entry_type: "income",
+            amount: "250.75",
+            financial_category_id: 7,
+            financial_category_name: "Oferta especial",
+            counterparty_id: 11,
+            counterparty_name: "Familia Lima",
+            cost_center_name: "Missoes",
+            created_at: "2026-05-13T10:00:00.000Z",
+            updated_at: "2026-05-13T11:00:00.000Z",
+            latest_audit: {
+              id: 91,
+              reason: "Corrigir subtipo e contraparte apos conferencia.",
+              user_name: "Maria Silva",
+              created_at: "2026-05-13T11:00:00.000Z",
+            },
+            message: "Lancamento atualizado com sucesso.",
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "http://api.test/api/v1/finance/entries/15/audits") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      return new Response(
+        JSON.stringify({
+          message: "sql error",
+          debug: "stack trace",
+        }),
+        {
+          status: 500,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const { PUT: financeEntryPUT } = await import(
+      "../src/app/api/finance/entries/[id]/route.ts"
+    );
+    const { GET: financeEntryAuditsGET } = await import(
+      "../src/app/api/finance/entries/[id]/audits/route.ts"
+    );
+
+    const updateResponse = await financeEntryPUT(
+      new Request("http://web.test/api/finance/entries/15", {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          entry_type: "income",
+          amount: "250.75",
+          financial_category_id: 7,
+          counterparty_id: 11,
+          cost_center_name: "Missoes",
+          reason: "Corrigir subtipo e contraparte apos conferencia.",
+        }),
+      }),
+      {
+        params: Promise.resolve({ id: "15" }),
+      },
+    );
+    const auditsResponse = await financeEntryAuditsGET(
+      new Request("http://web.test/api/finance/entries/15/audits", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+      {
+        params: Promise.resolve({ id: "15" }),
+      },
+    );
+
+    assert.equal(updateResponse.status, 200);
+    assert.deepEqual(await updateResponse.json(), {
+      data: {
+        id: 15,
+        entry_type: "income",
+        amount: "250.75",
+        financial_category_id: 7,
+        financial_category_name: "Oferta especial",
+        counterparty_id: 11,
+        counterparty_name: "Familia Lima",
+        cost_center_name: "Missoes",
+        created_at: "2026-05-13T10:00:00.000Z",
+        updated_at: "2026-05-13T11:00:00.000Z",
+        latest_audit: {
+          id: 91,
+          reason: "Corrigir subtipo e contraparte apos conferencia.",
+          user_name: "Maria Silva",
+          created_at: "2026-05-13T11:00:00.000Z",
+        },
+        message: "Lancamento atualizado com sucesso.",
+      },
+    });
+
+    assert.equal(auditsResponse.status, 500);
+    assert.deepEqual(await auditsResponse.json(), {
+      message: "Nao foi possivel concluir a solicitacao agora.",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("finance edit BFF rejects invalid JSON before touching the upstream API", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("upstream should not be called for invalid JSON");
+  };
+
+  try {
+    const { PATCH: financeEntryPATCH } = await import(
+      "../src/app/api/finance/entries/[id]/route.ts"
+    );
+
+    const invalidEditResponse = await financeEntryPATCH(
+      new Request("http://web.test/api/finance/entries/15", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: "{bad json",
+      }),
+      {
+        params: Promise.resolve({ id: "15" }),
+      },
+    );
+
+    assert.equal(fetchCalls, 0);
+    assert.equal(invalidEditResponse.status, 400);
+    assert.deepEqual(await invalidEditResponse.json(), {
+      message: "Envie um JSON valido.",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("counterparty BFF routes stay on the web boundary, sanitize payloads, and preserve snake_case", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.toString();
+
+    if (url === "http://api.test/api/v1/finance/counterparties" && init?.method === "GET") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            financial_counterparties: [
+              {
+                id: 9,
+                name: "Maria Souza",
+                slug: "maria-souza",
+              },
+            ],
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "http://api.test/api/v1/finance/counterparties" && init?.method === "POST") {
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      const payload = JSON.parse(init?.body ?? "{}");
+
+      assert.deepEqual(payload, {
+        name: "Maria Souza",
+      });
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            id: 9,
+            name: "Maria Souza",
+            slug: "maria-souza",
+            message: "Contraparte cadastrada com sucesso.",
+          },
+        }),
+        {
+          status: 201,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  };
+
+  try {
+    const {
+      GET: financeCounterpartiesGET,
+      POST: financeCounterpartiesPOST,
+    } = await import("../src/app/api/finance/counterparties/route.ts");
+
+    const listResponse = await financeCounterpartiesGET(
+      new Request("http://web.test/api/finance/counterparties", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+    const createResponse = await financeCounterpartiesPOST(
+      new Request("http://web.test/api/finance/counterparties", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          name: "Maria Souza",
+          church_id: 999,
+          note: "nao deve seguir para o Laravel",
+        }),
+      }),
+    );
+
+    assert.equal(listResponse.status, 200);
+    assert.deepEqual(await listResponse.json(), {
+      data: {
+        financial_counterparties: [
+          {
+            id: 9,
+            name: "Maria Souza",
+            slug: "maria-souza",
+          },
+        ],
+      },
+    });
+
+    assert.equal(createResponse.status, 201);
+    assert.deepEqual(await createResponse.json(), {
+      data: {
+        id: 9,
+        name: "Maria Souza",
+        slug: "maria-souza",
+        message: "Contraparte cadastrada com sucesso.",
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("finance BFF POST routes reject invalid JSON before touching the upstream API", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    throw new Error("upstream should not be called for invalid JSON");
+  };
+
+  try {
+    const {
+      POST: financeCounterpartiesPOST,
+    } = await import("../src/app/api/finance/counterparties/route.ts");
+    const { POST: financeEntriesPOST } = await import(
+      "../src/app/api/finance/entries/route.ts"
+    );
+
+    const invalidCounterpartyResponse = await financeCounterpartiesPOST(
+      new Request("http://web.test/api/finance/counterparties", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: "{bad json",
+      }),
+    );
+    const invalidEntryResponse = await financeEntriesPOST(
+      new Request("http://web.test/api/finance/entries", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: "{bad json",
+      }),
+    );
+
+    assert.equal(fetchCalls, 0);
+    assert.equal(invalidCounterpartyResponse.status, 400);
+    assert.deepEqual(await invalidCounterpartyResponse.json(), {
+      message: "Envie um JSON valido.",
+    });
+    assert.equal(invalidEntryResponse.status, 400);
+    assert.deepEqual(await invalidEntryResponse.json(), {
+      message: "Envie um JSON valido.",
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -713,7 +1167,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
         entry_type: "income",
         amount: "125.40",
         financial_category_id: 7,
-        counterparty_name: "Maria Souza",
+        counterparty_id: 11,
         cost_center_name: "Cultos de domingo",
       });
 
@@ -724,6 +1178,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
             entry_type: "income",
             amount: "125.40",
             financial_category_id: 7,
+            counterparty_id: 11,
             counterparty_name: "Maria Souza",
             cost_center_name: "Cultos de domingo",
             created_at: "2026-05-06T18:30:00.000000Z",
@@ -801,7 +1256,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
           entry_type: "income",
           amount: "125.40",
           financial_category_id: 7,
-          counterparty_name: "Maria Souza",
+          counterparty_id: 11,
           cost_center_name: "Cultos de domingo",
         }),
       }),
@@ -865,6 +1320,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
         entry_type: "income",
         amount: "125.40",
         financial_category_id: 7,
+        counterparty_id: 11,
         counterparty_name: "Maria Souza",
         cost_center_name: "Cultos de domingo",
         created_at: "2026-05-06T18:30:00.000000Z",

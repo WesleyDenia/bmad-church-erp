@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Domain\Finance\Models\FinancialCategory;
+use App\Domain\Finance\Models\FinancialEntry;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
-class StoreFinancialEntryRequest extends FormRequest
+class UpdateFinancialEntryRequest extends FormRequest
 {
     /**
      * @var list<string>
@@ -21,7 +22,10 @@ class StoreFinancialEntryRequest extends FormRequest
         'financial_category_id',
         'counterparty_id',
         'cost_center_name',
+        'reason',
     ];
+
+    private ?FinancialEntry $resolvedEntry = null;
 
     public function authorize(): bool
     {
@@ -33,7 +37,17 @@ class StoreFinancialEntryRequest extends FormRequest
             ], 401));
         }
 
-        return Gate::forUser($user)->allows('access-backoffice-area', 'treasury');
+        $entry = $this->entry();
+
+        if ($entry === null) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Lancamento nao encontrado.',
+            ], 404));
+        }
+
+        Gate::forUser($user)->authorize('update', $entry);
+
+        return true;
     }
 
     /**
@@ -61,6 +75,7 @@ class StoreFinancialEntryRequest extends FormRequest
                 ),
             ],
             'cost_center_name' => ['required', 'string', 'max:160'],
+            'reason' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -82,6 +97,8 @@ class StoreFinancialEntryRequest extends FormRequest
             'counterparty_id.exists' => 'Escolha uma contraparte valida da igreja atual.',
             'cost_center_name.required' => 'Informe o centro de custo deste lancamento.',
             'cost_center_name.max' => 'Use ate 160 caracteres para o centro de custo.',
+            'reason.required' => 'Informe o motivo da alteracao financeira.',
+            'reason.max' => 'Use ate 255 caracteres para o motivo da alteracao.',
         ];
     }
 
@@ -92,7 +109,7 @@ class StoreFinancialEntryRequest extends FormRequest
                 $extraFields = array_values(array_diff(array_keys($this->all()), self::ALLOWED_FIELDS));
 
                 if ($extraFields !== []) {
-                    $validator->errors()->add('payload', 'Envie apenas os campos do lancamento rapido.');
+                    $validator->errors()->add('payload', 'Envie apenas os campos da edicao financeira.');
                 }
 
                 $categoryId = $this->input('financial_category_id');
@@ -123,7 +140,7 @@ class StoreFinancialEntryRequest extends FormRequest
     }
 
     /**
-     * @return array{church_id: int, entry_type: string, amount: string, financial_category_id: int, counterparty_id: int, cost_center_name: string}
+     * @return array{church_id: int, entry_type: string, amount: string, financial_category_id: int, counterparty_id: int, cost_center_name: string, reason: string, ip_address: string|null}
      */
     public function entryPayload(): array
     {
@@ -134,13 +151,38 @@ class StoreFinancialEntryRequest extends FormRequest
             'financial_category_id' => (int) $this->integer('financial_category_id'),
             'counterparty_id' => (int) $this->integer('counterparty_id'),
             'cost_center_name' => (string) $this->string('cost_center_name'),
+            'reason' => trim((string) $this->string('reason')),
+            'ip_address' => $this->ip(),
         ];
+    }
+
+    public function entry(): ?FinancialEntry
+    {
+        if ($this->resolvedEntry !== null) {
+            return $this->resolvedEntry;
+        }
+
+        $entryId = $this->route('entry');
+
+        if (! is_scalar($entryId)) {
+            return null;
+        }
+
+        /** @var FinancialEntry|null $entry */
+        $entry = FinancialEntry::query()
+            ->withoutGlobalScopes()
+            ->with(['financialCategory', 'counterparty'])
+            ->find((int) $entryId);
+
+        $this->resolvedEntry = $entry;
+
+        return $this->resolvedEntry;
     }
 
     protected function failedValidation(Validator $validator): void
     {
         $message = $validator->errors()->has('payload')
-            ? 'Envie apenas os campos do lancamento rapido.'
+            ? 'Envie apenas os campos da edicao financeira.'
             : 'Revise os campos obrigatorios e tente novamente.';
 
         throw new HttpResponseException(response()->json([
