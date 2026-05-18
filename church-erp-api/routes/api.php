@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\ListFinancialCategoriesController;
 use App\Http\Controllers\Api\V1\ListFinancialCounterpartiesController;
 use App\Http\Controllers\Api\V1\ListFinancialEntriesController;
 use App\Http\Controllers\Api\V1\ListFinancialEntryAuditsController;
+use App\Http\Controllers\Api\V1\ListFinancialPendingItemsController;
 use App\Http\Controllers\Api\V1\LoginController;
 use App\Http\Controllers\Api\V1\LogoutController;
 use App\Http\Controllers\Api\V1\StoreFinancialCounterpartyController;
@@ -30,6 +31,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/finance/counterparties', ListFinancialCounterpartiesController::class);
         Route::post('/finance/counterparties', StoreFinancialCounterpartyController::class);
         Route::get('/finance/entries', ListFinancialEntriesController::class);
+        Route::get('/finance/pending-items', ListFinancialPendingItemsController::class);
         Route::post('/finance/entries', StoreFinancialEntryController::class);
         Route::get('/finance/entries/{entry}/audits', ListFinancialEntryAuditsController::class);
         Route::match(['put', 'patch'], '/finance/entries/{entry}', UpdateFinancialEntryController::class);

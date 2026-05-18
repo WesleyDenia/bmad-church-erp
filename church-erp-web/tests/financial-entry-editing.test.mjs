@@ -51,7 +51,7 @@ test("request payload builder includes reason only for editing mode", () => {
         cost_center_name: "Acao social",
         reason: "Corrigir comprovante.",
       },
-      { mode: "edit" },
+      { mode: "edit", resolvePendingReview: true },
     ),
     {
       entry_type: "expense",
@@ -60,6 +60,7 @@ test("request payload builder includes reason only for editing mode", () => {
       counterparty_id: 12,
       cost_center_name: "Acao social",
       reason: "Corrigir comprovante.",
+      resolve_pending_review: true,
     },
   );
 

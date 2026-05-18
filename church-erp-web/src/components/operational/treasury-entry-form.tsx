@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
 import { Surface } from "@/components/design-system/surface";
 import { CounterpartyInlineDialog } from "@/components/operational/counterparty-inline-dialog";
 import { FinancialEntryHistoryDialog } from "@/components/operational/financial-entry-history-dialog";
@@ -38,6 +38,7 @@ import type {
   FinancialEntryResponse,
   UpdateFinancialEntryPayload,
 } from "@/features/finance/financial-entry";
+import type { FinancialPendingItemSelection } from "@/features/finance/financial-pending-item";
 import {
   buildFinancialEntryListItemFromResponse,
   buildFinancialEntryRequestPayload,
@@ -88,7 +89,19 @@ function getNextReadyStatus(
   return mode === "edit" ? "editing" : "ready";
 }
 
-export function TreasuryEntryForm() {
+type TreasuryEntryFormProps = {
+  pendingSelection?: FinancialPendingItemSelection | null;
+  onPendingResolution?: () => void | Promise<void>;
+  onPendingSelectionCleared?: () => void;
+};
+
+export function TreasuryEntryForm({
+  pendingSelection = null,
+  onPendingResolution,
+  onPendingSelectionCleared,
+}: TreasuryEntryFormProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const editingEntryRef = useRef<FinancialEntryListItem | null>(null);
   const [status, setStatus] = useState<TreasuryEntryFormStatus>("loading_categories");
   const [categories, setCategories] = useState<FinancialCategoryOption[]>([]);
   const [counterparties, setCounterparties] = useState<FinancialCounterpartyOption[]>([]);
@@ -111,6 +124,26 @@ export function TreasuryEntryForm() {
     useRef<CounterpartyDialogCloseReason>(null);
 
   const mode: FinancialEntryMode = editingEntry ? "edit" : "create";
+  const pendingSelectionEntry = pendingSelection?.entry ?? null;
+  const pendingSelectionAction = pendingSelection?.action ?? null;
+  const pendingSelectionActivationKey = pendingSelection?.activationKey ?? 0;
+  const isResolvingPendingReview =
+    mode === "edit"
+    && pendingSelectionAction === "edit_entry"
+    && pendingSelectionEntry !== null
+    && editingEntry?.id === pendingSelectionEntry.id;
+
+  const openPendingSelection = useEffectEvent((entry: FinancialEntryListItem) => {
+    startEditing(entry);
+    setFeedback(
+      "Pendencia aberta para revisao. Corrija o lancamento ou confirme a conferencia salvando o motivo da revisao.",
+    );
+    setLastSavedSummary(null);
+    containerRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -129,7 +162,12 @@ export function TreasuryEntryForm() {
           ...current,
           financial_category_id: getDefaultCategoryId(nextWorkspace.categories, current.entry_type),
         }));
-        setStatus(getTreasuryEntryReadyStatus(nextWorkspace.categories.length));
+        setStatus(
+          getNextReadyStatus(
+            nextWorkspace.categories.length,
+            editingEntryRef.current === null ? "create" : "edit",
+          ),
+        );
       } catch (error) {
         if (controller.signal.aborted) {
           return;
@@ -151,6 +189,14 @@ export function TreasuryEntryForm() {
       controller.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (pendingSelectionAction !== "edit_entry" || pendingSelectionEntry === null) {
+      return;
+    }
+
+    openPendingSelection(pendingSelectionEntry);
+  }, [pendingSelectionAction, pendingSelectionActivationKey, pendingSelectionEntry]);
 
   const filteredCategories = categories.filter(
     (category) => category.kind === form.entry_type,
@@ -318,7 +364,8 @@ export function TreasuryEntryForm() {
     }
   }
 
-  function resetToCreateMode() {
+  function resetToCreateMode(options?: { clearPendingSelection?: boolean }) {
+    editingEntryRef.current = null;
     setEditingEntry(null);
     setEditReason("");
     setForm({
@@ -326,9 +373,14 @@ export function TreasuryEntryForm() {
     });
     setFieldErrors({});
     setStatus(getTreasuryEntryReadyStatus(categories.length));
+
+    if (options?.clearPendingSelection !== false) {
+      onPendingSelectionCleared?.();
+    }
   }
 
   function startEditing(entry: FinancialEntryListItem) {
+    editingEntryRef.current = entry;
     setEditingEntry(entry);
     setEditReason("");
     setFieldErrors({});
@@ -406,7 +458,7 @@ export function TreasuryEntryForm() {
         ...form,
         reason: editReason,
       },
-      { mode },
+      { mode, resolvePendingReview: isResolvingPendingReview },
     );
 
     try {
@@ -464,6 +516,7 @@ export function TreasuryEntryForm() {
           `${successBody.data.message} A lista local foi atualizada, mas nao foi possivel recarregar todos os lancamentos agora.`,
         );
       });
+      void Promise.resolve(onPendingResolution?.()).catch(() => {});
     } catch {
       setFeedback("Nao foi possivel concluir a solicitacao agora.");
       setStatus("server_error");
@@ -519,7 +572,8 @@ export function TreasuryEntryForm() {
   const isSubmitting = status === "entry_submitting";
 
   return (
-    <Surface className="overflow-hidden bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(240,253,250,0.9))] p-6 sm:p-7">
+    <div ref={containerRef}>
+      <Surface className="overflow-hidden bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(240,253,250,0.9))] p-6 sm:p-7">
       <CounterpartyInlineDialog
         open={isCounterpartyDialogOpen}
         onOpenChange={handleCounterpartyDialogOpenChange}
@@ -859,7 +913,10 @@ export function TreasuryEntryForm() {
                       type="button"
                       size="sm"
                       className="rounded-[1rem]"
-                      onClick={() => startEditing(entry)}
+                      onClick={() => {
+                        onPendingSelectionCleared?.();
+                        startEditing(entry);
+                      }}
                     >
                       Editar
                     </Button>
@@ -890,6 +947,7 @@ export function TreasuryEntryForm() {
           </div>
         )}
       </section>
-    </Surface>
+      </Surface>
+    </div>
   );
 }

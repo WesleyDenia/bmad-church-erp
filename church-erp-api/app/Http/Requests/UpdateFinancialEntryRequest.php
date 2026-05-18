@@ -23,6 +23,7 @@ class UpdateFinancialEntryRequest extends FormRequest
         'counterparty_id',
         'cost_center_name',
         'reason',
+        'resolve_pending_review',
     ];
 
     private ?FinancialEntry $resolvedEntry = null;
@@ -76,6 +77,7 @@ class UpdateFinancialEntryRequest extends FormRequest
             ],
             'cost_center_name' => ['required', 'string', 'max:160'],
             'reason' => ['required', 'string', 'max:255'],
+            'resolve_pending_review' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -140,7 +142,7 @@ class UpdateFinancialEntryRequest extends FormRequest
     }
 
     /**
-     * @return array{church_id: int, entry_type: string, amount: string, financial_category_id: int, counterparty_id: int, cost_center_name: string, reason: string, ip_address: string|null}
+     * @return array{church_id: int, entry_type: string, amount: string, financial_category_id: int, counterparty_id: int, cost_center_name: string, reason: string, resolve_pending_review: bool, ip_address: string|null}
      */
     public function entryPayload(): array
     {
@@ -152,6 +154,7 @@ class UpdateFinancialEntryRequest extends FormRequest
             'counterparty_id' => (int) $this->integer('counterparty_id'),
             'cost_center_name' => (string) $this->string('cost_center_name'),
             'reason' => trim((string) $this->string('reason')),
+            'resolve_pending_review' => $this->boolean('resolve_pending_review'),
             'ip_address' => $this->ip(),
         ];
     }

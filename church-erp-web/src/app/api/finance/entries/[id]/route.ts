@@ -79,6 +79,9 @@ async function forwardUpdate(
     counterparty_id: Number(requestBody.counterparty_id),
     cost_center_name: requestBody.cost_center_name ?? "",
     reason: requestBody.reason ?? "",
+    ...(requestBody.resolve_pending_review === true
+      ? { resolve_pending_review: true }
+      : {}),
   };
 
   const response = await callLaravel(`/api/v1/finance/entries/${id}`, {

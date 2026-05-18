@@ -587,6 +587,7 @@ test("finance edit and audit BFF routes preserve snake_case contracts and saniti
         counterparty_id: 11,
         cost_center_name: "Missoes",
         reason: "Corrigir subtipo e contraparte apos conferencia.",
+        resolve_pending_review: true,
       });
 
       return new Response(
@@ -663,6 +664,7 @@ test("finance edit and audit BFF routes preserve snake_case contracts and saniti
           counterparty_id: 11,
           cost_center_name: "Missoes",
           reason: "Corrigir subtipo e contraparte apos conferencia.",
+          resolve_pending_review: true,
         }),
       }),
       {
@@ -706,6 +708,137 @@ test("finance edit and audit BFF routes preserve snake_case contracts and saniti
     assert.equal(auditsResponse.status, 500);
     assert.deepEqual(await auditsResponse.json(), {
       message: "Nao foi possivel concluir a solicitacao agora.",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("finance pending-items BFF route preserves snake_case contracts and sanitizes upstream failures", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+  let mode = "success";
+
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.toString();
+
+    if (url !== "http://api.test/api/v1/finance/pending-items") {
+      throw new Error(`Unexpected fetch: ${url}`);
+    }
+
+    assert.equal(init?.headers instanceof Headers, true);
+    assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+    if (mode === "success") {
+      return new Response(
+        JSON.stringify({
+          data: {
+            financial_pending_items: [
+              {
+                id: "recent-audit-review-15",
+                entry_id: 15,
+                pending_type: "recent_audit_review",
+                pending_type_label: "Revisao de alteracao recente",
+                count: 2,
+                label: "Familia Lima",
+                context: "2 campos alterados em Oferta especial. Motivo: Corrigir subtipo e contraparte apos conferencia.",
+                cta_label: "Revisar lancamento",
+                resolution_action: "edit_entry",
+                financial_entry: {
+                  id: 15,
+                  entry_type: "income",
+                  amount: "250.75",
+                  financial_category_id: 7,
+                  financial_category_name: "Oferta especial",
+                  counterparty_id: 11,
+                  counterparty_name: "Familia Lima",
+                  cost_center_name: "Missoes",
+                  created_at: "2026-05-13T10:00:00.000Z",
+                  updated_at: "2026-05-13T11:00:00.000Z",
+                  latest_audit: {
+                    id: 91,
+                    reason: "Corrigir subtipo e contraparte apos conferencia.",
+                    user_name: "Maria Silva",
+                    created_at: "2026-05-13T11:00:00.000Z",
+                  },
+                },
+                latest_audit: {
+                  id: 91,
+                  reason: "Corrigir subtipo e contraparte apos conferencia.",
+                  user_name: "Maria Silva",
+                  created_at: "2026-05-13T11:00:00.000Z",
+                  changed_fields: [
+                    {
+                      field: "financial_category_name",
+                      old_value: "Dizimos",
+                      new_value: "Oferta especial",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: "sql error",
+        debug: "stack trace",
+      }),
+      {
+        status: 500,
+        headers: {
+          "content-type": "application/json",
+        },
+      },
+    );
+  };
+
+  try {
+    const { GET: pendingItemsGET } = await import(
+      "../src/app/api/finance/pending-items/route.ts"
+    );
+
+    const successResponse = await pendingItemsGET(
+      new Request("http://web.test/api/finance/pending-items", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+
+    assert.equal(successResponse.status, 200);
+    assert.equal(
+      (await successResponse.json()).data.financial_pending_items[0].entry_id,
+      15,
+    );
+
+    mode = "failure";
+
+    const failureResponse = await pendingItemsGET(
+      new Request("http://web.test/api/finance/pending-items", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+
+    assert.equal(failureResponse.status, 500);
+    assert.deepEqual(await failureResponse.json(), {
+      message: "Server error",
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -966,7 +1099,7 @@ test("treasury home links only to anchors that exist in the shell", () => {
   }
 });
 
-test("treasury home shell reads its local mock view-model from the feature layer", () => {
+test("treasury home shell keeps the static chrome in the feature layer but loads financial pending items from the BFF", () => {
   const treasuryHomeShell = readFileSync(
     new URL("../src/components/operational/treasury-home-shell.tsx", import.meta.url),
     "utf8",
@@ -981,6 +1114,7 @@ test("treasury home shell reads its local mock view-model from the feature layer
     /from\s+"@\/features\/treasury\/home-view-model"/,
   );
   assert.match(treasuryHomeShell, /treasury_home_view_model/);
+  assert.match(treasuryHomeShell, /fetch\("\/api\/finance\/pending-items"/);
   assert.match(treasuryHomeViewModel, /weekly_priority_block/);
   assert.match(treasuryHomeViewModel, /quick_action_rail/);
   assert.match(treasuryHomeViewModel, /operational_pending_block/);

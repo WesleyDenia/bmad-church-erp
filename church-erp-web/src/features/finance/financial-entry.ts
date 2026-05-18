@@ -28,6 +28,7 @@ export type FinancialEntryPayload = {
 
 export type UpdateFinancialEntryPayload = FinancialEntryPayload & {
   reason: string;
+  resolve_pending_review?: boolean;
 };
 
 export type FinancialEntryDraft = {
@@ -155,7 +156,7 @@ export function validateFinancialEntryDraft(
 
 export function buildFinancialEntryRequestPayload(
   draft: FinancialEntryDraft,
-  options: { mode: FinancialEntryMode },
+  options: { mode: FinancialEntryMode; resolvePendingReview?: boolean },
 ): FinancialEntryPayload | UpdateFinancialEntryPayload {
   const basePayload: FinancialEntryPayload = {
     entry_type: draft.entry_type,
@@ -169,6 +170,7 @@ export function buildFinancialEntryRequestPayload(
     return {
       ...basePayload,
       reason: draft.reason.trim(),
+      ...(options.resolvePendingReview ? { resolve_pending_review: true } : {}),
     };
   }
 
