@@ -53,7 +53,7 @@ development_status:
   2-2-registrar-receita-ou-despesa-com-campos-minimos: done
   2-3-criar-contraparte-inline-durante-o-lancamento: done
   2-4-editar-lancamento-com-motivo-e-trilha-de-auditoria: done
-  2-5-sinalizar-e-resolver-pendencias-financeiras: backlog
+  2-5-sinalizar-e-resolver-pendencias-financeiras: done
   epic-2-retrospective: optional
 
   epic-3: backlog

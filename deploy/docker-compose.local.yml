@@ -26,20 +26,6 @@ services:
     networks:
       - backend
 
-  web-dev:
-    build:
-      context: ../church-erp-web
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_APP_NAME: Church ERP Local
-      NEXT_PUBLIC_APP_URL: http://localhost:8080
-      API_BASE_URL: http://api-dev:8000
-      INTERNAL_API_AUDIENCE: church-erp-api-local
-      INTERNAL_API_ISSUER: church-erp-web-local
-    networks:
-      - edge
-
   api-dev:
     build:
       context: ../church-erp-api
@@ -64,6 +50,22 @@ services:
     networks:
       - edge
       - backend
+
+  web-dev:
+    build:
+      context: ../church-erp-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_APP_NAME: Church ERP Local
+      NEXT_PUBLIC_APP_URL: http://localhost:8080
+      API_BASE_URL: http://api-dev:8000
+      INTERNAL_API_AUDIENCE: church-erp-api-local
+      INTERNAL_API_ISSUER: church-erp-web-local
+    depends_on:
+    - api-dev
+    networks:
+      - edge
 
 networks:
   edge:
