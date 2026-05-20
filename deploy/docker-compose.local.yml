@@ -55,6 +55,12 @@ services:
     build:
       context: ../church-erp-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: Church ERP Local
+        NEXT_PUBLIC_APP_URL: http://localhost:8080
+        API_BASE_URL: http://api-dev:8000
+        INTERNAL_API_AUDIENCE: church-erp-api-local
+        INTERNAL_API_ISSUER: church-erp-web-local
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_APP_NAME: Church ERP Local
