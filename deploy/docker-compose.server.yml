@@ -3,6 +3,12 @@ services:
     build:
       context: ../church-erp-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: Church ERP Dev
+        NEXT_PUBLIC_APP_URL: https://dev.teudominio.pt
+        API_BASE_URL: http://api-dev:8000
+        INTERNAL_API_AUDIENCE: church-erp-api-dev
+        INTERNAL_API_ISSUER: church-erp-web-dev
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_APP_NAME: Church ERP Dev
@@ -49,6 +55,12 @@ services:
     build:
       context: ../church-erp-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: Church ERP Staging
+        NEXT_PUBLIC_APP_URL: https://stg.teudominio.pt
+        API_BASE_URL: http://api-stg:8000
+        INTERNAL_API_AUDIENCE: church-erp-api-stg
+        INTERNAL_API_ISSUER: church-erp-web-stg
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_APP_NAME: Church ERP Staging
@@ -95,6 +107,12 @@ services:
     build:
       context: ../church-erp-web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: Church ERP
+        NEXT_PUBLIC_APP_URL: https://teudominio.pt
+        API_BASE_URL: http://api-prod:8000
+        INTERNAL_API_AUDIENCE: church-erp-api-prod
+        INTERNAL_API_ISSUER: church-erp-web-prod
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_APP_NAME: Church ERP

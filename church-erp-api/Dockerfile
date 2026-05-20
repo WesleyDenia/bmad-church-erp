@@ -16,6 +16,8 @@ RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoload
 
 COPY . .
 
+RUN chmod +x docker/start.sh
+
 RUN composer dump-autoload --optimize \
     && php artisan package:discover --ansi \
     && cp .env.example .env \
@@ -23,4 +25,4 @@ RUN composer dump-autoload --optimize \
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "php artisan config:clear && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+CMD ["sh", "-c", "./docker/start.sh"]
