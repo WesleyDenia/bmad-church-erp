@@ -43,6 +43,9 @@ services:
       DB_DATABASE: church_erp_dev
       DB_USERNAME: church_erp
       DB_PASSWORD: change_me
+      INTERNAL_API_AUDIENCE: church-erp-api-local
+      INTERNAL_API_ISSUER: church-erp-web-local
+      INTERNAL_JWT_PUBLIC_KEY: "-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0KjxK/T8wdZwQxbO1sbT\\nIbJ11kjIJA+u2guv5UIWl53g0V0YoU3qp4WMuc0G6nk6/6rKd0zgP0yOwny5AScN\\nQWHXHFVwxEeYmWfGY2RvvBHTk0uvjYIzUGJ5aATa6vi1daYyNUnv8NDLGzJ6btsG\\naxCg9nRn7GjM6gXTErVZkeIRApNYsFot/CzTg/XcQXuhoW8XQEep6zL2jFbi0OBE\\n1pfSm8fgSj4yGgECtMb5VtT0zMM9cGhdypKl0Sgy4PHRZIr0SvbgLoDazCZSDQOp\\nqp0BUnhGZrxJFCMvSGzcMyysPs6sz4Qxjb2Ycon4igcDG564d3a89oG38klJ8DpW\\n7wIDAQAB\\n-----END PUBLIC KEY-----"
     volumes:
       - api_local_storage:/var/www/html/storage
     depends_on:
@@ -68,6 +71,7 @@ services:
       API_BASE_URL: http://api-dev:8000
       INTERNAL_API_AUDIENCE: church-erp-api-local
       INTERNAL_API_ISSUER: church-erp-web-local
+      INTERNAL_JWT_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDQqPEr9PzB1nBD\\nFs7WxtMhsnXWSMgkD67aC6/lQhaXneDRXRihTeqnhYy5zQbqeTr/qsp3TOA/TI7C\\nfLkBJw1BYdccVXDER5iZZ8ZjZG+8EdOTS6+NgjNQYnloBNrq+LV1pjI1Se/w0Msb\\nMnpu2wZrEKD2dGfsaMzqBdMStVmR4hECk1iwWi38LNOD9dxBe6GhbxdAR6nrMvaM\\nVuLQ4ETWl9Kbx+BKPjIaAQK0xvlW1PTMwz1waF3KkqXRKDLg8dFkivRK9uAugNrM\\nJlINA6mqnQFSeEZmvEkUIy9IbNwzLKw+zqzPhDGNvZhyifiKBwMbnrh3drz2gbfy\\nSUnwOlbvAgMBAAECggEAMK+SojKF/UZnKEg8l8GJht3If+i4hi2Am1DJyGDcu6Cz\\nUbZ6pjxzaYYQOVQc7n295eS4XBC8bBiVYMzQL/QoNB67ndlTuACKmxSrJgrLxWKV\\nbtNkkUyVY4aulDY5zESetmZCZcusKBDXqy9igNYrD7UwEYFEtFUZpusX/lABJ7ff\\nZ4cc1TZy6nQs2C7upZFUqMrugCjXA9rtLIrViaa/iblOmx+2hoeIwwpZITnio2hQ\\n9cMwmbQWvHo5ZLv39Pq5KkVA/1tMc328QoFM2wTsQbjLGbukiTSNP6bzdt5GLA7K\\nqI7g7UUew1ec/Y1X0NUnu1KtoHKvyqEff+P+qT0WHQKBgQDreduxbuIdVzMTIvnp\\nt+T+lC6pS8G0x1qz7B61uz5TiAGmj4+Qru4Bvd2pH7WYM1YtMUMeKDlTIGODRmkv\\ni5+UF46o9NEfIjNGFP7KWmmQo4aUaj4k0/CCN7asjO69FtSuT/zhFqvc+sPQ/vBN\\nndAddWO1zEuD6w0SP5geBOydBQKBgQDi2L2bcpme8GCDW+x0xs/Ucepuymvnt/TN\\nwVNFRqV68BnlSqsLjrkGzoNTOkvRO9I2W70WiVIzD3yOrusH+LSIowVDXaSDpxti\\n31uSpCH9qVxF8PZEA0vXIVPskNLKRLuXQKI+B4MB9NBn3TuCHwQ4UYEQuq7MGohb\\npqFKorWGYwKBgQDGva23np+HJf68iwukwAms+EI9ruvJeWxLaOEuft+Gvsat3oLM\\nGWhV3frEcDfjQojcUbSVMlvXlgGHXZkPgOdppUxJu374qPPflX7KKO7qHapLfzP9\\n/0cBkKZEEhq5SxisGmSTUYAyXQ+CSHlm+OgaxOYoHUorB+qbWUM5KuzNRQKBgQCQ\\nl1A7/g73JQaPlA8i2/pq0nV4SuP+nd2XLKvUE1S1CMeoxDBEPKOpOAazDQx4gGXc\\nKhtbewn+69cb51h+C0OfeDGJn+2V0PT+z5nB3Yag9cuP9Sgzb9pudJrWxfTl4muj\\n3BnN6eHSZGZWXchphzWcZC8dJ7D0/dB+grZ6KT4FOwKBgQDlnQ9ALmMs8yGekehs\\nUFuFKRr75iegVRJDEO+BRfrnwey/S4B0pbIHfBt2OeyRuekDS6WBMxmkIw0lIP/T\\nA7WSSZs87n7rS6wT8cFJVVRHcnbaE/Tp8Z5OydpxPR2QDfPdiUNNoXnUlYcCqWym\\nqt/InO+UnwHbGInkTOiZnFA6iw==\\n-----END PRIVATE KEY-----"
     depends_on:
     - api-dev
     networks:
