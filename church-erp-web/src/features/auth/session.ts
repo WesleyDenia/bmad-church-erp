@@ -16,14 +16,42 @@ function base64UrlDecode(value: string): string {
   return Buffer.from(value, "base64url").toString("utf8");
 }
 
+export class InternalJwtConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InternalJwtConfigurationError";
+  }
+}
+
+function normalizePrivateKey(value: string): string {
+  return value.replace(/\\n/g, "\n").trim();
+}
+
+function assertPemPrivateKey(value: string): void {
+  const isPemPrivateKey =
+    value.includes("-----BEGIN PRIVATE KEY-----") ||
+    value.includes("-----BEGIN RSA PRIVATE KEY-----");
+
+  if (!isPemPrivateKey || !value.includes("-----END")) {
+    throw new InternalJwtConfigurationError(
+      "INTERNAL_JWT_PRIVATE_KEY must be a valid PEM-encoded private key",
+    );
+  }
+}
+
 function readInternalJwtPrivateKey(): string {
-  const privateKey = process.env.INTERNAL_JWT_PRIVATE_KEY;
+  const privateKey = process.env.INTERNAL_JWT_PRIVATE_KEY?.trim();
 
   if (!privateKey) {
-    throw new Error("Missing required server env: INTERNAL_JWT_PRIVATE_KEY");
+    throw new InternalJwtConfigurationError(
+      "Missing required server env: INTERNAL_JWT_PRIVATE_KEY",
+    );
   }
 
-  return privateKey;
+  const normalizedPrivateKey = normalizePrivateKey(privateKey);
+  assertPemPrivateKey(normalizedPrivateKey);
+
+  return normalizedPrivateKey;
 }
 
 export function buildSessionCookieOptions() {
@@ -66,7 +94,19 @@ export function createInternalJwt(payload: InternalJwtPayload): string {
   signer.update(`${encodedHeader}.${encodedPayload}`);
   signer.end();
 
-  const signature = signer.sign(readInternalJwtPrivateKey(), "base64url");
+  let signature: string;
+
+  try {
+    signature = signer.sign(readInternalJwtPrivateKey(), "base64url");
+  } catch (error) {
+    if (error instanceof InternalJwtConfigurationError) {
+      throw error;
+    }
+
+    throw new InternalJwtConfigurationError(
+      "INTERNAL_JWT_PRIVATE_KEY must be a valid PEM-encoded private key",
+    );
+  }
 
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }

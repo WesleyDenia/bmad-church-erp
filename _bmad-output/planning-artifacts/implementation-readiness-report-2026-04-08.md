@@ -136,6 +136,7 @@ Total NFRs: 16
 - Não deve substituir todos os sistemas da igreja na primeira release.
 - Não deve introduzir automação nativa de mensageria no MVP.
 - O acesso básico deve contemplar perfis de tesoureiro, secretaria e liderança.
+- A operação administrativa mínima deve permitir cadastrar usuários da igreja, atribuir perfil básico e ativar ou desativar acesso antes dos fluxos operacionais dependentes de papel.
 - Há decisões em aberto sobre granularidade fina de permissões, taxonomia financeira detalhada, escopo exato da visão de liderança e o tratamento explícito do checklist semanal da secretaria.
 
 ### PRD Completeness Assessment
@@ -151,8 +152,8 @@ Total NFRs: 16
 
 | FR Number | PRD Requirement | Epic Coverage | Status |
 | --------- | --------------- | ------------- | ------ |
-| FR1 | Usuários autenticados com permissões básicas por perfil | Epic 1, Stories 1.3 e 1.4 | Covered |
-| FR2 | Restringir dados sensíveis conforme o perfil | Epic 1, Story 1.4 | Covered |
+| FR1 | Usuários autenticados com permissões básicas por perfil | Epic 1, Stories 1.3, 1.4, 1.6 e 1.7 | Covered |
+| FR2 | Restringir dados sensíveis conforme o perfil | Epic 1, Stories 1.4, 1.6 e 1.7 | Covered |
 | FR3 | Isolamento lógico por igreja | Epic 1, Stories 1.1 e 1.3 | Covered |
 | FR4 | Criar e gerir perfil inicial da igreja | Epic 1, Story 1.2 | Covered |
 | FR5 | Categorias mínimas iniciais | Epic 1, Story 1.5 | Covered |
@@ -186,6 +187,7 @@ Total NFRs: 16
 
 - O alinhamento entre PRD e `epics.md` está agora substancialmente resolvido.
 - A expansão funcional que antes estava implícita em épicos, UX e arquitetura passou a constar explicitamente no PRD.
+- A fundação de acesso agora cobre explicitamente a administração mínima de usuários necessária para validar fluxos por papel em épicos dependentes, especialmente o financeiro.
 - A rastreabilidade por story está adequada, com `**FRs covered:**` declarado em cada story.
 
 ### Coverage Statistics

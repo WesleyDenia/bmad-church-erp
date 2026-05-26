@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\ListFinancialEntryAuditsController;
 use App\Http\Controllers\Api\V1\ListFinancialPendingItemsController;
 use App\Http\Controllers\Api\V1\LoginController;
 use App\Http\Controllers\Api\V1\LogoutController;
+use App\Http\Controllers\Api\V1\StoreChurchUserController;
 use App\Http\Controllers\Api\V1\StoreFinancialCounterpartyController;
 use App\Http\Controllers\Api\V1\StoreFinancialEntryController;
 use App\Http\Controllers\Api\V1\UpdateFinancialEntryController;
@@ -27,6 +28,7 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('resolve.internal.session')->group(function (): void {
         Route::get('/backoffice/access/{area}', BackofficeAreaAccessController::class);
         Route::get('/categories/defaults', InitialCategoryDefaultsController::class);
+        Route::post('/church-users', StoreChurchUserController::class);
         Route::get('/finance/categories', ListFinancialCategoriesController::class);
         Route::get('/finance/counterparties', ListFinancialCounterpartiesController::class);
         Route::post('/finance/counterparties', StoreFinancialCounterpartyController::class);

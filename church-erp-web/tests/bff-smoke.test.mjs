@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import {
@@ -15,12 +16,23 @@ import {
   normalizeAccessResponse,
 } from "../src/features/auth/access-response-runtime.js";
 import { normalizeInitialSetupResponse } from "../src/features/auth/initial-setup-response.js";
+import {
+  createInternalJwt,
+  decodeJwtPayload,
+  InternalJwtConfigurationError,
+} from "../src/features/auth/session.ts";
 
 function setEnv(overrides) {
   const previous = new Map();
 
   for (const [key, value] of Object.entries(overrides)) {
     previous.set(key, process.env[key]);
+
+    if (value === undefined) {
+      delete process.env[key];
+      continue;
+    }
+
     process.env[key] = value;
   }
 
@@ -66,11 +78,120 @@ test("BFF env example exposes internal API variables", () => {
   assert.match(envExample, /API_BASE_URL=/);
   assert.match(envExample, /INTERNAL_API_AUDIENCE=/);
   assert.match(envExample, /INTERNAL_API_ISSUER=/);
+  assert.match(envExample, /INTERNAL_JWT_PRIVATE_KEY=/);
+  assert.match(envExample, /\\n escaped line breaks/);
+});
+
+test("internal session signing fails fast when the private key env is missing", () => {
+  const restoreEnv = setEnv({
+    INTERNAL_JWT_PRIVATE_KEY: "",
+  });
+
+  try {
+    assert.throws(
+      () =>
+        createInternalJwt({
+          user_id: 1,
+          church_id: 1,
+          roles: ["administrator"],
+          session_id: "missing-key",
+          permissions_version: 1,
+          issuer: "church-erp-web",
+          audience: "church-erp-api",
+        }),
+      (error) =>
+        error instanceof InternalJwtConfigurationError &&
+        error.message === "Missing required server env: INTERNAL_JWT_PRIVATE_KEY",
+    );
+  } finally {
+    restoreEnv();
+  }
+});
+
+test("internal session signing rejects malformed private keys with a controlled error", () => {
+  const restoreEnv = setEnv({
+    INTERNAL_JWT_PRIVATE_KEY: "invalid-key",
+  });
+
+  try {
+    assert.throws(
+      () =>
+        createInternalJwt({
+          user_id: 1,
+          church_id: 1,
+          roles: ["administrator"],
+          session_id: "invalid-key",
+          permissions_version: 1,
+          issuer: "church-erp-web",
+          audience: "church-erp-api",
+        }),
+      (error) =>
+        error instanceof InternalJwtConfigurationError &&
+        error.message ===
+          "INTERNAL_JWT_PRIVATE_KEY must be a valid PEM-encoded private key",
+    );
+  } finally {
+    restoreEnv();
+  }
+});
+
+test("internal session signing accepts multiline PEM keys and escaped newline values", () => {
+  const { privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    privateKeyEncoding: {
+      type: "pkcs8",
+      format: "pem",
+    },
+    publicKeyEncoding: {
+      type: "spki",
+      format: "pem",
+    },
+  });
+
+  const issueToken = () =>
+    createInternalJwt({
+      user_id: 1,
+      church_id: 7,
+      roles: ["administrator"],
+      session_id: "normalized-key",
+      permissions_version: 3,
+      issuer: "church-erp-web",
+      audience: "church-erp-api",
+    });
+
+  const restoreMultilineEnv = setEnv({
+    INTERNAL_JWT_PRIVATE_KEY: privateKey,
+  });
+
+  try {
+    const payload = decodeJwtPayload(issueToken());
+
+    assert.equal(payload?.session_id, "normalized-key");
+    assert.equal(payload?.church_id, 7);
+  } finally {
+    restoreMultilineEnv();
+  }
+
+  const restoreEscapedEnv = setEnv({
+    INTERNAL_JWT_PRIVATE_KEY: privateKey.replace(/\n/g, "\\n"),
+  });
+
+  try {
+    const payload = decodeJwtPayload(issueToken());
+
+    assert.equal(payload?.session_id, "normalized-key");
+    assert.equal(payload?.church_id, 7);
+  } finally {
+    restoreEscapedEnv();
+  }
 });
 
 test("web baseline contains route shells and BFF boundary files", () => {
   const requiredPaths = [
     "../src/app/(auth)/login/page.tsx",
+    "../src/app/admin/users/loading.tsx",
+    "../src/app/admin/users/page.tsx",
+    "../src/app/api/admin/users/route.ts",
     "../src/app/api/auth/login/route.ts",
     "../src/app/api/auth/me/route.ts",
     "../src/app/api/auth/logout/route.ts",
@@ -92,6 +213,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/features/auth/session.ts",
     "../src/features/auth/session-constants.ts",
     "../src/features/auth/session-types.ts",
+    "../src/features/church-users/contracts.ts",
     "../src/features/categories/defaults.ts",
     "../src/features/finance/financial-entry.ts",
     "../src/features/finance/counterparty.ts",
@@ -113,6 +235,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/components/operational/area-card.tsx",
     "../src/components/operational/access-denied-panel.tsx",
     "../src/components/operational/area-guard.tsx",
+    "../src/components/operational/church-user-create-form.tsx",
     "../src/components/operational/counterparty-inline-dialog.tsx",
     "../src/components/operational/financial-entry-history-dialog.tsx",
     "../src/components/operational/treasury-entry-form.tsx",
@@ -132,6 +255,23 @@ test("web baseline contains route shells and BFF boundary files", () => {
 });
 
 test("app shell navigation is role-aware", () => {
+  assert.deepEqual(getAccessibleAppAreaLinks("administrator"), [
+    {
+      href: "/secretaria",
+      label: "Secretaria",
+      description: "Base para cadastro, busca e acompanhamento de pessoas.",
+    },
+    {
+      href: "/communications",
+      label: "Comunicacao",
+      description: "Camada futura para modelos, handoff e mensagens preparadas.",
+    },
+    {
+      href: "/admin/users",
+      label: "Usuarios do sistema",
+      description: "Cadastro administrativo de acessos e perfis basicos da igreja.",
+    },
+  ]);
   assert.deepEqual(getAccessibleAppAreaLinks("treasurer"), [
     {
       href: "/treasury",
@@ -177,6 +317,10 @@ test("app shell navigation is role-aware", () => {
 test("protected routes are denied server-side before the browser renders content", () => {
   assert.deepEqual(getRouteAccessDecision(["leadership"], "/treasury"), {
     area: "treasury",
+    allowed: false,
+  });
+  assert.deepEqual(getRouteAccessDecision(["secretary"], "/admin/users"), {
+    area: "admin/users",
     allowed: false,
   });
   assert.deepEqual(getRouteAccessDecision(["secretary"], "/secretaria"), {
@@ -272,6 +416,18 @@ test("backend response normalizer still forwards valid onboarding payloads", asy
 
 test("BFF route handlers and proxy keep authorization logic outside the browser", () => {
   const proxyFile = readFileSync(new URL("../src/proxy.ts", import.meta.url), "utf8");
+  const adminUsersPage = readFileSync(
+    new URL("../src/app/admin/users/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const adminUsersRoute = readFileSync(
+    new URL("../src/app/api/admin/users/route.ts", import.meta.url),
+    "utf8",
+  );
+  const authLoginRoute = readFileSync(
+    new URL("../src/app/api/auth/login/route.ts", import.meta.url),
+    "utf8",
+  );
   const authMeRoute = readFileSync(
     new URL("../src/app/api/auth/me/route.ts", import.meta.url),
     "utf8",
@@ -296,9 +452,22 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
     new URL("../src/app/api/finance/entries/route.ts", import.meta.url),
     "utf8",
   );
+  const adminUsersForm = readFileSync(
+    new URL("../src/components/operational/church-user-create-form.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(proxyFile, /getRouteAccessDecision/);
   assert.match(proxyFile, /buildAccessDeniedPath/);
+  assert.match(adminUsersPage, /cookies\(/);
+  assert.match(adminUsersPage, /decodeJwtPayload/);
+  assert.doesNotMatch(adminUsersPage, /callLaravel\("\/api\/v1\/auth\/me"/);
+  assert.match(adminUsersPage, /AccessDeniedPanel/);
+  assert.doesNotMatch(adminUsersPage, /AreaGuard/);
+  assert.match(adminUsersRoute, /callLaravel\("\/api\/v1\/church-users"/);
+  assert.match(adminUsersRoute, /AUTH_SESSION_COOKIE_NAME/);
+  assert.match(authLoginRoute, /auth_login_internal_session_failed/);
+  assert.match(authLoginRoute, /Nao foi possivel concluir o login agora/);
   assert.match(authMeRoute, /safeBody/);
   assert.match(backofficeAccessRoute, /safeBody/);
   assert.match(categoryDefaultsRoute, /safeBody/);
@@ -306,6 +475,12 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
   assert.match(financeCounterpartiesRoute, /callLaravel/);
   assert.match(financeEntriesRoute, /callLaravel/);
   assert.match(financeEntriesRoute, /financial_category_id/);
+  assert.match(adminUsersForm, /fetch\("\/api\/admin\/users"/);
+  assert.match(adminUsersForm, /Select/);
+  assert.match(adminUsersForm, /status === 401/);
+  assert.match(adminUsersForm, /session_invalid/);
+  assert.match(adminUsersForm, /status === 403/);
+  assert.doesNotMatch(authLoginRoute, /password/);
   assert.doesNotMatch(authMeRoute, /errors:\s*\{/);
   assert.doesNotMatch(backofficeAccessRoute, /errors:\s*\{/);
   assert.doesNotMatch(categoryDefaultsRoute, /errors:\s*\{/);
@@ -1178,8 +1353,8 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       return new Response(
         JSON.stringify({
           data: {
-            roles: ["leadership"],
-            role: "leadership",
+            roles: ["administrator"],
+            role: "administrator",
           },
         }),
         {
@@ -1328,6 +1503,47 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       );
     }
 
+    if (url === "http://api.test/api/v1/church-users") {
+      assert.equal(init?.method, "POST");
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      const payload = JSON.parse(init?.body ?? "{}");
+
+      assert.deepEqual(payload, {
+        name: "Carlos Pereira",
+        email: "carlos@example.com",
+        password: "secret-password",
+        password_confirmation: "secret-password",
+        role: "treasurer",
+      });
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            user: {
+              id: 18,
+              name: "Carlos Pereira",
+              email: "carlos@example.com",
+            },
+            membership: {
+              church_id: 7,
+              role: "treasurer",
+              status: "active",
+            },
+            action: "created",
+            message: "Usuario cadastrado com sucesso.",
+          },
+        }),
+        {
+          status: 201,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
     throw new Error(`Unexpected fetch: ${url}`);
   };
 
@@ -1340,6 +1556,9 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
     );
     const { GET: financeCategoriesGET } = await import(
       "../src/app/api/finance/categories/route.ts"
+    );
+    const { POST: adminUsersPOST } = await import(
+      "../src/app/api/admin/users/route.ts"
     );
     const { POST: financeEntriesPOST } = await import(
       "../src/app/api/finance/entries/route.ts"
@@ -1392,6 +1611,22 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
           financial_category_id: 7,
           counterparty_id: 11,
           cost_center_name: "Cultos de domingo",
+        }),
+      }),
+    );
+    const adminUsersResponse = await adminUsersPOST(
+      new Request("http://web.test/api/admin/users", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          name: "Carlos Pereira",
+          email: "carlos@example.com",
+          password: "secret-password",
+          password_confirmation: "secret-password",
+          role: "treasurer",
         }),
       }),
     );
@@ -1459,6 +1694,24 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
         cost_center_name: "Cultos de domingo",
         created_at: "2026-05-06T18:30:00.000000Z",
         message: "Lancamento salvo com sucesso.",
+      },
+    });
+
+    assert.equal(adminUsersResponse.status, 201);
+    assert.deepEqual(await adminUsersResponse.json(), {
+      data: {
+        user: {
+          id: 18,
+          name: "Carlos Pereira",
+          email: "carlos@example.com",
+        },
+        membership: {
+          church_id: 7,
+          role: "treasurer",
+          status: "active",
+        },
+        action: "created",
+        message: "Usuario cadastrado com sucesso.",
       },
     });
   } finally {

@@ -78,6 +78,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 - Criar e gerir perfil da igreja
 - Isolamento lógico por igreja desde a fundação do produto
 - Acesso básico com permissões por perfil para tesoureiro, secretaria e liderança
+- Gestão básica de usuários da igreja com atribuição de perfil e ativação/desativação de acesso
 - Categorias iniciais simples para operação financeira e de pessoas
 
 ### 8.2 Finanças
