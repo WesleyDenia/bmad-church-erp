@@ -10,6 +10,7 @@ import {
 } from "@/features/app-shell/navigation-policy.js";
 
 const protectedPrefixes = [
+  "/admin/users",
   "/treasury",
   "/secretaria",
   "/leadership",
@@ -137,6 +138,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/login",
+    "/admin/users/:path*",
     "/treasury/:path*",
     "/secretaria/:path*",
     "/leadership/:path*",

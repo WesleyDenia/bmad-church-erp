@@ -132,7 +132,7 @@ FR29: Epic 1, Epic 2, Epic 3, Epic 4 e Epic 5 - padrao transversal de validacao,
 ## Epic List
 
 ### Epic 1: Fundacao da Igreja e Acesso Seguro
-Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca, sobre uma fundacao tecnica e visual coerente com a arquitetura e o UX aprovados.
+Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso, gestao administrativa minima de usuarios e configuracao inicial suficiente para iniciar a operacao com seguranca, sobre uma fundacao tecnica e visual coerente com a arquitetura e o UX aprovados.
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR29
 
 ### Epic 2: Operacao Financeira Semanal do Tesoureiro
@@ -153,7 +153,7 @@ Permitir preparar comunicacoes reutilizando dados existentes e concluir o handof
 
 ## Epic 1: Fundacao da Igreja e Acesso Seguro
 
-Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso e configuracao minima suficiente para iniciar a operacao com seguranca, sobre uma fundacao tecnica e visual coerente com a arquitetura e o UX aprovados.
+Permitir que a igreja entre no sistema com isolamento por tenant, perfis basicos de acesso, gestao administrativa minima de usuarios e configuracao inicial suficiente para iniciar a operacao com seguranca, sobre uma fundacao tecnica e visual coerente com a arquitetura e o UX aprovados.
 
 ### Story 1.1: Inicializar a fundacao do projeto com backend e frontend desacoplados
 
@@ -310,9 +310,109 @@ So that eu consiga gerar valor rapido sem configuracao extensa.
 - Os estados visuais relacionados aos defaults iniciais devem manter consistencia com `Tailwind CSS` e com os tokens/utilitarios do projeto.
 - A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
 
+### Story 1.6: Cadastrar usuario da igreja e atribuir perfil basico
+
+As a administradora da igreja,
+I want cadastrar usuarios da minha igreja e definir seu perfil basico de acesso,
+So that cada area operacional possa ser usada pela pessoa certa desde o inicio.
+
+**FRs covered:** FR1, FR2, FR29
+
+**Acceptance Criteria:**
+
+**Given** que a administradora autenticada possui acesso ao contexto da sua igreja
+**When** informa os dados minimos de um novo usuario e seleciona um perfil basico valido
+**Then** o sistema cria o usuario e o vinculo com o tenant correto
+**And** registra o perfil atribuido no contexto da igreja
+**And** apresenta confirmacao clara de sucesso
+
+**Given** que o email informado ja pertence a um usuario existente no mesmo tenant
+**When** a administradora tenta concluir o cadastro
+**Then** o sistema impede duplicidade operacional
+**And** explica de forma compreensivel que aquele usuario ja esta associado a igreja
+
+**Given** que o email informado pertence a um usuario existente fora daquele tenant e a regra de reutilizacao for suportada pelo backend
+**When** a administradora conclui a acao
+**Then** o sistema vincula o usuario existente a igreja atual com o perfil selecionado
+**And** nao mistura dados operacionais entre tenants
+
+**Given** que algum campo obrigatorio nao foi preenchido ou o perfil selecionado e invalido para o MVP
+**When** a administradora tenta salvar
+**Then** o sistema bloqueia a conclusao
+**And** informa quais ajustes precisam ser feitos em linguagem simples
+
+**Given** que um usuario foi criado com perfil de tesoureiro, secretaria ou lideranca
+**When** ele autentica no sistema
+**Then** o contexto retornado pela sessao reflete o perfil atribuido para aquela igreja
+**And** as areas permitidas passam a respeitar esse papel desde o primeiro acesso
+
+**Frontend Implementation Constraints:**
+
+- Formularios, selects de perfil, tabelas/listas, alerts e feedbacks desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para administracao de usuarios.
+- Composicoes de cadastro, listagem inicial e fluxo administrativo desta story devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- O fluxo de cadastro administrativo deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
+### Story 1.7: Listar usuarios da igreja e ajustar perfil ou status
+
+As a administradora da igreja,
+I want visualizar os usuarios da minha igreja e ajustar seu perfil ou status de acesso,
+So that eu mantenha a operacao alinhada com as responsabilidades reais de cada pessoa.
+
+**FRs covered:** FR1, FR2, FR29
+
+**Acceptance Criteria:**
+
+**Given** que a administradora acessa a area de usuarios da igreja
+**When** a tela e carregada
+**Then** o sistema lista apenas os usuarios vinculados ao tenant atual
+**And** exibe pelo menos nome, email, perfil e status de acesso de cada usuario
+
+**Given** que a administradora altera o perfil de um usuario entre os perfis permitidos no MVP
+**When** confirma a mudanca
+**Then** o sistema persiste o novo perfil no vinculo da igreja
+**And** passa a aplicar as novas permissoes nas proximas verificacoes de acesso e renovacoes de sessao
+
+**Given** que a administradora desativa um usuario da igreja
+**When** confirma a alteracao de status
+**Then** o sistema impede novos acessos operacionais daquele usuario no tenant correspondente
+**And** preserva o historico necessario para auditoria e rastreabilidade
+
+**Given** que a administradora reativa um usuario anteriormente desativado
+**When** confirma a reativacao
+**Then** o sistema volta a permitir autenticacao e acesso conforme o perfil vigente
+**And** mantem o mesmo vinculo com a igreja sem recriacao manual
+
+**Given** que a administradora tenta editar o proprio vinculo de forma que a igreja fique sem administracao viavel
+**When** a acao viola a regra minima de seguranca operacional
+**Then** o sistema bloqueia a operacao
+**And** explica a restricao de maneira compreensivel
+
+**Given** que um usuario autenticado perde permissao por troca de perfil ou desativacao
+**When** tenta acessar uma area que deixou de ser permitida
+**Then** o sistema bloqueia o acesso conforme a matriz atualizada
+**And** apresenta mensagem coerente com a politica de permissao do MVP
+
+**Frontend Implementation Constraints:**
+
+- Tabelas, listas, badges de status, dialogs de confirmacao, formularios de edicao e mensagens desta story devem usar componentes base em `church-erp-web/src/components/ui` derivados de `shadcn/ui`.
+- Nao introduzir biblioteca paralela de componentes para grid administrativo, modais ou controle visual de status.
+- Composicoes de gestao administrativa e estados de alteracao desta story devem ficar em `church-erp-web/src/components` ou `church-erp-web/src/features`.
+
+**Definition of Done adicional para frontend:**
+
+- A experiencia de listagem e manutencao de usuarios deve manter consistencia visual com `Tailwind CSS` e com os tokens/utilitarios do projeto.
+- A story so pode ser considerada pronta se reutilizar componentes base existentes antes de criar novos primitives de UI.
+
 ## Epic 2: Operacao Financeira Semanal do Tesoureiro
 
 Permitir que o tesoureiro use sua home da tesouraria, estruturada em blocos operacionais, para registrar receitas e despesas rapidamente, revisar pendencias financeiras, corrigir com seguranca e manter confianca operacional no fluxo pos-culto.
+
+Sequenciamento recomendado: a capacidade de cadastrar usuarios e ajustar perfil/status no Epic 1 deve estar disponivel antes da validacao funcional completa do Epic 2, para que a operacao financeira possa ser exercida com um usuario real de tesouraria no tenant correto.
 
 ### Story 2.1: Exibir home da tesouraria com blocos operacionais
 

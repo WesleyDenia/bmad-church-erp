@@ -49,6 +49,7 @@ Entregar uma primeira versão que ajude a igreja a concluir suas tarefas semanai
 
 - Criar perfil da igreja
 - Controle básico de acesso com permissões por perfil
+- Gestão básica de usuários da igreja com atribuição de perfil e ativação/desativação
 - Categorias mínimas para começar operação financeira e de pessoas
 
 ### 2. Lançamento Financeiro Rápido

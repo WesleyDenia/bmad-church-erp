@@ -23,11 +23,13 @@ const roleAwareAppAreaLinks = [
     description: "Camada futura para modelos, handoff e mensagens preparadas.",
     allowedRoles: ["administrator", "secretary"],
   },
+  {
+    href: "/admin/users",
+    label: "Usuarios do sistema",
+    description: "Cadastro administrativo de acessos e perfis basicos da igreja.",
+    allowedRoles: ["administrator"],
+  },
 ];
-
-const protectedAppAreas = new Set(
-  roleAwareAppAreaLinks.map((link) => link.href.slice(1)),
-);
 
 function stripAccessRules(link) {
   return {
@@ -98,13 +100,18 @@ export function getProtectedAppAreaFromPath(pathname) {
   }
 
   const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
-  const area = normalizedPath.split("/").filter(Boolean)[0];
+  const matchingLink = [...roleAwareAppAreaLinks]
+    .sort((left, right) => right.href.length - left.href.length)
+    .find(
+      (link) =>
+        normalizedPath === link.href || normalizedPath.startsWith(`${link.href}/`),
+    );
 
-  if (!area || !protectedAppAreas.has(area)) {
+  if (!matchingLink) {
     return null;
   }
 
-  return area;
+  return matchingLink.href.slice(1);
 }
 
 export function getRouteAccessDecision(roleOrRoles, pathname) {

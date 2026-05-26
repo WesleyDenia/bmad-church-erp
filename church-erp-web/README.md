@@ -35,10 +35,29 @@ Frontend Next.js desacoplado, preparado para atuar como BFF do projeto.
 ## Desenvolvimento
 
 1. Copie `.env.example` para `.env.local`.
-2. Ajuste `API_BASE_URL` para o backend local.
-3. Execute `npm install`.
-4. Execute `npm run dev`.
-5. Rode `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`.
+2. Ajuste `API_BASE_URL=http://localhost:8000`.
+3. Mantenha `INTERNAL_API_AUDIENCE=church-erp-api` e `INTERNAL_API_ISSUER=church-erp-web`, salvo se o backend local usar valores diferentes.
+4. Preencha `INTERNAL_JWT_PRIVATE_KEY` com uma chave privada RSA valida compativel com `INTERNAL_JWT_PUBLIC_KEY` configurada no `church-erp-api`.
+5. Execute `npm install`.
+6. Execute `npm run dev`.
+7. Rode `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`.
+
+## Configuracao local do JWT interno
+
+- O BFF usa `INTERNAL_JWT_PRIVATE_KEY` para assinar o cookie `church-erp-bff-session`.
+- A chave pode ser salva como PEM multiline no `.env.local` ou como string unica com `\n` escapado.
+- O Laravel precisa validar a chave publica correspondente em `church-erp-api/config/services.php` via `INTERNAL_JWT_PUBLIC_KEY`.
+- Para gerar um par local de testes com OpenSSL:
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out internal-jwt-private.pem
+openssl rsa -pubout -in internal-jwt-private.pem -out internal-jwt-public.pem
+```
+
+- Copie o conteudo de `internal-jwt-private.pem` para `INTERNAL_JWT_PRIVATE_KEY` no `church-erp-web/.env.local`.
+- Copie o conteudo de `internal-jwt-public.pem` para `INTERNAL_JWT_PUBLIC_KEY` no ambiente do `church-erp-api`.
+- Para usar a chave em uma linha no `.env.local`, substitua as quebras por `\n`.
+- Validacao local esperada: login invalido continua retornando `422`; login valido deve retornar `200` em `/api/auth/login` e `GET /api/auth/me` deve funcionar na sequencia usando o cookie emitido pelo BFF.
 
 ## Onboarding inicial
 
