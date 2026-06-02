@@ -1,6 +1,6 @@
 # Story 1.7: Listar usuarios da igreja e ajustar perfil ou status
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,41 +21,44 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 
 ## Tasks / Subtasks
 
-- [ ] Expor a listagem administrativa de usuarios do tenant atual no backend e no BFF, reaproveitando a fundacao criada na Story 1.6 e mantendo Laravel como autoridade final (AC: 1, 6)
-  - [ ] Adicionar `GET /api/v1/church-users` em `church-erp-api/routes/api.php`, protegido por `resolve.internal.session`, com controller fino em `app/Http/Controllers/Api/V1` e resposta padronizada `200` no shape `{ "data": [...] }` usando resource collection do Laravel.
-  - [ ] Criar uma consulta tenant-scoped em `app/Domain/Identity/Services`, por exemplo `ListChurchUsersService`, carregando `church_user` + `users` apenas do `church_id` autenticado e usando `church_user.id` como identificador canonicamente editavel.
-  - [ ] Garantir que a listagem inclua memberships `active` e `inactive`, mostrando pelo menos `membership_id`, `user.id`, `user.name`, `user.email`, `membership.role`, `membership.status` e um flag util para a UI como `is_current_user` quando o alvo for a propria sessao administradora.
-  - [ ] Expor `GET /api/admin/users` no `church-erp-web` via route handler App Router, usando `callLaravel(...)` e preservando a boundary browser -> BFF -> Laravel.
+- [x]* Expor a* listagem administrativa de usuarios do tenant atual no backend e no BFF, reaproveitando a fundacao criada na Story 1.6 e mantendo Laravel como autoridade final (AC: 1, 6)
+  - [x] Adicionar `GET /api/v1/church-users` em `church-erp-api/routes/api.php`, protegido por `resolve.internal.session`, com controller fino em `app/Http/Controllers/Api/V1` e resposta padronizada `200` no shape `{ "data": [...] }` usando resource collection do Laravel.
+  - [x] Criar uma consulta tenant-scoped em `app/Domain/Identity/Services`, por exemplo `ListChurchUsersService`, carregando `church_user` + `users` apenas do `church_id` autenticado e usando `church_user.id` como identificador canonicamente editavel.
+  - [x] Garantir que a listagem inclua memberships `active` e `inactive`, mostrando pelo menos `membership_id`, `user.id`, `user.name`, `user.email`, `membership.role`, `membership.status` e um flag util para a UI como `is_current_user` quando o alvo for a propria sessao administradora.
+  - [x] Expor `GET /api/admin/users` no `church-erp-web` via route handler App Router, usando `callLaravel(...)` e preservando a boundary browser -> BFF -> Laravel.
 
-- [ ] Implementar a manutencao de perfil e status no mesmo vinculo `church_user`, sem delete fisico nem recriacao de membership (AC: 2, 3, 4, 5, 6)
-  - [ ] Adicionar `PATCH /api/v1/church-users/{churchUser}` orientado ao `church_user.id`, com `FormRequest` dedicado e service de dominio, por exemplo `UpdateChurchUserMembershipService`.
-  - [ ] Restringir as alteracoes de perfil ao allowlist operacional do MVP para memberships geridos pela administradora: `treasurer`, `secretary` e `leadership`. Nao ampliar esta story para criar/promover `administrator`, ACL ou RBAC avancado.
-  - [ ] Restringir as alteracoes de status ao conjunto minimo `active` e `inactive`. Nao introduzir `suspended`, soft delete custom, convite pendente ou exclusao fisica.
-  - [ ] Tratar o payload de update como parcial: `role` e `status` sao opcionais independentemente, mas a requisicao deve conter pelo menos um dos dois; qualquer campo omitido permanece inalterado.
-  - [ ] Atualizar o mesmo registro em `church_user`, preservando `user_id`, `church_id`, `created_at` e `updated_at`, sem apagar e recriar o vinculo para reativacao.
-  - [ ] Bloquear toda tentativa de alterar um membership cujo papel atual seja `administrator`. Nesta story, o membership administrativo e somente leitura para evitar perda da administracao minima viavel.
-  - [ ] Garantir que o `PATCH` sempre responda `200` com body JSON contendo o estado atualizado do membership; erros de validacao/autorizacao devem usar mensagens operacionais simples.
+- [x] Implementar a manutencao de perfil e status no mesmo vinculo `church_user`, sem delete fisico nem recriacao de membership (AC: 2, 3, 4, 5, 6)
+  - [x] Adicionar `PATCH /api/v1/church-users/{churchUser}` orientado ao `church_user.id`, com `FormRequest` dedicado e service de dominio, por exemplo `UpdateChurchUserMembershipService`.
+  - [x] Restringir as alteracoes de perfil ao allowlist operacional do MVP para memberships geridos pela administradora: `treasurer`, `secretary` e `leadership`. Nao ampliar esta story para criar/promover `administrator`, ACL ou RBAC avancado.
+  - [x] Restringir as alteracoes de status ao conjunto minimo `active` e `inactive`. Nao introduzir `suspended`, soft delete custom, convite pendente ou exclusao fisica.
+  - [x] Tratar o payload de update como parcial: `role` e `status` sao opcionais independentemente, mas a requisicao deve conter pelo menos um dos dois; qualquer campo omitido permanece inalterado.
+  - [x] Atualizar o mesmo registro em `church_user`, preservando `user_id`, `church_id` e `created_at`, permitindo a mudanca natural de `updated_at` e sem apagar e recriar o vinculo para reativacao.
+  - [x] Bloquear toda tentativa de alterar um membership cujo papel atual seja `administrator`. Nesta story, o membership administrativo e somente leitura para evitar perda da administracao minima viavel.
+  - [x] Garantir que o `PATCH` sempre responda `200` com body JSON contendo o estado atualizado do membership; erros de validacao/autorizacao devem usar mensagens operacionais simples.
 
-- [ ] Fazer a area `/admin/users` evoluir de formulario isolado para superficie administrativa completa, com listagem e acoes coerentes com o UX aprovado (AC: 1, 2, 3, 4, 5)
-  - [ ] Manter `church-erp-web/src/app/admin/users/page.tsx` como entrypoint server-side da area e carregar a lista administrativa a partir do BFF, sem chamadas autenticadas diretas do browser ao Laravel.
-  - [ ] Preservar o formulario de cadastro da Story 1.6 e adicionar uma composicao operacional dedicada para gestao da lista, por exemplo `church-user-management-panel.tsx`, em `src/components/operational` ou `src/features/church-users`.
-  - [ ] Expor um route handler para alteracoes administrativas em `church-erp-web/src/app/api/admin/users/[id]/route.ts`, traduzindo `PATCH` do browser para `PATCH /api/v1/church-users/{churchUser}`.
-  - [ ] Usar primitives de `src/components/ui` para lista/tabela, badges de status, dialogs de confirmacao, selects de perfil e feedback contextual, verificando primeiro o que ja existe antes de criar novos wrappers.
-  - [ ] Exibir memberships cujo papel atual e `administrator` de forma legivel e previsivel, deixando claro que sao itens somente leitura nesta story.
-  - [ ] Cobrir os estados obrigatorios da tela: `loading`, `ready`, `empty`, `saving`, `success_updated`, `validation_error`, `denied`, `session_invalid`, `server_error` e bloqueio explicito de membership administrativo somente leitura.
+- [x] Fazer a area `/admin/users` evoluir de formulario isolado para superficie administrativa completa, com listagem e acoes coerentes com o UX aprovado (AC: 1, 2, 3, 4, 5)
+  - [x] Manter `church-erp-web/src/app/admin/users/page.tsx` como entrypoint server-side da area e carregar a lista administrativa a partir do BFF, sem chamadas autenticadas diretas do browser ao Laravel e sem confiar apenas no payload antigo do cookie para a autorizacao final da pagina.
+  - [x] Preservar o formulario de cadastro da Story 1.6 e adicionar uma composicao operacional dedicada para gestao da lista, por exemplo `church-user-management-panel.tsx`, em `src/components/operational` ou `src/features/church-users`.
+  - [x] Expor um route handler para alteracoes administrativas em `church-erp-web/src/app/api/admin/users/[id]/route.ts`, traduzindo `PATCH` do browser para `PATCH /api/v1/church-users/{churchUser}`.
+  - [x] Fazer com que os novos route handlers administrativos de `GET` e `PATCH` preservem a mesma disciplina do handler `POST` ja existente: `normalizeAuthResponse(...)`, mensagens seguras e limpeza do cookie BFF quando o backend devolver `401`.
+  - [x] Usar primitives de `src/components/ui` para lista/tabela, badges de status, dialogs de confirmacao, selects de perfil e feedback contextual, verificando primeiro o que ja existe antes de criar novos wrappers.
+  - [x] Exibir memberships cujo papel atual e `administrator` de forma legivel e previsivel, deixando claro que sao itens somente leitura nesta story.
+  - [x] Definir uma estrategia explicita de reconciliacao da lista apos `POST` e `PATCH` bem-sucedidos, por exemplo re-fetch pelo BFF ou `router.refresh()`, para que a pagina nao permaneça com dados stale.
+  - [x] Cobrir os estados obrigatorios da tela com nomenclatura consistente: `loading_list`, `ready`, `empty_operational_users`, `saving_update`, `success_updated`, `validation_error`, `admin_membership_read_only`, `denied`, `session_invalid` e `server_error`.
 
-- [ ] Garantir que mudancas de perfil/status tenham efeito nas proximas verificacoes de sessao e acesso, sem hacks paralelos de autorizacao (AC: 2, 3, 4, 6)
-  - [ ] Reutilizar `ResolveAuthenticatedSessionService`, `CurrentSessionController`, `proxy.ts` e o endpoint BFF `/api/auth/me`, que ja revalidam o membership em banco a cada checagem relevante.
-  - [ ] Fazer da mudanca de `status` para `inactive` o mecanismo oficial para bloquear novo login e fazer a proxima chamada autenticada do usuario-alvo falhar por sessao invalida ou membership inativo, sem depender de limpar cookie remotamente no browser dele.
-  - [ ] Validar que mudanca de `role` altera a decisao de `backoffice/access/{area}` e de `/api/auth/me` ja na proxima requisicao autenticada, porque a autorizacao efetiva continua no backend e le o membership atual do banco.
-  - [ ] Nao confiar no array `roles` antigo do JWT interno como fonte de verdade para permissao. A story deve reforcar a revalidacao por `auth/me`, middleware e policies existentes.
+- [x] Garantir que mudancas de perfil/status tenham efeito nas proximas verificacoes de sessao e acesso, sem hacks paralelos de autorizacao (AC: 2, 3, 4, 6)
+  - [x] Reutilizar `ResolveAuthenticatedSessionService`, `CurrentSessionController`, `proxy.ts` e o endpoint BFF `/api/auth/me`, que ja revalidam o membership em banco a cada checagem relevante.
+  - [x] Fazer com que a page server-side `/admin/users` valide a sessao administrativa usando a mesma fonte de verdade revalidada pelo BFF/backend, em vez de depender apenas de `roles` decodificados do cookie antigo.
+  - [x] Fazer da mudanca de `status` para `inactive` o mecanismo oficial para bloquear novo login e fazer a proxima chamada autenticada do usuario-alvo falhar por sessao invalida ou membership inativo, sem depender de limpar cookie remotamente no browser dele.
+  - [x] Validar que mudanca de `role` altera a decisao de `backoffice/access/{area}` e de `/api/auth/me` ja na proxima requisicao autenticada, porque a autorizacao efetiva continua no backend e le o membership atual do banco.
+  - [x] Nao confiar no array `roles` antigo do JWT interno como fonte de verdade para permissao. A story deve reforcar a revalidacao por `auth/me`, middleware e policies existentes.
 
-- [ ] Cobrir a story com testes de backend, BFF e regressao de acesso por perfil/status (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Backend Feature tests para: listar apenas usuarios do tenant atual; listar memberships `active` e `inactive`; atualizar apenas `role`; atualizar apenas `status`; atualizar `role` e `status` juntos; desativar e reativar o mesmo membership; bloquear alteracao de membership com papel atual `administrator`; retornar `403` para nao-administrador; retornar `404` para membership fora do tenant atual.
-  - [ ] Backend tests de regressao para: usuario desativado falha em `/api/v1/auth/login`; usuario com role alterada perde acesso a `backoffice/access/treasury` e passa a responder conforme a nova role na proxima request autenticada; usuario reativado volta a autenticar com o mesmo email/senha e o mesmo membership.
-  - [ ] Validar rastreabilidade minima da alteracao administrativa definida para esta story: manter o mesmo `church_user`, preservar `created_at`, atualizar `updated_at` e emitir log estruturado backend com `actor_user_id`, `target_membership_id`, `target_user_id`, `church_id` e diff de `role/status`, sem criar tabela nova.
-  - [ ] Frontend/BFF tests para confirmar a existencia de `GET /api/admin/users` e `PATCH /api/admin/users/[id]`, o uso de `callLaravel(...)`, a permanencia da pagina `/admin/users` como area exclusiva de administracao e a ausencia de chamadas autenticadas diretas do browser ao Laravel.
-  - [ ] Rodar `php artisan test`, `./vendor/bin/pint --test`, `npm test`, `npm run lint`, `npm run typecheck` e `npm run build:smoke` antes de mover a story para review.
+- [x] Cobrir a story com testes de backend, BFF e regressao de acesso por perfil/status (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Backend Feature tests para: listar apenas usuarios do tenant atual; listar memberships `active` e `inactive`; atualizar apenas `role`; atualizar apenas `status`; atualizar `role` e `status` juntos; desativar e reativar o mesmo membership; bloquear alteracao de membership com papel atual `administrator`; retornar `403` para nao-administrador; retornar `404` para membership fora do tenant atual.
+  - [x] Backend tests de regressao para: usuario desativado e rejeitado no login conforme a semantica atual do endpoint (`422` com mensagem funcional) e passa a receber `401` nas proximas chamadas autenticadas; usuario com role alterada perde acesso a area antiga e ganha a nova area correspondente na proxima request autenticada; usuario reativado volta a autenticar com o mesmo email/senha e o mesmo membership.
+  - [x] Validar rastreabilidade minima da alteracao administrativa definida para esta story: manter o mesmo `church_user`, preservar `created_at`, atualizar `updated_at` e emitir um log estruturado backend na camada de servico com `actor_user_id`, `target_membership_id`, `target_user_id`, `church_id` e diff de `role/status`, sem criar tabela nova.
+  - [x] Frontend/BFF tests para confirmar a existencia de `GET /api/admin/users` e `PATCH /api/admin/users/[id]`, o uso de `callLaravel(...)`, a permanencia da pagina `/admin/users` como area exclusiva de administracao e a ausencia de chamadas autenticadas diretas do browser ao Laravel.
+  - [x] Rodar `php artisan test`, `./vendor/bin/pint --test`, `npm test`, `npm run lint`, `npm run typecheck` e `npm run build:smoke` antes de mover a story para review.
 
 ## Dev Notes
 
@@ -74,10 +77,12 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 - Toda listagem, consulta, policy e update deve considerar explicitamente o `church_id` autenticado. Membership de outra igreja nao pode vazar nem por enumeracao de IDs.
 - A area administrativa continua exclusiva do papel `administrator`. `treasurer`, `secretary` e `leadership` nunca devem conseguir listar ou alterar usuarios do sistema.
 - A listagem deve incluir o membership administrativo atual para visibilidade, mas qualquer membership cujo papel atual seja `administrator` deve ser tratado como somente leitura nesta story.
+- O estado `empty_operational_users` significa ausencia de usuarios operacionais editaveis alem da administradora; nesse caso, a UI ainda pode mostrar a linha read-only da administradora e um texto orientando como criar o primeiro acesso operacional.
 - Desativacao e reativacao devem acontecer no mesmo registro `church_user`, usando `status = inactive` e `status = active`. Nao apagar e recriar membership, e nao remover `users`.
 - O efeito esperado e sincrono na proxima request autenticada: a story nao exige WebSocket, push invalidation nem refresh forcado de abas abertas.
 - A story deve ampliar a superficie existente de `/admin/users`, `POST /api/admin/users` e `contracts.ts`; nao crie uma segunda area administrativa paralela.
 - O browser continua chamando apenas o `church-erp-web`. Toda leitura ou escrita autenticada sobre usuarios da igreja precisa atravessar o BFF.
+- A pagina server-side `/admin/users` nao deve depender apenas do JWT decodificado localmente para autorizar a area; ela deve usar uma checagem revalidada pelo BFF/backend coerente com `/api/auth/me`.
 
 ### Abordagens proibidas
 
@@ -97,6 +102,7 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
   - `church-erp-api/app/Http/Controllers/Api/V1/UpdateChurchUserController.php`
   - `church-erp-api/app/Http/Requests/UpdateChurchUserRequest.php`
   - `church-erp-api/app/Http/Resources/ChurchUserCollection.php`
+  - `church-erp-api/app/Http/Resources/ChurchUserResource.php`
   - `church-erp-api/app/Domain/Identity/Services/ListChurchUsersService.php`
   - `church-erp-api/app/Domain/Identity/Services/UpdateChurchUserMembershipService.php`
   - `church-erp-api/app/Policies/ChurchUserPolicy.php`
@@ -117,7 +123,7 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 
 - `loading_list`: carregamento inicial da area administrativa e da lista de memberships.
 - `ready`: pagina carregada com formulario de cadastro e lista administrativa utilizavel.
-- `empty`: tenant sem usuarios operacionais adicionais alem da administradora, com orientacao simples para criar o primeiro acesso.
+- `empty_operational_users`: tenant sem usuarios operacionais adicionais alem da administradora, com orientacao simples para criar o primeiro acesso e sem esconder a linha read-only da administradora.
 - `saving_update`: alteracao de perfil ou status em andamento.
 - `success_updated`: confirmacao clara de que o perfil ou status foi atualizado.
 - `validation_error`: mensagens de negocio claras, inclusive para tentativa de alterar membership administrativo somente leitura.
@@ -144,10 +150,14 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 - Success response de update obrigatoria (`200`):
   - `data.membership_id`
   - `data.user.id`
+  - `data.user.name`
+  - `data.user.email`
   - `data.membership.role`
   - `data.membership.status`
+  - `data.is_current_user`
   - `data.action` com valor `updated`
   - `data.message`
+- O item retornado pelo `PATCH` deve seguir o mesmo shape canonico da linha de listagem, acrescido de `action` e `message`, para evitar merge parcial fragil no cliente.
 - Error response:
   - `message` funcional simples
   - `errors` por campo quando houver `422`
@@ -156,9 +166,9 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 
 - Backend alvo continua sendo Laravel 12 em PHP 8.3; frontend alvo continua sendo Next.js 16.2.3 App Router com React 19.2.4 e Tailwind 4, conforme `composer.json`, `package.json` e `project-context.md`.
 - `ResolveActiveChurchContextService` e `ResolveAuthenticatedSessionService` hoje aceitam apenas memberships `status = active`; use essa fundacao explicitamente a favor da story. Desativar membership deve bloquear login novo e chamadas autenticadas seguintes do usuario-alvo.
-- `ChurchUserPolicy` hoje protege apenas o create via role `administrator`; esta story deve expandir a policy para `viewAny` e `update`, sem espalhar autorizacao manual em controllers.
+- `ChurchUserPolicy` hoje protege apenas o create via role `administrator`; esta story deve expandir a policy para `viewAny` e `update` e religar explicitamente os call sites atuais de gate/request para esses novos pontos de autorizacao, sem deixar metodos mortos ou checks paralelos divergentes.
 - O allowlist de roles mutaveis continua restrito ao MVP operacional: `treasurer`, `secretary`, `leadership`. `administrator` permanece fora do fluxo comum de promocao nesta story.
-- Se a alteracao exigir mais de uma escrita relevante, encapsular em `DB::transaction(...)`. A rastreabilidade minima desta story significa, de forma objetiva: manter o mesmo row em `church_user`, atualizar `updated_at` e emitir log estruturado backend com diff de `role/status`; nao criar tabela nova de auditoria.
+- Se a alteracao exigir mais de uma escrita relevante, encapsular em `DB::transaction(...)`. A rastreabilidade minima desta story significa, de forma objetiva: manter o mesmo row em `church_user`, atualizar `updated_at` e emitir um log estruturado via logger padrao do Laravel na camada de servico com diff de `role/status`; nao criar tabela nova de auditoria.
 - Nao opportunisticamente atualizar o projeto para Laravel 13 so porque a documentacao 12.x ja indica versao mais nova disponivel; a story deve respeitar a baseline real do repositório.
 - Se a UI precisar de overlays de confirmacao, usar `shadcn/ui` na camada `src/components/ui` e manter a composicao de negocio fora das primitives.
 
@@ -174,8 +184,9 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
   - manter route handlers em `src/app/api`;
   - usar `callLaravel(...)` como unico caminho BFF -> Laravel;
   - manter `/admin/users` como pagina server-side exclusiva de administracao;
+  - manter nos novos handlers administrativos a mesma normalizacao de auth, mensagens seguras e limpeza de cookie usada pelo handler `POST` existente;
   - preservar o padrao de `proxy.ts` e `/api/auth/me` como fonte de revalidacao de sessao nas rotas protegidas;
-  - nao mover a regra de permissao definitiva para React.
+  - nao mover a regra de permissao definitiva para React, nem depender apenas de `roles` decodificados do cookie para decidir acesso final da page server-side.
 - UX:
   - manter linguagem pastoral-operacional, com feedback claro e sem tom corporativo;
   - evitar grid administrativo frio ou SaaS generico; a tela deve continuar parecer uma area operacional simples e confiavel;
@@ -189,13 +200,15 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
   - bloqueio explicito de qualquer tentativa de alterar membership cujo papel atual seja `administrator`;
   - `403` para nao-administradora;
   - `404` para `church_user.id` fora do tenant;
-  - usuario `inactive` nao autentica em `/api/v1/auth/login`;
-  - usuario com role alterada perde acesso a area antiga e passa a responder conforme a nova matriz em `backoffice/access/{area}` e `/api/auth/me` na proxima request autenticada;
+  - usuario `inactive` nao autentica em `/api/v1/auth/login`, respeitando a semantica atual do endpoint (`422` com mensagem funcional clara), e tambem falha com `401` nas proximas chamadas autenticadas a `/api/v1/auth/me` ou rotas protegidas;
+  - usuario com role alterada perde acesso a area antiga e passa a responder conforme a nova matriz em `backoffice/access/{area}` e `/api/auth/me` na proxima request autenticada, cobrindo pelo menos o par origem/destino relevante para `treasurer`, `secretary` e `leadership`;
   - reativacao restaura login/acesso sem recriar membership.
 - Frontend/BFF obrigatorio:
   - `GET /api/admin/users` usa `callLaravel("/api/v1/church-users", ...)`;
   - `PATCH /api/admin/users/[id]` usa `callLaravel("/api/v1/church-users/{id}", ...)`;
+  - `GET /api/admin/users` e `PATCH /api/admin/users/[id]` preservam `normalizeAuthResponse(...)`, mensagens seguras e limpeza do cookie BFF ao receber `401`;
   - a pagina `/admin/users` continua protegida por sessao valida e papel `administrator`;
+  - a pagina server-side `/admin/users` usa uma checagem de sessao/role revalidada pelo BFF ou backend, nao apenas o payload antigo do cookie;
   - a UI nao tenta chamar `apiBaseUrl` diretamente do browser;
   - a tela trata `401`, `403`, `422` e `500` com mensagens coerentes.
 - Commands obrigatorios:
@@ -212,6 +225,7 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 - A revisao recente da 1.6 reforcou que o boundary BFF precisa continuar explicito e que `401` e `403` devem ser distinguidos na UI. Reaproveite essa mesma disciplina nas alteracoes de role/status.
 - O login atual depende de exatamente um membership ativo por usuario em `ResolveActiveChurchContextService`. Isso torna ainda mais importante reativar/desativar o mesmo `church_user` em vez de criar duplicatas ou tentar sharing cross-tenant.
 - O proxy do Next.js hoje chama `/api/auth/me` em vez de confiar cegamente na role do cookie. Essa fundacao deve ser preservada, porque ela e justamente o caminho para refletir mudancas de perfil/status nas proximas checagens.
+- A page server-side `/admin/users` hoje ainda le `roles` do cookie decodificado localmente; nesta story, o comportamento final esperado deve convergir para uma checagem revalidada pelo BFF/backend, coerente com o restante da superficie protegida.
 - A primeira versao desta story deixava aberta a leitura sobre “administracao minima viavel”. Para execucao do agente `dev`, a regra final desta revisao passa a ser objetiva: membership com papel atual `administrator` e somente leitura nesta story.
 - O historico recente do repositorio mostra implementacoes verticais e story-scoped. Esta entrega deve seguir o mesmo padrao, sem refatorar autenticacao, navegacao ou dominio de Identity alem do necessario para cumprir os ACs.
 
@@ -219,6 +233,7 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 
 - O modelo `ChurchUser` ja tem `id` proprio e `status` default `active`; isso favorece updates sobre o vinculo e elimina qualquer justificativa para delete/recreate.
 - `CurrentSessionController` e `ResolveInternalSession` retornam `401` quando o membership nao esta mais valido; esse comportamento deve ser preservado e usado para o caso de desativacao.
+- `LoginController` hoje devolve `422` para falhas de autenticacao, inclusive quando um membership deixa de ser considerado ativo; a story deve respeitar essa semantica para login e reservar o `401` para sessao autenticada que deixou de ser valida.
 - O route handler `/api/auth/me` limpa o cookie quando o backend devolve sessao invalida, e `proxy.ts` redireciona para login em rotas protegidas. A story deve se apoiar nisso para o efeito de desativacao, nao duplicar invalidacao no frontend.
 - `navigation-policy.js` e `BackofficeAreaPolicy` seguem matriz por role. Mudar `church_user.role` precisa continuar sendo a unica alteracao necessaria para que a matriz refletida na navegacao/proxy/backend mude nas proximas checagens.
 - A propagacao esperada nesta story e a seguinte: sem invalidacao em tempo real da aba aberta, mas com efeito obrigatorio na proxima request autenticada que passar por `/api/auth/me`, `resolve.internal.session` ou `backoffice/access/{area}`.
@@ -229,6 +244,7 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 - `church-erp-api/app/Domain/Identity/Services/CreateChurchUserService.php` ja assume `users` + `church_user` como modelagem canonical. A nova manutencao deve permanecer nesse mesmo dominio `Identity`.
 - `church-erp-web/src/app/admin/users/page.tsx` hoje renderiza apenas `ChurchUserCreateForm`. O ponto natural de evolucao e enriquecer essa mesma pagina com listagem e acoes, sem migrar a administracao para outra rota.
 - `church-erp-web/src/features/church-users/contracts.ts` hoje modela apenas create. Este arquivo deve ser expandido para contratos de listagem e update, mantendo `snake_case` nas bordas da API.
+- `church-erp-web/src/app/api/admin/users/route.ts` ja contem a normalizacao de auth e limpeza de cookie que os novos handlers administrativos devem espelhar.
 
 ### References
 
@@ -306,39 +322,73 @@ so that eu mantenha a operacao alinhada com as responsabilidades reais de cada p
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+GPT-5 Codex
 
 ### Debug Log References
 
-- Story gerada a partir do backlog `1-7-listar-usuarios-da-igreja-e-ajustar-perfil-ou-status` em `_bmad-output/implementation-artifacts/sprint-status.yaml`.
-- Fontes analisadas integralmente para esta story: `epics.md`, `prd.md`, `architecture.md`, `ux-design-specification.md`, `mvp-scope.md`, `project-context.md`, `sprint-change-proposal-2026-05-25.md` e a story anterior `1-6`.
-- O estado real do codigo foi cruzado com `church-erp-api` e `church-erp-web`, incluindo `ChurchUser`, `ResolveAuthenticatedSessionService`, `proxy.ts`, `/api/auth/me`, `/admin/users` e os contratos atuais de `church-users`.
-- O task de validacao automatica referenciado pelo workflow (`_bmad/core/tasks/validate-workflow.xml`) nao existe neste checkout; checklist validado manualmente.
+- Workflow `dev-story` executado sobre a story explicitada pelo usuario, com contexto carregado de `project-context.md`, `sprint-status.yaml` e da propria story.
+- Implementacao conduzida em fatias verticais com TDD: primeiro `GET` tenant-scoped, depois `PATCH` parcial do `church_user`, depois BFF/UI e por fim testes de propagacao de sessao/permissao.
+- Validacoes finais executadas com sucesso: `php artisan test`, `./vendor/bin/pint --test`, `npm test`, `npm run lint`, `npm run typecheck` e `npm run build:smoke`.
+- Revisao adversarial posterior corrigiu limpeza indevida de cookie no BFF `/api/auth/me`, refinou o estado server-side de falha de sessao vs falha operacional, eliminou o N+1 do `ChurchUserResource` e adicionou cobertura para `PATCH` com `role` + `status` no mesmo request.
 
 ### Completion Notes List
 
-- Pendente implementacao.
-- Ponto de continuidade natural: evoluir a area `/admin/users` ja criada na 1.6, preservando o boundary BFF e a modelagem `users` + `church_user`.
+- Implementada listagem administrativa tenant-scoped em Laravel (`GET /api/v1/church-users`) e no BFF (`GET /api/admin/users`) com shape canonico por `church_user.id`.
+- Implementado `PATCH /api/v1/church-users/{churchUser}` com `FormRequest`, allowlist de `role/status`, bloqueio de membership `administrator`, update no mesmo row e log estruturado de diff.
+- Revalidada a pagina server-side `/admin/users` via BFF `/api/auth/me`, mantendo a area exclusiva de `administrator` e removendo a dependencia do payload antigo do cookie para a autorizacao final.
+- Adicionado `ChurchUserManagementPanel` com badges, selects, confirmacao em dialog, estados operacionais obrigatorios e reconciliacao explicita via `router.refresh()` para `POST` e `PATCH`.
+- Cobertos os efeitos de role/status na proxima request autenticada, incluindo `login`, `/api/v1/auth/me` e `backoffice/access/{area}`, preservando Laravel como fonte de verdade da permissao efetiva.
+- Ajustado o BFF `/api/auth/me` para limpar o cookie apenas em `401`, preservando a sessao em falhas `500`.
+- Diferenciado o estado de erro operacional server-side da pagina `/admin/users`, evitando tratar indisponibilidade do backend como sessao invalida.
+- Adicionada cobertura explicita para update combinado de `role` e `status`, alinhando o teste com a subtarefa marcada como concluida.
+- Eliminada a recarga redundante da relacao `user` no `ChurchUserResource` quando a listagem ja chega eager loaded.
 
 ### File List
 
 - `_bmad-output/implementation-artifacts/1-7-listar-usuarios-da-igreja-e-ajustar-perfil-ou-status.md`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
-- `church-erp-api/routes/api.php`
-- `church-erp-api/app/Http/Controllers/Api/V1/ListChurchUsersController.php`
-- `church-erp-api/app/Http/Controllers/Api/V1/UpdateChurchUserController.php`
-- `church-erp-api/app/Http/Requests/UpdateChurchUserRequest.php`
-- `church-erp-api/app/Http/Resources/ChurchUserCollection.php`
 - `church-erp-api/app/Domain/Identity/Services/ListChurchUsersService.php`
 - `church-erp-api/app/Domain/Identity/Services/UpdateChurchUserMembershipService.php`
+- `church-erp-api/app/Http/Controllers/Api/V1/ListChurchUsersController.php`
+- `church-erp-api/app/Http/Controllers/Api/V1/StoreChurchUserController.php`
+- `church-erp-api/app/Http/Controllers/Api/V1/UpdateChurchUserController.php`
+- `church-erp-api/app/Http/Requests/StoreChurchUserRequest.php`
+- `church-erp-api/app/Http/Requests/UpdateChurchUserRequest.php`
+- `church-erp-api/app/Http/Resources/ChurchUserCollection.php`
+- `church-erp-api/app/Http/Resources/ChurchUserResource.php`
 - `church-erp-api/app/Policies/ChurchUserPolicy.php`
+- `church-erp-api/app/Providers/AppServiceProvider.php`
+- `church-erp-api/routes/api.php`
 - `church-erp-api/tests/Feature/Identity/ListChurchUsersTest.php`
 - `church-erp-api/tests/Feature/Identity/UpdateChurchUserTest.php`
-- `church-erp-api/tests/Feature/Identity/AuthSessionTest.php`
 - `church-erp-web/src/app/admin/users/page.tsx`
-- `church-erp-web/src/app/api/admin/users/route.ts`
 - `church-erp-web/src/app/api/admin/users/[id]/route.ts`
+- `church-erp-web/src/app/api/admin/users/route.ts`
+- `church-erp-web/src/app/api/auth/me/route.ts`
 - `church-erp-web/src/components/operational/church-user-create-form.tsx`
 - `church-erp-web/src/components/operational/church-user-management-panel.tsx`
 - `church-erp-web/src/features/church-users/contracts.ts`
 - `church-erp-web/tests/bff-smoke.test.mjs`
+
+## Senior Developer Review (AI)
+
+### Reviewer
+
+- Wesley Silva (GPT-5 Codex)
+
+### Outcome
+
+- Aprovado apos correcoes.
+
+### Review Notes
+
+- Corrigida a limpeza indevida do cookie de sessao no BFF `/api/auth/me`, agora restrita a respostas `401`.
+- Ajustada a tela server-side `/admin/users` para distinguir falha de sessao de indisponibilidade operacional durante a revalidacao da sessao.
+- Eliminado o custo extra de N+1 na serializacao da listagem administrativa quando a relacao `user` ja vem eager loaded.
+- Adicionado teste de backend para o caminho de update parcial combinado (`role` + `status`) no mesmo membership.
+- Validacoes rerodadas com sucesso apos a revisao: `php artisan test`, `./vendor/bin/pint --test`, `npm test`, `npm run lint`, `npm run typecheck` e `npm run build:smoke`.
+
+## Change Log
+
+- 2026-06-01: Implementada a superficie administrativa completa de usuarios da igreja, com listagem tenant-scoped, manutencao de role/status no mesmo `church_user`, revalidacao server-side via BFF e regressao de sessao/permissao coberta por testes.
+- 2026-06-02: Revisao adversarial concluida com correcoes no BFF `/api/auth/me`, refinamento do tratamento server-side de erro de sessao, ajuste de performance no `ChurchUserResource` e ampliacao da cobertura de testes para update combinado de `role` e `status`.

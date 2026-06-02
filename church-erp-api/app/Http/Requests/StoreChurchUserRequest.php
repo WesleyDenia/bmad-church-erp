@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Domain\Identity\Models\ChurchUser;
 use App\Domain\Identity\Services\CreateChurchUserService;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,7 +34,7 @@ class StoreChurchUserRequest extends FormRequest
             ], 401));
         }
 
-        return Gate::forUser($user)->allows('manage-church-users');
+        return Gate::forUser($user)->allows('create', ChurchUser::class);
     }
 
     /**

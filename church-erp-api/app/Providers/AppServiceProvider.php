@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Finance\Models\FinancialEntry;
+use App\Domain\Identity\Models\ChurchUser;
 use App\Policies\BackofficeAreaPolicy;
 use App\Policies\ChurchUserPolicy;
 use App\Policies\FinancialEntryPolicy;
@@ -25,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-backoffice-area', [BackofficeAreaPolicy::class, 'access']);
-        Gate::define('manage-church-users', [ChurchUserPolicy::class, 'create']);
+        Gate::policy(ChurchUser::class, ChurchUserPolicy::class);
         Gate::policy(FinancialEntry::class, FinancialEntryPolicy::class);
     }
 }

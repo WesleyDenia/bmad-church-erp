@@ -192,6 +192,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/app/admin/users/loading.tsx",
     "../src/app/admin/users/page.tsx",
     "../src/app/api/admin/users/route.ts",
+    "../src/app/api/admin/users/[id]/route.ts",
     "../src/app/api/auth/login/route.ts",
     "../src/app/api/auth/me/route.ts",
     "../src/app/api/auth/logout/route.ts",
@@ -236,6 +237,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/components/operational/access-denied-panel.tsx",
     "../src/components/operational/area-guard.tsx",
     "../src/components/operational/church-user-create-form.tsx",
+    "../src/components/operational/church-user-management-panel.tsx",
     "../src/components/operational/counterparty-inline-dialog.tsx",
     "../src/components/operational/financial-entry-history-dialog.tsx",
     "../src/components/operational/treasury-entry-form.tsx",
@@ -424,6 +426,10 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
     new URL("../src/app/api/admin/users/route.ts", import.meta.url),
     "utf8",
   );
+  const adminUsersItemRoute = readFileSync(
+    new URL("../src/app/api/admin/users/[id]/route.ts", import.meta.url),
+    "utf8",
+  );
   const authLoginRoute = readFileSync(
     new URL("../src/app/api/auth/login/route.ts", import.meta.url),
     "utf8",
@@ -456,15 +462,25 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
     new URL("../src/components/operational/church-user-create-form.tsx", import.meta.url),
     "utf8",
   );
+  const adminUsersManagementPanel = readFileSync(
+    new URL("../src/components/operational/church-user-management-panel.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(proxyFile, /getRouteAccessDecision/);
   assert.match(proxyFile, /buildAccessDeniedPath/);
-  assert.match(adminUsersPage, /cookies\(/);
-  assert.match(adminUsersPage, /decodeJwtPayload/);
-  assert.doesNotMatch(adminUsersPage, /callLaravel\("\/api\/v1\/auth\/me"/);
+  assert.match(adminUsersPage, /fetch\(/);
+  assert.match(adminUsersPage, /\/api\/auth\/me/);
+  assert.match(adminUsersPage, /\/api\/admin\/users/);
+  assert.doesNotMatch(adminUsersPage, /decodeJwtPayload/);
   assert.match(adminUsersPage, /AccessDeniedPanel/);
   assert.doesNotMatch(adminUsersPage, /AreaGuard/);
   assert.match(adminUsersRoute, /callLaravel\("\/api\/v1\/church-users"/);
+  assert.match(adminUsersRoute, /method:\s*"GET"/);
+  assert.match(adminUsersRoute, /normalizeAuthResponse/);
+  assert.match(adminUsersItemRoute, /callLaravel\(`\/api\/v1\/church-users\/\$\{id\}`/);
+  assert.match(adminUsersItemRoute, /method:\s*"PATCH"/);
+  assert.match(adminUsersItemRoute, /normalizeAuthResponse/);
   assert.match(adminUsersRoute, /AUTH_SESSION_COOKIE_NAME/);
   assert.match(authLoginRoute, /auth_login_internal_session_failed/);
   assert.match(authLoginRoute, /Nao foi possivel concluir o login agora/);
@@ -476,6 +492,9 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
   assert.match(financeEntriesRoute, /callLaravel/);
   assert.match(financeEntriesRoute, /financial_category_id/);
   assert.match(adminUsersForm, /fetch\("\/api\/admin\/users"/);
+  assert.match(adminUsersManagementPanel, /fetch\((["`])\/api\/admin\/users\/\$\{/);
+  assert.match(adminUsersManagementPanel, /router\.refresh\(\)/);
+  assert.match(adminUsersManagementPanel, /Dialog/);
   assert.match(adminUsersForm, /Select/);
   assert.match(adminUsersForm, /status === 401/);
   assert.match(adminUsersForm, /session_invalid/);
@@ -1504,6 +1523,47 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
     }
 
     if (url === "http://api.test/api/v1/church-users") {
+      if (init?.method === "GET") {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                membership_id: 7,
+                user: {
+                  id: 3,
+                  name: "Maria Silva",
+                  email: "admin@example.com",
+                },
+                membership: {
+                  role: "administrator",
+                  status: "active",
+                },
+                is_current_user: true,
+              },
+              {
+                membership_id: 18,
+                user: {
+                  id: 18,
+                  name: "Carlos Pereira",
+                  email: "carlos@example.com",
+                },
+                membership: {
+                  role: "treasurer",
+                  status: "active",
+                },
+                is_current_user: false,
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        );
+      }
+
       assert.equal(init?.method, "POST");
       assert.equal(init?.headers instanceof Headers, true);
       assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
@@ -1521,6 +1581,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       return new Response(
         JSON.stringify({
           data: {
+            membership_id: 18,
             user: {
               id: 18,
               name: "Carlos Pereira",
@@ -1531,12 +1592,52 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
               role: "treasurer",
               status: "active",
             },
+            is_current_user: false,
             action: "created",
             message: "Usuario cadastrado com sucesso.",
           },
         }),
         {
           status: 201,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "http://api.test/api/v1/church-users/18") {
+      assert.equal(init?.method, "PATCH");
+      assert.equal(init?.headers instanceof Headers, true);
+      assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+
+      const payload = JSON.parse(init?.body ?? "{}");
+
+      assert.deepEqual(payload, {
+        role: "leadership",
+        status: "inactive",
+      });
+
+      return new Response(
+        JSON.stringify({
+          data: {
+            membership_id: 18,
+            user: {
+              id: 18,
+              name: "Carlos Pereira",
+              email: "carlos@example.com",
+            },
+            membership: {
+              role: "leadership",
+              status: "inactive",
+            },
+            is_current_user: false,
+            action: "updated",
+            message: "Usuario atualizado com sucesso.",
+          },
+        }),
+        {
+          status: 200,
           headers: {
             "content-type": "application/json",
           },
@@ -1557,8 +1658,11 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
     const { GET: financeCategoriesGET } = await import(
       "../src/app/api/finance/categories/route.ts"
     );
-    const { POST: adminUsersPOST } = await import(
+    const { GET: adminUsersGET, POST: adminUsersPOST } = await import(
       "../src/app/api/admin/users/route.ts"
+    );
+    const { PATCH: adminUsersPATCH } = await import(
+      "../src/app/api/admin/users/[id]/route.ts"
     );
     const { POST: financeEntriesPOST } = await import(
       "../src/app/api/finance/entries/route.ts"
@@ -1598,6 +1702,13 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
         },
       }),
     );
+    const adminUsersListResponse = await adminUsersGET(
+      new Request("http://web.test/api/admin/users", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
     const financeEntriesResponse = await financeEntriesPOST(
       new Request("http://web.test/api/finance/entries", {
         method: "POST",
@@ -1629,6 +1740,24 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
           role: "treasurer",
         }),
       }),
+    );
+    const adminUsersPatchResponse = await adminUsersPATCH(
+      new Request("http://web.test/api/admin/users/18", {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+        body: JSON.stringify({
+          role: "leadership",
+          status: "inactive",
+        }),
+      }),
+      {
+        params: {
+          id: "18",
+        },
+      },
     );
 
     assert.equal(deniedProxyResponse.status, 307);
@@ -1682,6 +1811,38 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       },
     });
 
+    assert.equal(adminUsersListResponse.status, 200);
+    assert.deepEqual(await adminUsersListResponse.json(), {
+      data: [
+        {
+          membership_id: 7,
+          user: {
+            id: 3,
+            name: "Maria Silva",
+            email: "admin@example.com",
+          },
+          membership: {
+            role: "administrator",
+            status: "active",
+          },
+          is_current_user: true,
+        },
+        {
+          membership_id: 18,
+          user: {
+            id: 18,
+            name: "Carlos Pereira",
+            email: "carlos@example.com",
+          },
+          membership: {
+            role: "treasurer",
+            status: "active",
+          },
+          is_current_user: false,
+        },
+      ],
+    });
+
     assert.equal(financeEntriesResponse.status, 201);
     assert.deepEqual(await financeEntriesResponse.json(), {
       data: {
@@ -1700,6 +1861,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
     assert.equal(adminUsersResponse.status, 201);
     assert.deepEqual(await adminUsersResponse.json(), {
       data: {
+        membership_id: 18,
         user: {
           id: 18,
           name: "Carlos Pereira",
@@ -1710,8 +1872,28 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
           role: "treasurer",
           status: "active",
         },
+        is_current_user: false,
         action: "created",
         message: "Usuario cadastrado com sucesso.",
+      },
+    });
+
+    assert.equal(adminUsersPatchResponse.status, 200);
+    assert.deepEqual(await adminUsersPatchResponse.json(), {
+      data: {
+        membership_id: 18,
+        user: {
+          id: 18,
+          name: "Carlos Pereira",
+          email: "carlos@example.com",
+        },
+        membership: {
+          role: "leadership",
+          status: "inactive",
+        },
+        is_current_user: false,
+        action: "updated",
+        message: "Usuario atualizado com sucesso.",
       },
     });
   } finally {

@@ -7,10 +7,9 @@ import {
   readSessionTokenFromCookieValue,
 } from "@/features/auth/session";
 import type {
-  CreateChurchUserErrorResponse,
-  CreateChurchUserPayload,
-  CreateChurchUserResponse,
-  ListChurchUsersResponse,
+  ChurchUserErrorResponse,
+  UpdateChurchUserPayload,
+  UpdateChurchUserResponse,
 } from "@/features/church-users/contracts";
 
 function getSessionToken(request: Request): string | null {
@@ -47,7 +46,7 @@ function buildSafeErrorBody(status: number, body: { message?: unknown }) {
 
   if (status >= 500) {
     return {
-      message: "Nao foi possivel concluir a operacao agora. Tente novamente.",
+      message: "Nao foi possivel atualizar o usuario agora. Tente novamente.",
     };
   }
 
@@ -63,58 +62,37 @@ function applyUnauthorizedCookieCleanup(response: NextResponse, status: number) 
   }
 }
 
-export async function GET(request: Request): Promise<Response> {
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> | { id: string } },
+): Promise<Response> {
   const token = getSessionToken(request);
 
   if (!token) {
     return buildUnauthorizedResponse();
   }
 
-  const response = await callLaravel("/api/v1/church-users", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  const { body, status } = await normalizeAuthResponse(response);
-  const nextResponse = NextResponse.json(
-    response.ok
-      ? (body as ListChurchUsersResponse)
-      : buildSafeErrorBody(status, body as { message?: unknown }),
-    { status },
-  );
-
-  applyUnauthorizedCookieCleanup(nextResponse, status);
-
-  return nextResponse;
-}
-
-export async function POST(request: Request): Promise<Response> {
-  const token = getSessionToken(request);
-
-  if (!token) {
-    return buildUnauthorizedResponse();
-  }
-
-  let requestBody: Partial<CreateChurchUserPayload>;
+  let requestBody: Partial<UpdateChurchUserPayload>;
 
   try {
-    requestBody = (await request.json()) as Partial<CreateChurchUserPayload>;
+    requestBody = (await request.json()) as Partial<UpdateChurchUserPayload>;
   } catch {
     return buildInvalidJsonResponse();
   }
 
-  const payload: CreateChurchUserPayload = {
-    name: requestBody.name ?? "",
-    email: requestBody.email ?? "",
-    password: requestBody.password ?? "",
-    password_confirmation: requestBody.password_confirmation ?? "",
-    role: requestBody.role ?? "treasurer",
-  };
+  const { id } = await Promise.resolve(context.params);
+  const payload: UpdateChurchUserPayload = {};
 
-  const response = await callLaravel("/api/v1/church-users", {
-    method: "POST",
+  if (typeof requestBody.role === "string") {
+    payload.role = requestBody.role;
+  }
+
+  if (typeof requestBody.status === "string") {
+    payload.status = requestBody.status;
+  }
+
+  const response = await callLaravel(`/api/v1/church-users/${id}`, {
+    method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -123,17 +101,10 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   const { body, status } = await normalizeAuthResponse(response);
-  const safeBody =
-    status >= 500
-      ? {
-          message: "Nao foi possivel cadastrar o usuario agora. Tente novamente.",
-        }
-      : buildSafeErrorBody(status, body as { message?: unknown });
-
   const nextResponse = NextResponse.json(
     response.ok
-      ? (body as CreateChurchUserResponse)
-      : (safeBody as CreateChurchUserErrorResponse),
+      ? (body as UpdateChurchUserResponse)
+      : (buildSafeErrorBody(status, body as { message?: unknown }) as ChurchUserErrorResponse),
     { status },
   );
 
