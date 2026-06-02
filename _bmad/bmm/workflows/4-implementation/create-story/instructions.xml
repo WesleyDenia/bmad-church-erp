@@ -330,7 +330,7 @@
       <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
     </check>
 
-    <action>Report completion</action>
+    <action>Report completion and present adversarial review menu</action>
     <output>**🎯 ULTIMATE BMad Method STORY CONTEXT CREATED, {user_name}!**
 
       **Story Details:**
@@ -339,14 +339,40 @@
       - File: {{story_file}}
       - Status: ready-for-dev
 
-      **Next Steps:**
+      **Review Options:**
+      - [R] Run adversarial review now
+      - [D] Done - exit workflow
+
+      **Recommended Next Steps After Review:**
       1. Review the comprehensive story in {{story_file}}
       2. Run dev agents `dev-story` for optimized implementation
       3. Run `code-review` when complete (auto-marks done)
       4. Optional: If Test Architect module installed, run `/bmad:tea:automate` after `dev-story` to generate guardrail tests
-
-      **The developer now has everything needed for flawless implementation!**
     </output>
+    <ask>Choose [R] to run adversarial review or [D] to finish:</ask>
+
+    <check if="user chooses 'R'">
+      <action>Execute adversarial review for {{story_file}}</action>
+      <invoke-task>Review {{story_file}} using {project-root}/_bmad/core/tasks/review-adversarial-general.xml</invoke-task>
+      <action>Capture the findings from the task output</action>
+      <action>If zero findings are returned, HALT and ask for user guidance because the review result is suspicious</action>
+      <action>Evaluate severity (Critical, High, Medium, Low) and validity (real, noise, undecided)</action>
+      <action>Do NOT exclude findings based on severity or validity unless explicitly asked to do so</action>
+      <action>Order findings by severity</action>
+      <action>Number the ordered findings (F1, F2, F3, etc.)</action>
+      <output>Adversarial review completed for {{story_file}}. Present all findings in order, then redisplay this menu.</output>
+      <action>Return to the review menu in this step</action>
+    </check>
+
+    <check if="user chooses 'D'">
+      <output>Story creation complete. The story is ready at {{story_file}}.</output>
+      <action>End workflow</action>
+    </check>
+
+    <check if="user provides any other input">
+      <output>Invalid selection. Choose [R] to run adversarial review or [D] to finish.</output>
+      <action>Return to the review menu in this step</action>
+    </check>
   </step>
 
 </workflow>

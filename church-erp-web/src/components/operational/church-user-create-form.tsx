@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { startTransition, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ function classifyStatus(status: number, message: string): FormStatus {
 }
 
 export function ChurchUserCreateForm() {
+  const router = useRouter();
   const [status, setStatus] = useState<FormStatus>("ready");
   const [payload, setPayload] = useState<CreateChurchUserPayload>({
     name: "",
@@ -139,6 +141,9 @@ export function ChurchUserCreateForm() {
       setFeedback(successBody.data.message);
       setStatus("success_created");
       resetForm();
+      startTransition(() => {
+        router.refresh();
+      });
     } catch {
       setFeedback("Nao foi possivel cadastrar o usuario agora. Tente novamente.");
       setStatus("server_error");

@@ -32,7 +32,12 @@ class StoreChurchUserController
             ], 500);
         }
 
-        return (new ChurchUserResource($churchUser))
+        return (new ChurchUserResource([
+            ...$churchUser,
+            'action' => 'created',
+            'message' => 'Usuario cadastrado com sucesso.',
+            'include_church_id' => true,
+        ]))
             ->response()
             ->setStatusCode(201);
     }

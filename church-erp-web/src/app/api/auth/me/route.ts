@@ -42,10 +42,13 @@ export async function GET(request: Request): Promise<Response> {
           }
         : body;
     const nextResponse = NextResponse.json(safeBody, { status });
-    nextResponse.cookies.set(AUTH_SESSION_COOKIE_NAME, "", {
-      ...buildSessionCookieOptions(),
-      maxAge: 0,
-    });
+
+    if (status === 401) {
+      nextResponse.cookies.set(AUTH_SESSION_COOKIE_NAME, "", {
+        ...buildSessionCookieOptions(),
+        maxAge: 0,
+      });
+    }
 
     return nextResponse;
   }
