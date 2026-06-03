@@ -140,7 +140,7 @@ Permitir que o tesoureiro use sua home da tesouraria, estruturada em blocos oper
 **FRs covered:** FR6, FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR21, FR23a, FR24a, FR29
 
 ### Epic 3: Fechamento e Visibilidade para Lideranca
-Permitir gerar fechamento financeiro imediato, revisar o periodo e compartilhar uma visao clara para a lideranca por meio de leitura resumida em blocos, sem sobrecarga operacional.
+Permitir gerar fechamento financeiro imediato a partir de uma regra unica de agregacao, revisar o periodo com consolidado e detalhamento derivados da mesma fonte de verdade e compartilhar uma visao clara para a lideranca por meio de leitura resumida em blocos, sem sobrecarga operacional nem logicas paralelas de leitura.
 **FRs covered:** FR14, FR15, FR16, FR28, FR29
 
 ### Epic 4: Base de Pessoas e Rotina da Secretaria
@@ -571,13 +571,13 @@ So that eu resolva excecoes antes de gerar o fechamento.
 
 ## Epic 3: Fechamento e Visibilidade para Lideranca
 
-Permitir gerar fechamento financeiro imediato, revisar o periodo e compartilhar uma visao clara para a lideranca por meio de leitura resumida em blocos, sem sobrecarga operacional.
+Permitir gerar fechamento financeiro imediato a partir de uma regra unica de agregacao, revisar o periodo com consolidado e detalhamento derivados da mesma fonte de verdade e compartilhar uma visao clara para a lideranca por meio de leitura resumida em blocos, sem sobrecarga operacional nem logicas paralelas de leitura.
 
 ### Story 3.1: Gerar resumo de fechamento do periodo
 
 As a tesoureiro,
-I want gerar um resumo de fechamento com um clique,
-So that eu conclua a prestacao de contas do periodo sem montar relatorios manualmente.
+I want gerar um resumo de fechamento com um clique a partir dos dados reais persistidos do periodo,
+So that eu conclua a prestacao de contas do periodo sem montar relatorios manualmente nem depender de resumo mockado ou reconciliado depois.
 
 **FRs covered:** FR14
 
@@ -587,6 +587,12 @@ So that eu conclua a prestacao de contas do periodo sem montar relatorios manual
 **When** o tesoureiro solicita o fechamento
 **Then** o sistema gera o resumo imediatamente
 **And** apresenta receitas, despesas e resultado liquido do periodo
+**And** o consolidado nasce da mesma regra de agregacao que abastecera o detalhamento da Story 3.2, sem logica paralela no frontend
+
+**Given** que backend, BFF e UI participam da leitura de fechamento
+**When** a Story 3.1 e implementada
+**Then** o contrato do fechamento deve ser fechado cedo e documentado entre as tres camadas
+**And** a UI consome apenas dados reais do fechamento, sem bloco generico ou mockado como etapa intermediaria
 
 **Given** que nao existem lancamentos para o periodo
 **When** o tesoureiro tenta gerar o fechamento
@@ -618,6 +624,12 @@ So that eu consiga explicar os totais com clareza para a lideranca.
 **When** o usuario abre o detalhamento do periodo
 **Then** o sistema mostra a segmentacao por centro de custo e subtipo
 **And** os totais detalhados batem com o resultado consolidado
+**And** o detalhamento deriva da mesma fonte de verdade e do mesmo contrato de leitura usados no resumo da Story 3.1, sem recalculo independente no frontend
+
+**Given** que haja divergencia entre consolidado e detalhado
+**When** o fechamento for processado ou exibido
+**Then** o sistema deve tratar isso como falha grave de consistencia
+**And** nao pode apresentar a visao como fechamento confiavel para o usuario
 
 **Given** que uma categoria nao possui movimentacao no periodo
 **When** o detalhamento e exibido
@@ -669,17 +681,27 @@ So that eu entregue a visibilidade necessaria para a lideranca no mesmo fluxo.
 ### Story 3.4: Exibir home da lideranca com leitura resumida
 
 As a lider da igreja,
-I want acessar uma home da lideranca com resumo executivo em blocos do estado financeiro e operacional,
-So that eu entenda a situacao atual sem entrar em detalhe operacional.
+I want acessar uma home da lideranca com resumo executivo em blocos derivado do fechamento consolidado ja confiavel,
+So that eu entenda a situacao atual sem entrar em detalhe operacional nem depender de leitura paralela ou dashboard generico.
 
 **FRs covered:** FR28
 
 **Acceptance Criteria:**
 
+**Given** que a Story 3.1 e a Story 3.2 ja entregaram um fechamento consistente
+**When** um usuario com perfil de lideranca acessa o sistema
+**Then** a home da lideranca consome a mesma fonte de verdade do fechamento consolidado e do detalhamento
+**And** nao executa agregacao independente para montar os numeros executivos
+
 **Given** que um usuario com perfil de lideranca acessa o sistema
 **When** abre sua home por perfil
 **Then** o sistema exibe um resumo claro do fechamento e do estado operacional em blocos executivos com profundidade opcional
 **And** evita expor controles de operacao diaria desnecessarios
+
+**Given** que ainda nao exista fechamento consolidado confiavel para o periodo
+**When** a home da lideranca for aberta
+**Then** o sistema apresenta estado orientado a contexto, sem inventar resumo executivo generico
+**And** comunica que a leitura depende do fechamento financeiro consolidado
 
 **Given** que o perfil de lideranca nao possui permissao para detalhes sensiveis de edicao
 **When** o usuario tenta aprofundar alem da visao prevista
