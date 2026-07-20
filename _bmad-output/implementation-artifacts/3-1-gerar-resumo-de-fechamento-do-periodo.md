@@ -1,6 +1,6 @@
 # Story 3.1: Gerar resumo de fechamento do periodo
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,39 +24,39 @@ so that eu conclua a prestacao de contas sem montar relatorios manualmente nem d
 
 ## Tasks / Subtasks
 
-- [ ] Implementar a seam backend do fechamento consolidado no dominio `Finance` (AC: 1, 2, 3, 4, 5, 6)
-  - [ ] Criar um service dedicado em `church-erp-api/app/Domain/Finance/Services/`, como `BuildFinancialClosingSummaryService`, para centralizar a regra unica de agregacao do periodo.
-  - [ ] Definir explicitamente o contrato de entrada do service com `church_id`, `period_start` e `period_end`, aplicando filtro por `created_at` enquanto o dominio ainda nao possuir data financeira dedicada.
-  - [ ] Extrair a regra de resolucao do periodo padrao para uma seam reaproveitavel pelo controller e por testes, fechando a semana operacional como segunda `00:00:00` ate domingo `23:59:59.999999` em `UTC` enquanto o dominio ainda nao possuir timezone por igreja.
-  - [ ] Validar `period_start` e `period_end` no Laravel como par opcional e coerente: ambos ausentes para usar default, ou ambos presentes em formato timestamp ISO 8601 compativel com `UTC`, com `period_start <= period_end`.
-  - [ ] Expor endpoint versionado em `/api/v1/finance/closing-summary` dentro do grupo `resolve.internal.session`, com controller fino em `app/Http/Controllers/Api/V1`.
-  - [ ] Retornar a resposta com `JsonResource` dedicado, preservando `snake_case`, `data.closing_summary`, `state` e `period_kind`, com shape consistente tanto para sucesso quanto para estado vazio.
-  - [ ] Proteger a leitura com a mesma regra de acesso da area `treasury`, reaproveitando o padrao atual de `Gate::authorize('access-backoffice-area', 'treasury')` antes de qualquer leitura sensivel.
+- [x] Implementar a seam backend do fechamento consolidado no dominio `Finance` (AC: 1, 2, 3, 4, 5, 6)
+  - [x] Criar um service dedicado em `church-erp-api/app/Domain/Finance/Services/`, como `BuildFinancialClosingSummaryService`, para centralizar a regra unica de agregacao do periodo.
+  - [x] Definir explicitamente o contrato de entrada do service com `church_id`, `period_start` e `period_end`, aplicando filtro por `created_at` enquanto o dominio ainda nao possuir data financeira dedicada.
+  - [x] Extrair a regra de resolucao do periodo padrao para uma seam reaproveitavel pelo controller e por testes, fechando a semana operacional como segunda `00:00:00` ate domingo `23:59:59.999999` em `UTC` enquanto o dominio ainda nao possuir timezone por igreja.
+  - [x] Validar `period_start` e `period_end` no Laravel como par opcional e coerente: ambos ausentes para usar default, ou ambos presentes em formato timestamp ISO 8601 compativel com `UTC`, com `period_start <= period_end`.
+  - [x] Expor endpoint versionado em `/api/v1/finance/closing-summary` dentro do grupo `resolve.internal.session`, com controller fino em `app/Http/Controllers/Api/V1`.
+  - [x] Retornar a resposta com `JsonResource` dedicado, preservando `snake_case`, `data.closing_summary`, `state` e `period_kind`, com shape consistente tanto para sucesso quanto para estado vazio.
+  - [x] Proteger a leitura com a mesma regra de acesso da area `treasury`, reaproveitando o padrao atual de `Gate::authorize('access-backoffice-area', 'treasury')` antes de qualquer leitura sensivel.
 
-- [ ] Fechar o contrato BFF do fechamento sem chamar o Laravel autenticado diretamente do browser (AC: 1, 2, 4, 5, 6, 8)
-  - [ ] Criar `church-erp-web/src/app/api/finance/closing-summary/route.ts` seguindo o padrao atual de `callLaravel`, leitura de cookie de sessao, `cache: "no-store"` e sanitizacao de `401`, `403` e `5xx`.
-  - [ ] Fazer o BFF aceitar `GET` com query params opcionais `period_start` e `period_end`, repassa-los sem renomear campos e preservar respostas `422` de validacao do Laravel.
-  - [ ] Criar contratos TypeScript em `church-erp-web/src/features/finance/closing-summary.ts` com request e response em `snake_case`, incluindo `state`, `period_kind`, `period_start`, `period_end`, `total_income`, `total_expense`, `net_result` e `entry_count`.
-  - [ ] Garantir que a UI use o mesmo contrato de periodo no BFF e nao derive o resumo a partir da lista de lancamentos recentes ja carregada por outro fluxo.
+- [x] Fechar o contrato BFF do fechamento sem chamar o Laravel autenticado diretamente do browser (AC: 1, 2, 4, 5, 6, 8)
+  - [x] Criar `church-erp-web/src/app/api/finance/closing-summary/route.ts` seguindo o padrao atual de `callLaravel`, leitura de cookie de sessao, `cache: "no-store"` e sanitizacao de `401`, `403` e `5xx`.
+  - [x] Fazer o BFF aceitar `GET` com query params opcionais `period_start` e `period_end`, repassa-los sem renomear campos e preservar respostas `422` de validacao do Laravel.
+  - [x] Criar contratos TypeScript em `church-erp-web/src/features/finance/closing-summary.ts` com request e response em `snake_case`, incluindo `state`, `period_kind`, `period_start`, `period_end`, `total_income`, `total_expense`, `net_result` e `entry_count`.
+  - [x] Garantir que a UI use o mesmo contrato de periodo no BFF e nao derive o resumo a partir da lista de lancamentos recentes ja carregada por outro fluxo.
 
-- [ ] Substituir o fechamento estatico da home da tesouraria por leitura real do periodo (AC: 1, 4, 5, 6, 9)
-  - [ ] Evoluir `church-erp-web/src/components/operational/closing-status-block.tsx` para receber dados reais do fechamento, preservando o papel do bloco na home e sem introduzir pagina paralela nesta story.
-  - [ ] Ajustar `church-erp-web/src/components/operational/treasury-home-shell.tsx` para carregar o fechamento real via BFF ao abrir a home sem query params, com estados claros de `loading_closing_summary`, `empty_closing_summary`, `closing_summary_loaded`, `denied_or_session_invalid` e `server_error`.
-  - [ ] Fechar explicitamente o mapeamento dos estados operacionais do bloco a partir do payload real e de `pending_items_count`: `em_andamento` quando ha pendencias operacionais abertas, `pronto_para_revisar` quando ha resumo real e nenhuma pendencia, `atencao` reservado para falha de consistencia ou degradacao futura, e `concluido` fora do escopo desta story.
-  - [ ] Reduzir a dependencia do `treasury_home_view_model.closing_status_block` para a parte que hoje simula resumo e status do fechamento.
-  - [ ] Manter a CTA de fechamento dentro da experiencia da `treasury`, apontando para o proprio bloco e proximos passos operacionais na home nesta entrega, sem antecipar exportacao, home da lideranca, rota paralela ou detalhamento completo.
+- [x] Substituir o fechamento estatico da home da tesouraria por leitura real do periodo (AC: 1, 4, 5, 6, 9)
+  - [x] Evoluir `church-erp-web/src/components/operational/closing-status-block.tsx` para receber dados reais do fechamento, preservando o papel do bloco na home e sem introduzir pagina paralela nesta story.
+  - [x] Ajustar `church-erp-web/src/components/operational/treasury-home-shell.tsx` para carregar o fechamento real via BFF ao abrir a home sem query params, com estados claros de `loading_closing_summary`, `empty_closing_summary`, `closing_summary_loaded`, `denied_or_session_invalid` e `server_error`.
+  - [x] Fechar explicitamente o mapeamento dos estados operacionais do bloco a partir do payload real e de `pending_items_count`: `em_andamento` quando ha pendencias operacionais abertas, `pronto_para_revisar` quando ha resumo real e nenhuma pendencia, `atencao` reservado para falha de consistencia ou degradacao futura, e `concluido` fora do escopo desta story.
+  - [x] Reduzir a dependencia do `treasury_home_view_model.closing_status_block` para a parte que hoje simula resumo e status do fechamento.
+  - [x] Manter a CTA de fechamento dentro da experiencia da `treasury`, apontando para o proprio bloco e proximos passos operacionais na home nesta entrega, sem antecipar exportacao, home da lideranca, rota paralela ou detalhamento completo.
 
-- [ ] Preparar a fundacao para a Story 3.2 sem antecipar seu escopo de interface (AC: 2)
-  - [ ] Garantir que a agregacao do consolidado nao fique embutida no controller, BFF ou React, para que o detalhamento futuro reutilize a mesma regra.
-  - [ ] Registrar no contrato ou no resource metadados minimos do periodo suficientes para permitir extensao futura para detalhamento e compartilhamento, sem recalculo paralelo.
-  - [ ] Separar explicitamente a camada de agregacao de dominio da camada de serializacao HTTP para que a Story 3.2 possa reutilizar o resultado consolidado sem depender do resource como API interna informal.
+- [x] Preparar a fundacao para a Story 3.2 sem antecipar seu escopo de interface (AC: 2)
+  - [x] Garantir que a agregacao do consolidado nao fique embutida no controller, BFF ou React, para que o detalhamento futuro reutilize a mesma regra.
+  - [x] Registrar no contrato ou no resource metadados minimos do periodo suficientes para permitir extensao futura para detalhamento e compartilhamento, sem recalculo paralelo.
+  - [x] Separar explicitamente a camada de agregacao de dominio da camada de serializacao HTTP para que a Story 3.2 possa reutilizar o resultado consolidado sem depender do resource como API interna informal.
 
-- [ ] Cobrir os riscos principais com testes backend e web (AC: 1, 2, 3, 4, 5, 6, 7, 8, 9)
-  - [ ] Backend: testar resumo com `income` e `expense`, resultado liquido, filtro por `created_at`, tenant isolation, estado vazio e bloqueio para usuario sem acesso a `treasury`.
-  - [ ] Backend: testar resolucao do periodo padrao da semana operacional corrente, range customizado valido, erro `422` para range invertido, erro `422` para limite isolado e serializacao `UTC` consistente.
-  - [ ] BFF/Web: testar sanitizacao de `401`, `403` e `5xx`, preservacao de `422`, manutencao de `snake_case`, forwarding de query params e uso exclusivo do BFF local.
-  - [ ] UI/comportamento: testar que o bloco de fechamento deixa de depender de resumo mockado, renderiza estado vazio coerente, usa carregamento automatico da home para o periodo default e nao tenta fechar a conta com dados fabricados.
-  - [ ] Executar `php artisan test` e `./vendor/bin/pint --test` em `church-erp-api`, alem de `npm test`, `npm run lint`, `npm run typecheck` e `npm run build:smoke` em `church-erp-web`.
+- [x] Cobrir os riscos principais com testes backend e web (AC: 1, 2, 3, 4, 5, 6, 7, 8, 9)
+  - [x] Backend: testar resumo com `income` e `expense`, resultado liquido, filtro por `created_at`, tenant isolation, estado vazio e bloqueio para usuario sem acesso a `treasury`.
+  - [x] Backend: testar resolucao do periodo padrao da semana operacional corrente, range customizado valido, erro `422` para range invertido, erro `422` para limite isolado e serializacao `UTC` consistente.
+  - [x] BFF/Web: testar sanitizacao de `401`, `403` e `5xx`, preservacao de `422`, manutencao de `snake_case`, forwarding de query params e uso exclusivo do BFF local.
+  - [x] UI/comportamento: testar que o bloco de fechamento deixa de depender de resumo mockado, renderiza estado vazio coerente, usa carregamento automatico da home para o periodo default e nao tenta fechar a conta com dados fabricados.
+  - [x] Executar `php artisan test` e `./vendor/bin/pint --test` em `church-erp-api`, alem de `npm test`, `npm run lint`, `npm run typecheck` e `npm run build:smoke` em `church-erp-web`.
 
 ## Dev Notes
 
@@ -261,6 +261,12 @@ GPT-5 Codex
 - Foi confirmado que `ListFinancialEntriesService` lista apenas os oito registros mais recentes para uso operacional da tesouraria e nao pode servir como base de fechamento.
 - Foi confirmado que `TreasuryHomeShell` ainda alimenta `ClosingStatusBlock` a partir de `treasury_home_view_model`.
 - Revisao adversarial posterior fechou ambiguidades sobre periodo default, shape de `empty_closing_summary`, contrato `422`, origem dos status do bloco e referencias de UX.
+- RED executado: `php artisan test tests/Feature/Finance/FinancialClosingSummaryTest.php` falhou com `404` para `/api/v1/finance/closing-summary`; `npm test -- tests/financial-closing-summary.test.mjs` falhou por contrato/handler web inexistentes.
+- GREEN executado: `php artisan test tests/Feature/Finance/FinancialClosingSummaryTest.php` passou com 5 testes e 39 assertions; `npm test -- tests/financial-closing-summary.test.mjs` passou junto da suite web carregada pelo glob do script.
+- Validacao completa executada: `php artisan test` passou com 94 testes e 501 assertions; `./vendor/bin/pint --test` passou; `npm test` passou com 46 testes; `npm run lint`, `npm run typecheck` e `npm run build:smoke` passaram.
+- Code review executado em 2026-07-20 encontrou 3 issues High e 1 Medium; todos foram corrigidos automaticamente.
+- Pos-review: `php artisan test tests/Feature/Finance/FinancialClosingSummaryTest.php` passou com 5 testes e 42 assertions; `npm test -- tests/financial-closing-summary.test.mjs` passou dentro da suite web.
+- Pos-review validacao completa executada: `php artisan test` passou com 94 testes e 504 assertions; `./vendor/bin/pint --test` passou; `npm test` passou com 46 testes; `npm run lint`, `npm run typecheck` e `npm run build:smoke` passaram.
 
 ### Completion Notes List
 
@@ -270,7 +276,58 @@ GPT-5 Codex
 - O bloco de fechamento da home passou a ser tratado como leitura real a substituir, e nao como detalhe visual estatico.
 - A story preserva dependencia futura de 3.2 e 3.4 sem antecipar seus escopos.
 - Correcao adversarial aplicada para fechar default semanal, timezone atual, semantica inclusiva do periodo, shape de `data.closing_summary` e preservacao de `422`.
+- Implementado endpoint `GET /api/v1/finance/closing-summary` com service unico de agregacao, request de validacao, period resolver e resource dedicado em `data.closing_summary`.
+- Implementado BFF local `/api/finance/closing-summary`, preservando `422`, sanitizando `401`, `403` e `5xx`, e repassando `period_start`/`period_end` sem renomear.
+- `TreasuryHomeShell` passou a carregar o fechamento automaticamente pelo BFF, e `ClosingStatusBlock` passou a renderizar estados reais sem depender de resumo estatico do view-model.
+- Cobertura adicionada para agregacao por tenant, periodo por `created_at`, semana operacional default UTC, estado vazio, bloqueio de acesso, BFF boundary e comportamento da home.
+- Review fix: validacao de `period_start` e `period_end` agora rejeita datas de calendario invalidas em vez de aceitar normalizacao permissiva do Carbon.
+- Review fix: a home recarrega o resumo de fechamento depois de criar ou editar lancamento financeiro, evitando resumo vazio ou totals antigos apos salvamento.
+- Review fix: o bloco de fechamento nao marca o periodo como pronto para revisar enquanto a leitura de pendencias ainda nao e confiavel.
+
+### Senior Developer Review (AI)
+
+Reviewer: Wesley Silva on 2026-07-20
+
+Outcome: Approved after fixes.
+
+Issues fixed:
+
+- [High] Datas invalidas como `2026-02-30T00:00:00Z` eram normalizadas pelo Carbon e podiam passar como periodo valido; corrigido com parsing estrito de calendario e hora em `ShowFinancialClosingSummaryRequest`.
+- [High] O resumo de fechamento nao era recarregado apos criacao/edicao de lancamento; corrigido em `TreasuryHomeShell` para recarregar pendencias e fechamento apos o callback de salvamento do formulario.
+- [High] A UI podia marcar o fechamento como `pronto para revisar` enquanto as pendencias ainda estavam carregando ou indisponiveis; corrigido com estado conservador `em conferencia`.
+- [Medium] Cobertura de regressao ampliada para data invalida, estado de pendencias desconhecidas e refresh do fechamento apos salvamento.
+
+Verification:
+
+- `php artisan test`
+- `./vendor/bin/pint --test`
+- `npm test`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build:smoke`
+
+### Change Log
+
+- 2026-07-20: Corrigidos apontamentos do code review, validacao completa verde e story movida para done.
+- 2026-07-20: Implementada leitura real do resumo de fechamento do periodo e substituido o fechamento estatico da home da tesouraria. Story movida para review.
 
 ### File List
 
-- Nao aplicavel nesta etapa de contexto. Preencher somente apos implementacao real da story.
+- `_bmad-output/implementation-artifacts/3-1-gerar-resumo-de-fechamento-do-periodo.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `church-erp-api/app/Domain/Finance/Services/BuildFinancialClosingSummaryService.php`
+- `church-erp-api/app/Domain/Finance/Support/ClosingSummaryPeriod.php`
+- `church-erp-api/app/Domain/Finance/Support/ResolveClosingSummaryPeriod.php`
+- `church-erp-api/app/Http/Controllers/Api/V1/ShowFinancialClosingSummaryController.php`
+- `church-erp-api/app/Http/Requests/ShowFinancialClosingSummaryRequest.php`
+- `church-erp-api/app/Http/Resources/FinancialClosingSummaryResource.php`
+- `church-erp-api/app/Http/Resources/ChurchUserResource.php`
+- `church-erp-api/routes/api.php`
+- `church-erp-api/tests/Feature/Finance/FinancialClosingSummaryTest.php`
+- `church-erp-web/src/app/api/finance/closing-summary/route.ts`
+- `church-erp-web/src/components/operational/closing-status-block.tsx`
+- `church-erp-web/src/components/operational/treasury-home-shell.tsx`
+- `church-erp-web/src/features/finance/closing-summary.ts`
+- `church-erp-web/src/features/treasury/home-view-model.ts`
+- `church-erp-web/tests/bff-smoke.test.mjs`
+- `church-erp-web/tests/financial-closing-summary.test.mjs`
