@@ -34,18 +34,6 @@ export type TreasuryHomeViewModel = {
       href: string;
     };
   };
-  closing_status_block: {
-    status_label: string;
-    summary: string;
-    pending_items_count: number;
-    cta_label: string;
-    href: string;
-    empty_state?: {
-      summary: string;
-      cta_label: string;
-      href: string;
-    };
-  };
   payables_receivables_block: {
     cta_label: string;
     href: string;
@@ -119,20 +107,6 @@ export const treasury_home_view_model: TreasuryHomeViewModel = {
         "Nao ha pendencias abertas agora. Aproveite para revisar os registros da semana e confirmar se o fechamento segue limpo.",
       cta_label: "Conferir rotina da semana",
       href: "/treasury#fechamento",
-    },
-  },
-  closing_status_block: {
-    status_label: "em andamento",
-    summary:
-      "O fechamento da semana ainda depende de revisar pendencias abertas e confirmar se o resumo financeiro pode seguir para compartilhamento.",
-    pending_items_count: 2,
-    cta_label: "Retomar fechamento",
-    href: "/treasury#fechamento",
-    empty_state: {
-      summary:
-        "Ainda nao ha dados suficientes para resumir o fechamento atual. Registre os primeiros movimentos para abrir esta leitura operacional.",
-      cta_label: "Abrir lancamento rapido",
-      href: "/treasury#lancamento-rapido",
     },
   },
   payables_receivables_block: {

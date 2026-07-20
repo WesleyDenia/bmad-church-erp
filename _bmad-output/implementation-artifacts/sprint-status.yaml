@@ -50,16 +50,16 @@ development_status:
   1-7-listar-usuarios-da-igreja-e-ajustar-perfil-ou-status: done
   epic-1-retrospective: done
 
-  epic-2: in-progress
+  epic-2: done
   2-1-exibir-home-operacional-do-tesoureiro: done
   2-2-registrar-receita-ou-despesa-com-campos-minimos: done
   2-3-criar-contraparte-inline-durante-o-lancamento: done
   2-4-editar-lancamento-com-motivo-e-trilha-de-auditoria: done
   2-5-sinalizar-e-resolver-pendencias-financeiras: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
-  epic-3: backlog
-  3-1-gerar-resumo-de-fechamento-do-periodo: backlog
+  epic-3: in-progress
+  3-1-gerar-resumo-de-fechamento-do-periodo: done
   3-2-exibir-detalhamento-por-centro-de-custo-e-subtipo: backlog
   3-3-compartilhar-ou-exportar-o-resumo-de-fechamento: backlog
   3-4-exibir-visao-resumida-para-lideranca: backlog

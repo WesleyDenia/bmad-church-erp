@@ -8,6 +8,15 @@ import { QuickActionRail } from "@/components/operational/quick-action-rail";
 import { TreasuryEntryForm } from "@/components/operational/treasury-entry-form";
 import { WeeklyPriorityBlock } from "@/components/operational/weekly-priority-block";
 import type {
+  ClosingSummaryUiState,
+  FinancialClosingSummaryErrorResponse,
+  FinancialClosingSummaryResponse,
+} from "@/features/finance/closing-summary";
+import {
+  buildClosingSummaryPresentation,
+  buildInitialClosingSummaryState,
+} from "@/features/finance/closing-summary";
+import type {
   FinancialPendingItemRecord,
   FinancialPendingItemsErrorResponse,
   FinancialPendingItemsResponse,
@@ -25,8 +34,10 @@ export function TreasuryHomeShell() {
   const quickActionRail = treasury_home_view_model.quick_action_rail;
   const operationalPendingBlock = treasury_home_view_model.operational_pending_block;
   const quickActions = quickActionRail?.actions ?? [];
-  const closingStatus = treasury_home_view_model.closing_status_block;
   const [pendingItems, setPendingItems] = useState<FinancialPendingItemRecord[]>([]);
+  const [closingSummary, setClosingSummary] = useState<ClosingSummaryUiState>(
+    buildInitialClosingSummaryState,
+  );
   const [pendingState, setPendingState] = useState<
     | "loading_pending_items"
     | "empty_pending_items"
@@ -100,17 +111,79 @@ export function TreasuryHomeShell() {
     }
   }, []);
 
+  const loadClosingSummary = useCallback(async (
+    signal?: AbortSignal,
+    options?: { preserveLoadingState?: boolean },
+  ): Promise<void> => {
+    if (!options?.preserveLoadingState) {
+      setClosingSummary(buildInitialClosingSummaryState());
+    }
+
+    try {
+      const response = await fetch("/api/finance/closing-summary", {
+        method: "GET",
+        cache: "no-store",
+        signal,
+      });
+
+      const body = (await response.json()) as
+        | FinancialClosingSummaryResponse
+        | FinancialClosingSummaryErrorResponse;
+
+      if (!response.ok) {
+        const message =
+          "message" in body && typeof body.message === "string"
+            ? body.message
+            : "Server error";
+
+        setClosingSummary((current) => ({
+          state:
+            response.status === 401 || response.status === 403
+              ? "denied_or_session_invalid"
+              : current.summary !== null
+                ? "stale_home_state_recovered"
+                : "server_error",
+          summary: current.summary,
+          message,
+        }));
+        return;
+      }
+
+      const nextSummary = (body as FinancialClosingSummaryResponse).data.closing_summary;
+
+      setClosingSummary({
+        state: nextSummary.state,
+        summary: nextSummary,
+        message: null,
+      });
+    } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
+
+      setClosingSummary((current) => ({
+        state: current.summary !== null ? "stale_home_state_recovered" : "server_error",
+        summary: current.summary,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel carregar o fechamento agora.",
+      }));
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
 
     queueMicrotask(() => {
       void loadPendingItems(controller.signal, { preserveLoadingState: true });
+      void loadClosingSummary(controller.signal, { preserveLoadingState: true });
     });
 
     return () => {
       controller.abort();
     };
-  }, [loadPendingItems]);
+  }, [loadClosingSummary, loadPendingItems]);
 
   const pendingPresentation = buildPendingItemsPresentation(pendingItems);
   const selectedPendingItem = pendingItems.find(
@@ -119,7 +192,13 @@ export function TreasuryHomeShell() {
   const closingPendingItemsCount =
     pendingState === "pending_items_loaded" || pendingState === "empty_pending_items"
       ? pendingPresentation.pending_items_count
-      : 0;
+      : null;
+  const closingPresentation = closingSummary.summary
+    ? buildClosingSummaryPresentation(
+      closingSummary.summary,
+      closingPendingItemsCount,
+    )
+    : null;
 
   function handleSelectPendingItem(itemId: string) {
     setPendingSelectionState((current) => activatePendingItemSelection(current, itemId));
@@ -169,7 +248,10 @@ export function TreasuryHomeShell() {
             onPendingResolution={() => {
               setPendingSelectionState(clearPendingItemSelection);
 
-              return loadPendingItems();
+              return Promise.all([
+                loadPendingItems(),
+                loadClosingSummary(undefined, { preserveLoadingState: true }),
+              ]).then(() => undefined);
             }}
             onPendingSelectionCleared={() => {
               setPendingSelectionState(clearPendingItemSelection);
@@ -196,12 +278,15 @@ export function TreasuryHomeShell() {
 
         <div id="fechamento">
           <ClosingStatusBlock
-            status_label={closingStatus?.status_label ?? "indisponivel"}
-            summary={closingStatus?.summary ?? "O resumo de fechamento estara disponivel assim que houver movimentos registrados."}
-            pending_items_count={closingPendingItemsCount}
-            cta_label={closingStatus?.cta_label ?? "Ver detalhes"}
-            href={closingStatus?.href ?? "/treasury#fechamento"}
-            empty_state={closingStatus?.empty_state}
+            state={closingSummary.state}
+            closing_summary={closingPresentation?.closing_summary ?? null}
+            status_label={closingPresentation?.status_label ?? "carregando"}
+            summary={closingPresentation?.summary ?? "Carregando o fechamento real do periodo atual."}
+            pending_items_count={closingPendingItemsCount ?? 0}
+            cta_label={closingPresentation?.cta_label ?? "Ver fechamento"}
+            href={closingPresentation?.href ?? "/treasury#fechamento"}
+            error_message={closingSummary.message ?? undefined}
+            onRetry={() => void loadClosingSummary()}
           />
         </div>
 

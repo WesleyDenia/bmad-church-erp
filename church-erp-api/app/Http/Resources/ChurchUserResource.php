@@ -65,7 +65,6 @@ class ChurchUserResource extends JsonResource
             $user = $this->resource->relationLoaded('user')
                 ? $this->resource->getRelation('user')
                 : $this->resource->user()->firstOrFail();
-               
 
             return [
                 $this->resource,

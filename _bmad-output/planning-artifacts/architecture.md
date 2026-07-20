@@ -160,6 +160,8 @@ A arquitetura desacoplada introduz coordenação extra entre frontend e backend,
 - Validação complementar no frontend para UX, sem substituir regras do backend
 - Home por perfil e blocos operacionais como eixo estrutural da UI
 - Componentes operacionais compostos sobre primitives base, sem alterar o MVP funcional
+- O fechamento financeiro deve ter contrato integrado fechado cedo entre backend, BFF e UI
+- O resumo consolidado, o detalhamento e a visão da liderança devem derivar da mesma fonte de verdade, sem agregações paralelas por camada
 - Estratégia de cache inicialmente não crítica ao funcionamento do MVP
 - Possibilidade de introduzir Redis depois, sem acoplá-lo como pré-requisito inicial
 
@@ -209,6 +211,15 @@ O frontend Next.js aplicará apenas validações complementares para melhorar a 
 **Caching Strategy:**
 O MVP não dependerá de cache para funcionamento correto.
 A arquitetura deve permitir introduzir Redis posteriormente para cache e rate limiting, mas a primeira implementação não deve exigir cache distribuído como componente crítico.
+
+**Financial Closing Read Model:**
+O fechamento financeiro do período deve nascer como uma leitura única e consistente sobre dados reais persistidos. Isso implica:
+- uma regra única de agregação para consolidado e detalhamento;
+- um contrato integrado fechado cedo entre backend, BFF e UI;
+- proibição de recalcular totais no frontend a partir de lógica paralela;
+- consumo da home da liderança a partir do mesmo resultado confiável usado pela tesouraria.
+
+Se houver divergência entre consolidado e detalhamento, a arquitetura deve tratar isso como falha de consistência do fechamento, e não como discrepância aceitável de apresentação.
 
 ### Decision Impact Analysis
 

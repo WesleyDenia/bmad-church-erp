@@ -200,6 +200,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/app/api/categories/defaults/route.ts",
     "../src/app/api/finance/categories/route.ts",
     "../src/app/api/finance/counterparties/route.ts",
+    "../src/app/api/finance/closing-summary/route.ts",
     "../src/app/api/finance/entries/route.ts",
     "../src/app/api/finance/entries/[id]/route.ts",
     "../src/app/api/finance/entries/[id]/audits/route.ts",
@@ -217,6 +218,7 @@ test("web baseline contains route shells and BFF boundary files", () => {
     "../src/features/church-users/contracts.ts",
     "../src/features/categories/defaults.ts",
     "../src/features/finance/financial-entry.ts",
+    "../src/features/finance/closing-summary.ts",
     "../src/features/finance/counterparty.ts",
     "../src/features/finance/amount.ts",
     "../src/features/treasury/home-view-model.ts",
@@ -1309,14 +1311,14 @@ test("treasury home shell keeps the static chrome in the feature layer but loads
   );
   assert.match(treasuryHomeShell, /treasury_home_view_model/);
   assert.match(treasuryHomeShell, /fetch\("\/api\/finance\/pending-items"/);
+  assert.match(treasuryHomeShell, /fetch\("\/api\/finance\/closing-summary"/);
   assert.match(treasuryHomeViewModel, /weekly_priority_block/);
   assert.match(treasuryHomeViewModel, /quick_action_rail/);
   assert.match(treasuryHomeViewModel, /operational_pending_block/);
-  assert.match(treasuryHomeViewModel, /closing_status_block/);
   assert.match(treasuryHomeViewModel, /payables_receivables_block/);
   assert.match(treasuryHomeViewModel, /quick_action_rail:[\s\S]*empty_state/);
   assert.match(treasuryHomeViewModel, /operational_pending_block:[\s\S]*empty_state/);
-  assert.match(treasuryHomeViewModel, /closing_status_block:[\s\S]*empty_state/);
+  assert.doesNotMatch(treasuryHomeViewModel, /closing_status_block/);
 });
 
 test("treasury home keeps an action-oriented empty state when a block lacks enough data", () => {
@@ -1347,12 +1349,11 @@ test("treasury home keeps an action-oriented empty state when a block lacks enou
 
   assert.match(quickActionRail, /if\s*\(actions\.length\s*===\s*0\)/);
   assert.match(operationalPendingBlock, /if\s*\(items\.length\s*===\s*0\)/);
-  assert.match(closingStatusBlock, /if\s*\(empty_state\)/);
+  assert.match(closingStatusBlock, /loading_closing_summary/);
   assert.match(payablesReceivablesBlock, /empty_state/);
   assert.match(payablesReceivablesBlock, /Ainda nao existem dados suficientes|empty_state\.summary/);
   assert.match(treasuryHomeShell, /empty_state=\{quickActionRail\?\.empty_state\s+\?\?\s+\{/);
   assert.match(treasuryHomeShell, /empty_state=\{operationalPendingBlock\?\.empty_state\s+\?\?\s+\{/);
-  assert.match(treasuryHomeShell, /empty_state=\{closingStatus\?\.empty_state\}/);
   assert.match(treasuryHomeViewModel, /empty_state/);
   assert.match(treasuryHomeViewModel, /Preparar primeiros compromissos/);
 });

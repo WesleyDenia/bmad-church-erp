@@ -88,7 +88,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 - Criação inline de contrapartes ausentes
 - Edição com trilha de auditoria e motivo de alteração
 - Indicadores leves de revisão para anomalias
-- Resumo de fechamento imediato com totais e segmentações por centro de custo e categoria/subtipo
+- Resumo de fechamento imediato com totais e segmentações por centro de custo e categoria/subtipo, sempre derivado de uma regra única de agregação e de uma fonte única de verdade
 - Exportação ou partilha simples do resumo com a liderança
 
 ### 8.3 Registos de Pessoas
@@ -172,8 +172,10 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 
 ### FR-4 Resumo de Fechamento
 
-- O sistema deve gerar um resumo simples de fechamento imediatamente após a operação.
+- O sistema deve gerar um resumo simples de fechamento imediatamente após a operação, usando dados reais persistidos do período.
 - O resumo deve mostrar receitas, despesas, resultado líquido e segmentação por centro de custo e categoria/subtipo.
+- O consolidado e o detalhamento devem derivar da mesma regra de agregação e da mesma fonte de verdade.
+- Qualquer divergência entre consolidado e detalhamento deve ser tratada como falha grave de consistência, e não como ajuste cosmético posterior.
 - O sistema deve permitir exportar ou partilhar o resumo de fechamento com a liderança.
 
 ### FR-5 Registos de Membros e Visitantes
@@ -188,6 +190,7 @@ As igrejas frequentemente executam processos administrativos críticos por meio 
 - As homes devem expor blocos operacionais, ações diretas e pendências relevantes.
 - O sistema deve expor pendências operacionais por perfil e por domínio de trabalho.
 - O sistema deve permitir navegação direta do cartão de pendência para a fila ou fluxo de resolução correspondente.
+- A home da liderança deve derivar sua leitura financeira do fechamento consolidado confiável e não pode depender de agregação paralela ou resumo mockado.
 
 ### FR-7 Preparação de Comunicação
 
