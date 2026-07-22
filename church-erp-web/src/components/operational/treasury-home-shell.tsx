@@ -8,13 +8,19 @@ import { QuickActionRail } from "@/components/operational/quick-action-rail";
 import { TreasuryEntryForm } from "@/components/operational/treasury-entry-form";
 import { WeeklyPriorityBlock } from "@/components/operational/weekly-priority-block";
 import type {
+  ClosingDetailsUiState,
   ClosingSummaryUiState,
+  FinancialClosingSummary,
   FinancialClosingSummaryErrorResponse,
   FinancialClosingSummaryResponse,
 } from "@/features/finance/closing-summary";
 import {
+  buildClosingSummaryStateFromDetailsConsistencyError,
   buildClosingSummaryPresentation,
+  buildInitialClosingDetailsState,
   buildInitialClosingSummaryState,
+  shouldPromoteDetailsErrorToClosingSummary,
+  shouldReloadClosingDetailsAfterEntryMutation,
 } from "@/features/finance/closing-summary";
 import type {
   FinancialPendingItemRecord,
@@ -37,6 +43,9 @@ export function TreasuryHomeShell() {
   const [pendingItems, setPendingItems] = useState<FinancialPendingItemRecord[]>([]);
   const [closingSummary, setClosingSummary] = useState<ClosingSummaryUiState>(
     buildInitialClosingSummaryState,
+  );
+  const [closingDetails, setClosingDetails] = useState<ClosingDetailsUiState>(
+    buildInitialClosingDetailsState,
   );
   const [pendingState, setPendingState] = useState<
     | "loading_pending_items"
@@ -114,7 +123,7 @@ export function TreasuryHomeShell() {
   const loadClosingSummary = useCallback(async (
     signal?: AbortSignal,
     options?: { preserveLoadingState?: boolean },
-  ): Promise<void> => {
+  ): Promise<FinancialClosingSummary | null> => {
     if (!options?.preserveLoadingState) {
       setClosingSummary(buildInitialClosingSummaryState());
     }
@@ -146,7 +155,7 @@ export function TreasuryHomeShell() {
           summary: current.summary,
           message,
         }));
-        return;
+        return null;
       }
 
       const nextSummary = (body as FinancialClosingSummaryResponse).data.closing_summary;
@@ -156,9 +165,16 @@ export function TreasuryHomeShell() {
         summary: nextSummary,
         message: null,
       });
+      setClosingDetails((current) => (
+        current.state === "details_collapsed"
+          ? current
+          : buildInitialClosingDetailsState()
+      ));
+
+      return nextSummary;
     } catch (error) {
       if (signal?.aborted) {
-        return;
+        return null;
       }
 
       setClosingSummary((current) => ({
@@ -169,8 +185,129 @@ export function TreasuryHomeShell() {
             ? error.message
             : "Nao foi possivel carregar o fechamento agora.",
       }));
+
+      return null;
     }
   }, []);
+
+  const loadClosingDetails = useCallback(async (
+    signal?: AbortSignal,
+    summaryOverride?: FinancialClosingSummary,
+  ): Promise<void> => {
+    const baseSummary = summaryOverride ?? closingSummary.summary;
+
+    if (!baseSummary || baseSummary.state === "empty_closing_summary") {
+      setClosingDetails(buildInitialClosingDetailsState());
+      return;
+    }
+
+    const params = new URLSearchParams({
+      include_details: "true",
+      period_start: baseSummary.period_start,
+      period_end: baseSummary.period_end,
+    });
+
+    setClosingDetails((current) => ({
+      state: "loading_closing_details",
+      summary: current.summary,
+      message: null,
+    }));
+
+    try {
+      const response = await fetch(`/api/finance/closing-summary?${params.toString()}`, {
+        method: "GET",
+        cache: "no-store",
+        signal,
+      });
+
+      const body = (await response.json()) as
+        | FinancialClosingSummaryResponse
+        | FinancialClosingSummaryErrorResponse;
+
+      if (!response.ok) {
+        const message =
+          "message" in body && typeof body.message === "string"
+            ? body.message
+            : "Server error";
+        const errorSummary = "data" in body
+          ? body.data?.closing_summary ?? null
+          : null;
+        const isConsistencyError = shouldPromoteDetailsErrorToClosingSummary(
+          response.status,
+          errorSummary,
+        );
+
+        if (isConsistencyError) {
+          setClosingSummary(
+            buildClosingSummaryStateFromDetailsConsistencyError(errorSummary, message),
+          );
+        }
+
+        setClosingDetails({
+          state:
+            isConsistencyError
+              ? "consistency_error"
+              : response.status === 401 || response.status === 403
+                ? "denied_or_session_invalid"
+                : "server_error",
+          summary: errorSummary,
+          message,
+        });
+        return;
+      }
+
+      const nextSummary = (body as FinancialClosingSummaryResponse).data.closing_summary;
+      if (nextSummary.state === "consistency_error") {
+        setClosingSummary(
+          buildClosingSummaryStateFromDetailsConsistencyError(
+            nextSummary,
+            "Nao foi possivel confirmar a consistencia do fechamento.",
+          ),
+        );
+      }
+
+      setClosingDetails({
+        state: nextSummary.state === "consistency_error"
+          ? "consistency_error"
+          : "closing_details_loaded",
+        summary: nextSummary,
+        message: null,
+      });
+    } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
+
+      setClosingDetails({
+        state: "server_error",
+        summary: null,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel carregar o detalhamento agora.",
+      });
+    }
+  }, [closingSummary.summary]);
+
+  const refreshClosingAfterEntryMutation = useCallback(async (): Promise<void> => {
+    const shouldReloadDetails = shouldReloadClosingDetailsAfterEntryMutation(
+      closingDetails.state,
+    );
+
+    if (shouldReloadDetails) {
+      setClosingDetails({
+        state: "details_stale_after_mutation",
+        summary: null,
+        message: null,
+      });
+    }
+
+    const nextSummary = await loadClosingSummary(undefined, { preserveLoadingState: true });
+
+    if (shouldReloadDetails && nextSummary) {
+      await loadClosingDetails(undefined, nextSummary);
+    }
+  }, [closingDetails.state, loadClosingDetails, loadClosingSummary]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -245,13 +382,10 @@ export function TreasuryHomeShell() {
               selectedPendingItem,
               pendingSelectionState.activationKey,
             )}
+            onEntryMutation={refreshClosingAfterEntryMutation}
             onPendingResolution={() => {
               setPendingSelectionState(clearPendingItemSelection);
-
-              return Promise.all([
-                loadPendingItems(),
-                loadClosingSummary(undefined, { preserveLoadingState: true }),
-              ]).then(() => undefined);
+              return loadPendingItems();
             }}
             onPendingSelectionCleared={() => {
               setPendingSelectionState(clearPendingItemSelection);
@@ -287,6 +421,16 @@ export function TreasuryHomeShell() {
             href={closingPresentation?.href ?? "/treasury#fechamento"}
             error_message={closingSummary.message ?? undefined}
             onRetry={() => void loadClosingSummary()}
+            onRequestDetails={
+              closingPresentation?.operational_status === "status_pronto_para_revisar"
+              || closingPresentation?.operational_status === "consistency_error"
+                ? () => void loadClosingDetails()
+                : undefined
+            }
+            details_state={closingDetails.state}
+            details_summary={closingDetails.summary}
+            details_error_message={closingDetails.message ?? undefined}
+            onRetryDetails={() => void loadClosingDetails()}
           />
         </div>
 

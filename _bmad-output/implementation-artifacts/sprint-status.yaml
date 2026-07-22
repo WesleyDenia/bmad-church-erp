@@ -60,7 +60,7 @@ development_status:
 
   epic-3: in-progress
   3-1-gerar-resumo-de-fechamento-do-periodo: done
-  3-2-exibir-detalhamento-por-centro-de-custo-e-subtipo: backlog
+  3-2-exibir-detalhamento-por-centro-de-custo-e-subtipo: done
   3-3-compartilhar-ou-exportar-o-resumo-de-fechamento: backlog
   3-4-exibir-visao-resumida-para-lideranca: backlog
   epic-3-retrospective: optional
