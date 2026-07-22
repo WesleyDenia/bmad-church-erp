@@ -91,12 +91,14 @@ function getNextReadyStatus(
 
 type TreasuryEntryFormProps = {
   pendingSelection?: FinancialPendingItemSelection | null;
+  onEntryMutation?: () => void | Promise<void>;
   onPendingResolution?: () => void | Promise<void>;
   onPendingSelectionCleared?: () => void;
 };
 
 export function TreasuryEntryForm({
   pendingSelection = null,
+  onEntryMutation,
   onPendingResolution,
   onPendingSelectionCleared,
 }: TreasuryEntryFormProps) {
@@ -516,7 +518,10 @@ export function TreasuryEntryForm({
           `${successBody.data.message} A lista local foi atualizada, mas nao foi possivel recarregar todos os lancamentos agora.`,
         );
       });
-      void Promise.resolve(onPendingResolution?.()).catch(() => {});
+      void Promise.all([
+        Promise.resolve(onEntryMutation?.()),
+        Promise.resolve(isResolvingPendingReview ? onPendingResolution?.() : undefined),
+      ]).catch(() => {});
     } catch {
       setFeedback("Nao foi possivel concluir a solicitacao agora.");
       setStatus("server_error");

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Surface } from "@/components/design-system/surface";
+import { ClosingDetailBreakdown } from "@/components/operational/closing-detail-breakdown";
 import { Button } from "@/components/ui/button";
 import type {
+  ClosingDetailsLoadState,
   ClosingSummaryLoadState,
   FinancialClosingSummary,
 } from "@/features/finance/closing-summary";
@@ -16,6 +18,11 @@ type ClosingStatusBlockProps = {
   href: string;
   error_message?: string;
   onRetry?: () => void;
+  onRequestDetails?: () => void;
+  details_state?: ClosingDetailsLoadState;
+  details_summary?: FinancialClosingSummary | null;
+  details_error_message?: string;
+  onRetryDetails?: () => void;
 };
 
 export function ClosingStatusBlock({
@@ -28,6 +35,11 @@ export function ClosingStatusBlock({
   href,
   error_message,
   onRetry,
+  onRequestDetails,
+  details_state = "details_collapsed",
+  details_summary = null,
+  details_error_message,
+  onRetryDetails,
 }: ClosingStatusBlockProps) {
   if (state === "loading_closing_summary") {
     return (
@@ -105,9 +117,27 @@ export function ClosingStatusBlock({
         ) : null}
       </div>
 
-      <Button asChild variant="secondary" className="mt-5 w-full rounded-[1.25rem]">
-        <Link href={href}>{cta_label}</Link>
-      </Button>
+      {onRequestDetails ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-5 w-full rounded-[1.25rem]"
+          onClick={onRequestDetails}
+        >
+          {cta_label}
+        </Button>
+      ) : (
+        <Button asChild variant="secondary" className="mt-5 w-full rounded-[1.25rem]">
+          <Link href={href}>{cta_label}</Link>
+        </Button>
+      )}
+
+      <ClosingDetailBreakdown
+        state={details_state}
+        closing_summary={details_summary}
+        error_message={details_error_message}
+        onRetry={onRetryDetails ?? onRequestDetails ?? (() => {})}
+      />
     </Surface>
   );
 }

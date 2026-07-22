@@ -94,6 +94,136 @@ PEM;
             ->assertJsonPath('data.closing_summary.calculation_basis', 'financial_entries.created_at');
     }
 
+    public function test_it_includes_reconciled_details_grouped_by_cost_center_and_subtype_when_requested(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        [, $otherChurch] = $this->seedMembership('treasurer', 'tesoureiro2@example.com', 'igreja-esperanca');
+        $donations = $this->createCategory($church->id, 'Dizimos', 'dizimos', 'income');
+        $offerings = $this->createCategory($church->id, 'Ofertas', 'ofertas', 'income');
+        $maintenance = $this->createCategory($church->id, 'Manutencao', 'manutencao', 'expense');
+        $otherDonations = $this->createCategory($otherChurch->id, 'Dizimos vazados', 'dizimos-vazados', 'income');
+
+        $this->createEntry($church->id, 'income', '200.00', '2026-06-01 10:00:00', [
+            'category' => $donations,
+            'cost_center_name' => 'Cultos de domingo',
+        ]);
+        $this->createEntry($church->id, 'expense', '80.25', '2026-06-02 10:00:00', [
+            'category' => $maintenance,
+            'cost_center_name' => 'Cultos de domingo',
+        ]);
+        $this->createEntry($church->id, 'income', '175.50', '2026-06-03 10:00:00', [
+            'category' => $offerings,
+            'cost_center_name' => 'Acao social',
+        ]);
+        $this->createEntry($church->id, 'income', '15.00', '2026-06-08 00:00:00', [
+            'category' => $donations,
+            'cost_center_name' => 'Fora do periodo',
+        ]);
+        $this->createEntry($otherChurch->id, 'income', '999.00', '2026-06-03 10:00:00', [
+            'category' => $otherDonations,
+            'cost_center_name' => 'Outro tenant',
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->getJson('/api/v1/finance/closing-summary?include_details=true&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.closing_summary.state', 'closing_summary_loaded')
+            ->assertJsonPath('data.closing_summary.total_income', '375.50')
+            ->assertJsonPath('data.closing_summary.total_expense', '80.25')
+            ->assertJsonPath('data.closing_summary.net_result', '295.25')
+            ->assertJsonPath('data.closing_summary.entry_count', 3)
+            ->assertJsonPath('data.closing_summary.details.reconciliation.cost_center_status', 'consistent')
+            ->assertJsonPath('data.closing_summary.details.reconciliation.subtype_status', 'consistent')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.cost_center_name', 'Cultos de domingo')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.total_income', '200.00')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.total_expense', '80.25')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.net_result', '119.75')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.entry_count', 2)
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.percentage_of_total_movement', '61.49')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.1.cost_center_name', 'Acao social')
+            ->assertJsonPath('data.closing_summary.details.by_subtype.0.financial_category_id', $donations->id)
+            ->assertJsonPath('data.closing_summary.details.by_subtype.0.financial_category_name', 'Dizimos')
+            ->assertJsonPath('data.closing_summary.details.by_subtype.0.financial_category_slug', 'dizimos')
+            ->assertJsonPath('data.closing_summary.details.by_subtype.0.financial_category_kind', 'income')
+            ->assertJsonPath('data.closing_summary.details.by_subtype.0.total_income', '200.00')
+            ->assertJsonMissingPath('data.closing_summary.details.by_cost_center.2')
+            ->assertJsonMissingPath('data.closing_summary.details.by_subtype.3')
+            ->assertJsonMissing(['cost_center_name' => 'Outro tenant'])
+            ->assertJsonMissing(['financial_category_name' => 'Dizimos vazados']);
+
+        $closingSummary = $response->json('data.closing_summary');
+
+        $this->assertRowsReconcileWithSummary($closingSummary, 'by_cost_center');
+        $this->assertRowsReconcileWithSummary($closingSummary, 'by_subtype');
+    }
+
+    public function test_it_keeps_zero_net_groups_and_disambiguates_colliding_cost_center_keys(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        $offerings = $this->createCategory($church->id, 'Ofertas', 'ofertas', 'income');
+        $maintenance = $this->createCategory($church->id, 'Manutencao', 'manutencao', 'expense');
+
+        $this->createEntry($church->id, 'income', '50.00', '2026-06-01 10:00:00', [
+            'category' => $offerings,
+            'cost_center_name' => 'Ação Social',
+        ]);
+        $this->createEntry($church->id, 'expense', '50.00', '2026-06-02 10:00:00', [
+            'category' => $maintenance,
+            'cost_center_name' => 'Ação Social',
+        ]);
+        $this->createEntry($church->id, 'income', '25.00', '2026-06-03 10:00:00', [
+            'category' => $offerings,
+            'cost_center_name' => 'Acao Social',
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->getJson('/api/v1/finance/closing-summary?include_details=true&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.closing_summary.total_income', '75.00')
+            ->assertJsonPath('data.closing_summary.total_expense', '50.00')
+            ->assertJsonPath('data.closing_summary.net_result', '25.00')
+            ->assertJsonPath('data.closing_summary.entry_count', 3)
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.cost_center_name', 'Ação Social')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.total_income', '50.00')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.total_expense', '50.00')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.net_result', '0.00')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.0.entry_count', 2)
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.1.cost_center_name', 'Acao Social')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center.1.entry_count', 1);
+
+        $rows = $response->json('data.closing_summary.details.by_cost_center');
+
+        $this->assertIsArray($rows);
+        $this->assertNotSame($rows[0]['cost_center_key'], $rows[1]['cost_center_key']);
+        $this->assertStringStartsWith('acao-social-', $rows[0]['cost_center_key']);
+        $this->assertStringStartsWith('acao-social-', $rows[1]['cost_center_key']);
+
+        $closingSummary = $response->json('data.closing_summary');
+
+        $this->assertRowsReconcileWithSummary($closingSummary, 'by_cost_center');
+        $this->assertRowsReconcileWithSummary($closingSummary, 'by_subtype');
+    }
+
+    public function test_it_preserves_the_summary_contract_when_details_are_not_requested(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        $this->createEntry($church->id, 'income', '50.00', '2026-06-01 00:00:00');
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->getJson('/api/v1/finance/closing-summary?period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z');
+
+        $response
+            ->assertOk()
+            ->assertJsonMissingPath('data.closing_summary.details');
+    }
+
     public function test_it_resolves_the_default_current_operational_week_in_utc(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-06-03T10:15:00Z'));
@@ -140,6 +270,51 @@ PEM;
             ->assertJsonPath('data.closing_summary.entry_count', 0);
     }
 
+    public function test_it_returns_empty_detail_arrays_for_an_empty_summary_when_requested(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        $this->createEntry($church->id, 'income', '50.00', '2026-06-08 00:00:00');
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->getJson('/api/v1/finance/closing-summary?include_details=true&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.closing_summary.state', 'empty_closing_summary')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center', [])
+            ->assertJsonPath('data.closing_summary.details.by_subtype', [])
+            ->assertJsonPath('data.closing_summary.details.reconciliation.cost_center_status', 'consistent')
+            ->assertJsonPath('data.closing_summary.details.reconciliation.subtype_status', 'consistent');
+    }
+
+    public function test_it_returns_consistency_error_when_a_subtype_cannot_be_confirmed_for_the_tenant(): void
+    {
+        [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
+        [, $otherChurch] = $this->seedMembership('treasurer', 'tesoureiro2@example.com', 'igreja-esperanca');
+        $foreignCategory = $this->createCategory($otherChurch->id, 'Categoria estrangeira', 'categoria-estrangeira', 'income');
+
+        $this->createEntry($church->id, 'income', '50.00', '2026-06-01 00:00:00', [
+            'category' => $foreignCategory,
+            'cost_center_name' => 'Cultos de domingo',
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['treasurer'], 'session-123'))
+            ->getJson('/api/v1/finance/closing-summary?include_details=true&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z');
+
+        $response
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Nao foi possivel confirmar a consistencia do fechamento.')
+            ->assertJsonPath('data.closing_summary.state', 'consistency_error')
+            ->assertJsonPath('data.closing_summary.calculation_basis', 'financial_entries.created_at')
+            ->assertJsonPath('data.closing_summary.details.by_cost_center', [])
+            ->assertJsonPath('data.closing_summary.details.by_subtype', [])
+            ->assertJsonPath('data.closing_summary.details.reconciliation.cost_center_status', 'consistent')
+            ->assertJsonPath('data.closing_summary.details.reconciliation.subtype_status', 'inconsistent')
+            ->assertJsonMissing(['financial_category_name' => 'Categoria estrangeira']);
+    }
+
     public function test_it_validates_custom_period_as_a_complete_coherent_utc_pair(): void
     {
         [$user, $church] = $this->seedMembership('treasurer', 'tesoureiro@example.com', 'igreja-central');
@@ -169,6 +344,12 @@ PEM;
             ->getJson('/api/v1/finance/closing-summary?period_start=2026-02-30T00:00:00Z&period_end=2026-03-07T23:59:59Z')
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['period_start']);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/finance/closing-summary?include_details=yes&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['include_details']);
     }
 
     public function test_it_blocks_users_without_treasury_access_before_financial_details_leak(): void
@@ -185,6 +366,26 @@ PEM;
             ->assertJsonPath('message', 'Acesso negado para esta area.')
             ->assertJsonMissingPath('data.closing_summary')
             ->assertJsonMissingPath('errors');
+    }
+
+    public function test_it_blocks_users_without_treasury_access_before_detailed_names_leak(): void
+    {
+        [$user, $church] = $this->seedMembership('leadership', 'lideranca@example.com', 'igreja-central');
+        $category = $this->createCategory($church->id, 'Dizimos sigilosos', 'dizimos-sigilosos', 'income');
+        $this->createEntry($church->id, 'income', '50.00', '2026-06-01 00:00:00', [
+            'category' => $category,
+            'cost_center_name' => 'Centro sigiloso',
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['leadership'], 'session-123'))
+            ->getJson('/api/v1/finance/closing-summary?include_details=true&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z');
+
+        $response
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Acesso negado para esta area.')
+            ->assertJsonMissing(['cost_center_name' => 'Centro sigiloso'])
+            ->assertJsonMissing(['financial_category_name' => 'Dizimos sigilosos']);
     }
 
     /**
@@ -213,16 +414,17 @@ PEM;
         return [$user, $church, $membership];
     }
 
-    private function createEntry(int $churchId, string $entryType, string $amount, string $createdAt): FinancialEntry
+    /**
+     * @param  array{category?: FinancialCategory, cost_center_name?: string}  $overrides
+     */
+    private function createEntry(int $churchId, string $entryType, string $amount, string $createdAt, array $overrides = []): FinancialEntry
     {
-        $category = FinancialCategory::query()->withoutGlobalScopes()->firstOrCreate([
-            'church_id' => $churchId,
-            'slug' => "categoria-{$entryType}",
-        ], [
-            'name' => "Categoria {$entryType}",
-            'kind' => $entryType,
-            'is_default' => false,
-        ]);
+        $category = $overrides['category'] ?? $this->createCategory(
+            $churchId,
+            "Categoria {$entryType}",
+            "categoria-{$entryType}",
+            $entryType,
+        );
         $counterparty = FinancialCounterparty::query()->withoutGlobalScopes()->firstOrCreate([
             'church_id' => $churchId,
             'slug' => 'maria-souza',
@@ -237,7 +439,7 @@ PEM;
             'financial_category_id' => $category->id,
             'counterparty_id' => $counterparty->id,
             'counterparty_name' => $counterparty->name,
-            'cost_center_name' => 'Cultos de domingo',
+            'cost_center_name' => $overrides['cost_center_name'] ?? 'Cultos de domingo',
         ]);
 
         $entry->forceFill([
@@ -246,6 +448,59 @@ PEM;
         ])->save();
 
         return $entry;
+    }
+
+    private function createCategory(int $churchId, string $name, string $slug, string $kind): FinancialCategory
+    {
+        return FinancialCategory::query()->withoutGlobalScopes()->firstOrCreate([
+            'church_id' => $churchId,
+            'slug' => $slug,
+        ], [
+            'name' => $name,
+            'kind' => $kind,
+            'is_default' => false,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $closingSummary
+     */
+    private function assertRowsReconcileWithSummary(array $closingSummary, string $dimension): void
+    {
+        $rows = $closingSummary['details'][$dimension] ?? null;
+
+        $this->assertIsArray($rows);
+
+        $actual = [
+            'total_income_cents' => 0,
+            'total_expense_cents' => 0,
+            'net_result_cents' => 0,
+            'entry_count' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            $this->assertIsArray($row);
+
+            $actual['total_income_cents'] += $this->decimalToCents($row['total_income']);
+            $actual['total_expense_cents'] += $this->decimalToCents($row['total_expense']);
+            $actual['net_result_cents'] += $this->decimalToCents($row['net_result']);
+            $actual['entry_count'] += (int) $row['entry_count'];
+        }
+
+        $this->assertSame($this->decimalToCents($closingSummary['total_income']), $actual['total_income_cents']);
+        $this->assertSame($this->decimalToCents($closingSummary['total_expense']), $actual['total_expense_cents']);
+        $this->assertSame($this->decimalToCents($closingSummary['net_result']), $actual['net_result_cents']);
+        $this->assertSame((int) $closingSummary['entry_count'], $actual['entry_count']);
+    }
+
+    private function decimalToCents(mixed $amount): int
+    {
+        $value = trim((string) $amount);
+        $sign = str_starts_with($value, '-') ? -1 : 1;
+        $unsigned = ltrim($value, '+-');
+        [$whole, $fraction] = array_pad(explode('.', $unsigned, 2), 2, '0');
+
+        return $sign * (((int) $whole * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0'));
     }
 
     private function createInternalJwt(int $userId, int $churchId, array $roles, string $sessionId): string

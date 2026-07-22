@@ -36,6 +36,7 @@ class ShowFinancialClosingSummaryRequest extends FormRequest
         return [
             'period_start' => ['nullable', 'string'],
             'period_end' => ['nullable', 'string'],
+            'include_details' => ['nullable', 'string'],
         ];
     }
 
@@ -45,8 +46,19 @@ class ShowFinancialClosingSummaryRequest extends FormRequest
             function (Validator $validator): void {
                 $periodStart = $this->query('period_start');
                 $periodEnd = $this->query('period_end');
+                $includeDetails = $this->query('include_details');
                 $hasStart = is_string($periodStart) && $periodStart !== '';
                 $hasEnd = is_string($periodEnd) && $periodEnd !== '';
+
+                if (
+                    $includeDetails !== null
+                    && ! in_array($includeDetails, ['true', 'false', '1', '0'], true)
+                ) {
+                    $validator->errors()->add(
+                        'include_details',
+                        'Informe include_details como true ou false.'
+                    );
+                }
 
                 if ($hasStart !== $hasEnd) {
                     $validator->errors()->add(
@@ -118,6 +130,11 @@ class ShowFinancialClosingSummaryRequest extends FormRequest
         }
 
         return $resolver->currentOperationalWeek();
+    }
+
+    public function includeDetails(): bool
+    {
+        return in_array($this->query('include_details'), ['true', '1'], true);
     }
 
     public function churchId(): int

@@ -15,13 +15,20 @@ class ShowFinancialClosingSummaryController
         ResolveClosingSummaryPeriod $periodResolver,
         BuildFinancialClosingSummaryService $service,
     ): JsonResponse {
-        return (new FinancialClosingSummaryResource(
-            $service->build(
-                $request->churchId(),
-                $request->closingPeriod($periodResolver),
-            ),
-        ))
+        $summary = $service->build(
+            $request->churchId(),
+            $request->closingPeriod($periodResolver),
+            $request->includeDetails(),
+        );
+        $status = $summary['http_status'] ?? 200;
+        $resource = new FinancialClosingSummaryResource($summary);
+
+        if (isset($summary['message'])) {
+            $resource->additional(['message' => $summary['message']]);
+        }
+
+        return $resource
             ->response()
-            ->setStatusCode(200);
+            ->setStatusCode($status);
     }
 }

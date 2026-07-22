@@ -44,8 +44,13 @@ function buildSafeBody(
 function buildLaravelPath(request: Request): string {
   const url = new URL(request.url);
   const params = new URLSearchParams();
+  const includeDetails = url.searchParams.get("include_details");
   const periodStart = url.searchParams.get("period_start");
   const periodEnd = url.searchParams.get("period_end");
+
+  if (includeDetails !== null) {
+    params.set("include_details", includeDetails);
+  }
 
   if (periodStart !== null) {
     params.set("period_start", periodStart);

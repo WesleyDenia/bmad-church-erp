@@ -105,7 +105,110 @@ test("closing summary web contract keeps snake_case states and presentation mapp
   assert.match(empty.summary, /Registre um lancamento/);
 });
 
-test("closing summary BFF route forwards optional UTC period params and preserves validation errors", async () => {
+test("closing summary detail contract keeps snake_case fields and consistency_error state", async () => {
+  const {
+    buildClosingSummaryPresentation,
+    buildClosingSummaryStateFromDetailsConsistencyError,
+    shouldPromoteDetailsErrorToClosingSummary,
+    shouldReloadClosingDetailsAfterEntryMutation,
+  } = await import("../src/features/finance/closing-summary.ts");
+
+  const detailedSummary = {
+    state: "closing_summary_loaded",
+    period_kind: "custom_period",
+    period_start: "2026-06-01T00:00:00.000000Z",
+    period_end: "2026-06-07T23:59:59.000000Z",
+    total_income: "375.50",
+    total_expense: "80.25",
+    net_result: "295.25",
+    entry_count: 3,
+    calculation_basis: "financial_entries.created_at",
+    details: {
+      by_cost_center: [
+        {
+          cost_center_key: "cultos-de-domingo",
+          cost_center_name: "Cultos de domingo",
+          total_income: "200.00",
+          total_expense: "80.25",
+          net_result: "119.75",
+          entry_count: 2,
+          percentage_of_total_movement: "61.50",
+        },
+      ],
+      by_subtype: [
+        {
+          financial_category_id: 10,
+          financial_category_name: "Dizimos",
+          financial_category_slug: "dizimos",
+          financial_category_kind: "income",
+          total_income: "200.00",
+          total_expense: "0.00",
+          net_result: "200.00",
+          entry_count: 1,
+          percentage_of_total_movement: "43.91",
+        },
+      ],
+      reconciliation: {
+        cost_center_status: "consistent",
+        subtype_status: "consistent",
+      },
+    },
+  };
+
+  assert.equal(
+    detailedSummary.details.by_cost_center[0].percentage_of_total_movement,
+    "61.50",
+  );
+  assert.equal(detailedSummary.details.by_subtype[0].financial_category_slug, "dizimos");
+
+  const presentation = buildClosingSummaryPresentation(detailedSummary, 0);
+  assert.equal(presentation.operational_status, "status_pronto_para_revisar");
+
+  const consistencyError = {
+    ...detailedSummary,
+    state: "consistency_error",
+    details: {
+      by_cost_center: [],
+      by_subtype: [],
+      reconciliation: {
+        cost_center_status: "consistent",
+        subtype_status: "inconsistent",
+      },
+    },
+  };
+
+  assert.equal(consistencyError.state, "consistency_error");
+  assert.deepEqual(consistencyError.details.by_subtype, []);
+
+  assert.equal(shouldPromoteDetailsErrorToClosingSummary(409, consistencyError), true);
+  assert.equal(shouldPromoteDetailsErrorToClosingSummary(500, consistencyError), false);
+  assert.equal(shouldPromoteDetailsErrorToClosingSummary(409, detailedSummary), false);
+
+  const promotedSummary = buildClosingSummaryStateFromDetailsConsistencyError(
+    consistencyError,
+    "Nao foi possivel confirmar a consistencia do fechamento.",
+  );
+
+  assert.equal(promotedSummary.state, "consistency_error");
+  assert.equal(promotedSummary.summary, consistencyError);
+
+  const blockedPresentation = buildClosingSummaryPresentation(
+    promotedSummary.summary,
+    0,
+  );
+
+  assert.equal(blockedPresentation.operational_status, "consistency_error");
+  assert.equal(blockedPresentation.cta_label, "Tentar novamente");
+  assert.doesNotMatch(blockedPresentation.summary, /Receitas:/);
+  assert.doesNotMatch(blockedPresentation.summary, /Despesas:/);
+
+  assert.equal(shouldReloadClosingDetailsAfterEntryMutation("closing_details_loaded"), true);
+  assert.equal(shouldReloadClosingDetailsAfterEntryMutation("consistency_error"), true);
+  assert.equal(shouldReloadClosingDetailsAfterEntryMutation("details_stale_after_mutation"), true);
+  assert.equal(shouldReloadClosingDetailsAfterEntryMutation("details_collapsed"), false);
+});
+
+test("closing summary BFF route forwards optional UTC period and include_details params and preserves validation errors", async () => {
   const restoreEnv = setEnv({
     API_BASE_URL: "http://api.test",
     INTERNAL_API_AUDIENCE: "church-erp-api",
@@ -144,7 +247,7 @@ test("closing summary BFF route forwards optional UTC period params and preserve
 
     const response = await GET(
       new Request(
-        "http://web.test/api/finance/closing-summary?period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z",
+        "http://web.test/api/finance/closing-summary?include_details=true&period_start=2026-06-01T00:00:00Z&period_end=2026-06-07T23:59:59Z",
         {
           headers: {
             cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
@@ -156,13 +259,97 @@ test("closing summary BFF route forwards optional UTC period params and preserve
     assert.equal(calls.length, 1);
     assert.equal(
       calls[0].url,
-      "http://api.test/api/v1/finance/closing-summary?period_start=2026-06-01T00%3A00%3A00Z&period_end=2026-06-07T23%3A59%3A59Z",
+      "http://api.test/api/v1/finance/closing-summary?include_details=true&period_start=2026-06-01T00%3A00%3A00Z&period_end=2026-06-07T23%3A59%3A59Z",
     );
     assert.equal(response.status, 422);
     assert.deepEqual(await response.json(), {
       message: "Revise o periodo do fechamento e tente novamente.",
       errors: {
         period_start: ["Informe um timestamp UTC valido para o inicio do periodo."],
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("closing summary BFF preserves consistency_error 409 without server sanitization", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        message: "Nao foi possivel confirmar a consistencia do fechamento.",
+        data: {
+          closing_summary: {
+            state: "consistency_error",
+            period_kind: "custom_period",
+            period_start: "2026-06-01T00:00:00.000000Z",
+            period_end: "2026-06-07T23:59:59.000000Z",
+            total_income: "50.00",
+            total_expense: "0.00",
+            net_result: "50.00",
+            entry_count: 1,
+            calculation_basis: "financial_entries.created_at",
+            details: {
+              by_cost_center: [],
+              by_subtype: [],
+              reconciliation: {
+                cost_center_status: "consistent",
+                subtype_status: "inconsistent",
+              },
+            },
+          },
+        },
+      }),
+      {
+        status: 409,
+        headers: {
+          "content-type": "application/json",
+        },
+      },
+    );
+
+  try {
+    const { GET } = await import("../src/app/api/finance/closing-summary/route.ts");
+
+    const response = await GET(
+      new Request("http://web.test/api/finance/closing-summary?include_details=true", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      message: "Nao foi possivel confirmar a consistencia do fechamento.",
+      data: {
+        closing_summary: {
+          state: "consistency_error",
+          period_kind: "custom_period",
+          period_start: "2026-06-01T00:00:00.000000Z",
+          period_end: "2026-06-07T23:59:59.000000Z",
+          total_income: "50.00",
+          total_expense: "0.00",
+          net_result: "50.00",
+          entry_count: 1,
+          calculation_basis: "financial_entries.created_at",
+          details: {
+            by_cost_center: [],
+            by_subtype: [],
+            reconciliation: {
+              cost_center_status: "consistent",
+              subtype_status: "inconsistent",
+            },
+          },
+        },
       },
     });
   } finally {
@@ -237,6 +424,10 @@ test("treasury home loads closing summary from the BFF and no longer trusts stat
     new URL("../src/components/operational/closing-status-block.tsx", import.meta.url),
     "utf8",
   );
+  const closingDetailBreakdown = readFileSync(
+    new URL("../src/components/operational/closing-detail-breakdown.tsx", import.meta.url),
+    "utf8",
+  );
   const treasuryHomeViewModel = readFileSync(
     new URL("../src/features/treasury/home-view-model.ts", import.meta.url),
     "utf8",
@@ -248,7 +439,17 @@ test("treasury home loads closing summary from the BFF and no longer trusts stat
   assert.match(treasuryHomeShell, /buildInitialClosingSummaryState/);
   assert.match(treasuryHomeShell, /stale_home_state_recovered/);
   assert.match(treasuryHomeShell, /loadClosingSummary\(undefined,\s*\{\s*preserveLoadingState:\s*true\s*\}\)/);
+  assert.match(treasuryHomeShell, /include_details:\s*"true"/);
+  assert.match(treasuryHomeShell, /loadClosingDetails/);
+  assert.match(treasuryHomeShell, /details_stale_after_mutation/);
+  assert.match(treasuryHomeShell, /buildClosingSummaryStateFromDetailsConsistencyError/);
+  assert.match(treasuryHomeShell, /shouldPromoteDetailsErrorToClosingSummary/);
   assert.match(closingStatusBlock, /closing_summary/);
+  assert.match(closingStatusBlock, /ClosingDetailBreakdown/);
+  assert.match(closingDetailBreakdown, /Por centro de custo/);
+  assert.match(closingDetailBreakdown, /Por subtipo/);
+  assert.doesNotMatch(closingDetailBreakdown, /financial_entries/);
+  assert.doesNotMatch(closingDetailBreakdown, /\.reduce\(/);
   assert.doesNotMatch(treasuryHomeShell, /const closingStatus = treasury_home_view_model\.closing_status_block/);
   assert.doesNotMatch(treasuryHomeViewModel, /closing_status_block:\s*\{/);
 });
