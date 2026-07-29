@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Surface } from "@/components/design-system/surface";
 import { ClosingDetailBreakdown } from "@/components/operational/closing-detail-breakdown";
+import { ClosingSummaryHandoffActions } from "@/components/operational/closing-summary-handoff-actions";
 import { Button } from "@/components/ui/button";
 import type {
   ClosingDetailsLoadState,
   ClosingSummaryLoadState,
+  ClosingSummaryOperationalStatus,
   FinancialClosingSummary,
 } from "@/features/finance/closing-summary";
 
@@ -14,11 +16,12 @@ type ClosingStatusBlockProps = {
   status_label: string;
   summary: string;
   pending_items_count: number;
+  operational_status: ClosingSummaryOperationalStatus;
   cta_label: string;
   href: string;
   error_message?: string;
   onRetry?: () => void;
-  onRequestDetails?: () => void;
+  onRequestDetails?: () => Promise<FinancialClosingSummary | null> | void;
   details_state?: ClosingDetailsLoadState;
   details_summary?: FinancialClosingSummary | null;
   details_error_message?: string;
@@ -31,6 +34,7 @@ export function ClosingStatusBlock({
   status_label,
   summary,
   pending_items_count,
+  operational_status,
   cta_label,
   href,
   error_message,
@@ -63,6 +67,7 @@ export function ClosingStatusBlock({
     state === "denied_or_session_invalid"
     || state === "server_error"
     || state === "stale_home_state_recovered"
+    || state === "consistency_error"
   ) {
     return (
       <Surface className="p-6 sm:p-7">
@@ -77,7 +82,11 @@ export function ClosingStatusBlock({
             atencao
           </span>
           <p className="mt-4 text-sm leading-7 text-[color:var(--color-muted)]">
-            {error_message ?? "Nao foi possivel carregar o fechamento agora."}
+            {error_message ?? (
+              state === "consistency_error"
+                ? "Nao foi possivel confirmar a consistencia do fechamento."
+                : "Nao foi possivel carregar o fechamento agora."
+            )}
           </p>
         </div>
 
@@ -138,6 +147,20 @@ export function ClosingStatusBlock({
         error_message={details_error_message}
         onRetry={onRetryDetails ?? onRequestDetails ?? (() => {})}
       />
+
+      {onRequestDetails ? (
+        <ClosingSummaryHandoffActions
+          summary_state={state}
+          details_state={details_state}
+          operational_status={operational_status}
+          pending_items_count={pending_items_count}
+          closing_summary={closing_summary ?? null}
+          details_summary={details_summary}
+          onRequestDetails={async () => (
+            await onRequestDetails()
+          ) ?? null}
+        />
+      ) : null}
     </Surface>
   );
 }

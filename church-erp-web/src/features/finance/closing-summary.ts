@@ -142,12 +142,12 @@ export function buildInitialClosingDetailsState(): ClosingDetailsUiState {
 export function shouldPromoteDetailsErrorToClosingSummary(
   status: number,
   closingSummary: FinancialClosingSummary | null,
-): closingSummary is FinancialClosingSummary & { state: "consistency_error" } {
-  return status === 409 && closingSummary?.state === "consistency_error";
+): boolean {
+  return status === 409 || closingSummary?.state === "consistency_error";
 }
 
 export function buildClosingSummaryStateFromDetailsConsistencyError(
-  closingSummary: FinancialClosingSummary,
+  closingSummary: FinancialClosingSummary | null,
   message: string,
 ): ClosingSummaryUiState {
   return {
