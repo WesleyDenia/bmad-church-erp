@@ -1,0 +1,4 @@
+interface:
+  display_name: "BMAD Review Security"
+  short_description: "Revisão adversarial de segurança BMAD"
+  default_prompt: "/bmad-review-security <arquivo ou escopo>"

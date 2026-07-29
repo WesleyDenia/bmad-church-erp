@@ -1,0 +1,14 @@
+<!-- Inserir antes de marcar spec/story como ready-for-dev ou done.
+     Requer aprovacao humana antes de editar workflows BMAD. -->
+<step n="{{step_number}}" goal="Executar gate adversarial de seguranca" critical="true">
+  <action>Invoke /bmad-review-security for the current spec/story and implementation scope.</action>
+  <action>Require STRIDE threat model coverage for authentication, authorization, payload limits, inputs, outputs, secrets, logs and sensitive data.</action>
+  <action>Run applicable SAST, SCA and secret-detection gates or record explicit tool gaps.</action>
+  <check if="high_or_medium_security_findings_exist">
+    <action>Set story/spec status to in-progress or blocked.</action>
+    <action>Append security follow-ups before implementation readiness.</action>
+  </check>
+  <check if="security_review_passes_without_blocking_findings">
+    <action>Record Security Sign-off: Approved with Security Notes.</action>
+  </check>
+</step>

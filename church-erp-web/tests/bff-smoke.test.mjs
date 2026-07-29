@@ -79,7 +79,8 @@ test("BFF env example exposes internal API variables", () => {
   assert.match(envExample, /INTERNAL_API_AUDIENCE=/);
   assert.match(envExample, /INTERNAL_API_ISSUER=/);
   assert.match(envExample, /INTERNAL_JWT_PRIVATE_KEY=/);
-  assert.match(envExample, /\\n escaped line breaks/);
+  assert.match(envExample, /secret manager/);
+  assert.doesNotMatch(envExample, /BEGIN PRIVATE KEY/); // pragma: allowlist secret
 });
 
 test("internal session signing fails fast when the private key env is missing", () => {
@@ -110,7 +111,7 @@ test("internal session signing fails fast when the private key env is missing", 
 
 test("internal session signing rejects malformed private keys with a controlled error", () => {
   const restoreEnv = setEnv({
-    INTERNAL_JWT_PRIVATE_KEY: "invalid-key",
+    INTERNAL_JWT_PRIVATE_KEY: "invalid-key", // pragma: allowlist secret
   });
 
   try {
@@ -1574,8 +1575,8 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       assert.deepEqual(payload, {
         name: "Carlos Pereira",
         email: "carlos@example.com",
-        password: "secret-password",
-        password_confirmation: "secret-password",
+        password: "secret-password", // pragma: allowlist secret
+        password_confirmation: "secret-password", // pragma: allowlist secret
         role: "treasurer",
       });
 
@@ -1736,8 +1737,8 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
         body: JSON.stringify({
           name: "Carlos Pereira",
           email: "carlos@example.com",
-          password: "secret-password",
-          password_confirmation: "secret-password",
+          password: "secret-password", // pragma: allowlist secret
+          password_confirmation: "secret-password", // pragma: allowlist secret
           role: "treasurer",
         }),
       }),

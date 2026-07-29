@@ -41,3 +41,35 @@ h2,
 h3 {
   font-family: var(--font-display), serif;
 }
+
+@media print {
+  html,
+  body {
+    background: white;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .closing-summary-print-view,
+  .closing-summary-print-view * {
+    visibility: visible;
+  }
+
+  .closing-summary-print-view {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+
+  button,
+  input,
+  textarea,
+  select,
+  nav,
+  form {
+    display: none !important;
+  }
+}

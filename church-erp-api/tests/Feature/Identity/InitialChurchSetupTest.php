@@ -20,8 +20,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => 'Igreja Central',
             'admin_name' => 'Maria Silva',
             'admin_email' => 'maria@example.com',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
+            'password_confirmation' => 'secret-password', // pragma: allowlist secret
         ]);
 
         $response
@@ -38,7 +38,7 @@ class InitialChurchSetupTest extends TestCase
 
         $user = User::query()->where('email', 'maria@example.com')->firstOrFail();
 
-        $this->assertTrue(Hash::check('secret-password', $user->password));
+        $this->assertTrue(Hash::check('secret-password', $user->password)); // pragma: allowlist secret
 
         $churchId = $response->json('data.church.id');
 
@@ -78,8 +78,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => '',
             'admin_name' => '',
             'admin_email' => 'not-an-email',
-            'password' => 'short',
-            'password_confirmation' => 'different',
+            'password' => 'short', // pragma: allowlist secret
+            'password_confirmation' => 'different', // pragma: allowlist secret
         ]);
 
         $response
@@ -103,8 +103,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => 'Igreja Central',
             'admin_name' => 'Maria Silva',
             'admin_email' => 'maria@example.com',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
+            'password_confirmation' => 'secret-password', // pragma: allowlist secret
         ]);
 
         $response
@@ -123,8 +123,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => 'Igreja Central',
             'admin_name' => 'Maria Silva',
             'admin_email' => 'maria@example.com',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
+            'password_confirmation' => 'secret-password', // pragma: allowlist secret
         ];
 
         $this->postJson('/api/v1/onboarding/initial-setup', $payload)
@@ -152,8 +152,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => 'Igreja Central',
             'admin_name' => 'Maria Silva',
             'admin_email' => 'maria@example.com',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
+            'password_confirmation' => 'secret-password', // pragma: allowlist secret
         ];
 
         $firstResponse = $this->postJson('/api/v1/onboarding/initial-setup', $payload);
@@ -177,8 +177,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => 'Igreja Central',
             'admin_name' => 'Maria Silva',
             'admin_email' => 'maria@example.com',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
+            'password_confirmation' => 'secret-password', // pragma: allowlist secret
         ];
 
         $this->postJson('/api/v1/onboarding/initial-setup', $payload)
@@ -186,8 +186,8 @@ class InitialChurchSetupTest extends TestCase
 
         $response = $this->postJson('/api/v1/onboarding/initial-setup', [
             ...$payload,
-            'password' => 'wrong-password',
-            'password_confirmation' => 'wrong-password',
+            'password' => 'wrong-password', // pragma: allowlist secret
+            'password_confirmation' => 'wrong-password', // pragma: allowlist secret
         ]);
 
         $response
@@ -213,8 +213,8 @@ class InitialChurchSetupTest extends TestCase
             'church_name' => 'Igreja Esperanca',
             'admin_name' => 'Ana Lima',
             'admin_email' => 'ana@example.com',
-            'password' => 'secret-password',
-            'password_confirmation' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
+            'password_confirmation' => 'secret-password', // pragma: allowlist secret
         ]);
 
         $response

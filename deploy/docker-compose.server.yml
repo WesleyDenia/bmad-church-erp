@@ -31,13 +31,13 @@ services:
       APP_ENV: development
       APP_DEBUG: "true"
       APP_URL: https://dev.api.teudominio.pt
-      APP_KEY: base64:7YQ4ns0c5n0mNhV5w7Bq8U2n3jYFW+AWm9R/6FQ7f3Q=
+      APP_KEY: ${API_DEV_APP_KEY:?Set API_DEV_APP_KEY}
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_dev
-      DB_USERNAME: church_erp
-      DB_PASSWORD: change_me
+      DB_USERNAME: ${DEV_DB_USERNAME:-church_erp_dev}
+      DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD}
     volumes:
       - api_dev_storage:/var/www/html/storage
     networks:
@@ -83,13 +83,13 @@ services:
       APP_ENV: staging
       APP_DEBUG: "false"
       APP_URL: https://stg.api.teudominio.pt
-      APP_KEY: base64:Tl1N7dS1Yz4qq1Bg5wQevlA2m2PO2WfATVFoY6tJrq0=
+      APP_KEY: ${API_STG_APP_KEY:?Set API_STG_APP_KEY}
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_stg
-      DB_USERNAME: church_erp
-      DB_PASSWORD: change_me
+      DB_USERNAME: ${STG_DB_USERNAME:-church_erp_stg}
+      DB_PASSWORD: ${STG_DB_PASSWORD:?Set STG_DB_PASSWORD}
     volumes:
       - api_stg_storage:/var/www/html/storage
     networks:
@@ -135,13 +135,13 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_URL: https://api.teudominio.pt
-      APP_KEY: base64:ZPVXmqY4w4YxV8ir0p4Fq4X56vP4HwR13PjicNIk0J4=
+      APP_KEY: ${API_PROD_APP_KEY:?Set API_PROD_APP_KEY}
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_prod
-      DB_USERNAME: church_erp
-      DB_PASSWORD: change_me
+      DB_USERNAME: ${PROD_DB_USERNAME:-church_erp_prod}
+      DB_PASSWORD: ${PROD_DB_PASSWORD:?Set PROD_DB_PASSWORD}
     volumes:
       - api_prod_storage:/var/www/html/storage
     networks:

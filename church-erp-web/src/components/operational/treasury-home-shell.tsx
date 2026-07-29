@@ -193,12 +193,12 @@ export function TreasuryHomeShell() {
   const loadClosingDetails = useCallback(async (
     signal?: AbortSignal,
     summaryOverride?: FinancialClosingSummary,
-  ): Promise<void> => {
+  ): Promise<FinancialClosingSummary | null> => {
     const baseSummary = summaryOverride ?? closingSummary.summary;
 
     if (!baseSummary || baseSummary.state === "empty_closing_summary") {
       setClosingDetails(buildInitialClosingDetailsState());
-      return;
+      return null;
     }
 
     const params = new URLSearchParams({
@@ -253,7 +253,7 @@ export function TreasuryHomeShell() {
           summary: errorSummary,
           message,
         });
-        return;
+        return null;
       }
 
       const nextSummary = (body as FinancialClosingSummaryResponse).data.closing_summary;
@@ -273,9 +273,10 @@ export function TreasuryHomeShell() {
         summary: nextSummary,
         message: null,
       });
+      return nextSummary;
     } catch (error) {
       if (signal?.aborted) {
-        return;
+        return null;
       }
 
       setClosingDetails({
@@ -286,6 +287,7 @@ export function TreasuryHomeShell() {
             ? error.message
             : "Nao foi possivel carregar o detalhamento agora.",
       });
+      return null;
     }
   }, [closingSummary.summary]);
 
@@ -336,6 +338,12 @@ export function TreasuryHomeShell() {
       closingPendingItemsCount,
     )
     : null;
+  const closingOperationalStatus = closingPresentation?.operational_status
+    ?? (
+      closingSummary.state === "closing_summary_loaded"
+        ? "status_em_andamento"
+        : closingSummary.state
+    );
 
   function handleSelectPendingItem(itemId: string) {
     setPendingSelectionState((current) => activatePendingItemSelection(current, itemId));
@@ -417,6 +425,7 @@ export function TreasuryHomeShell() {
             status_label={closingPresentation?.status_label ?? "carregando"}
             summary={closingPresentation?.summary ?? "Carregando o fechamento real do periodo atual."}
             pending_items_count={closingPendingItemsCount ?? 0}
+            operational_status={closingOperationalStatus}
             cta_label={closingPresentation?.cta_label ?? "Ver fechamento"}
             href={closingPresentation?.href ?? "/treasury#fechamento"}
             error_message={closingSummary.message ?? undefined}
@@ -424,7 +433,7 @@ export function TreasuryHomeShell() {
             onRequestDetails={
               closingPresentation?.operational_status === "status_pronto_para_revisar"
               || closingPresentation?.operational_status === "consistency_error"
-                ? () => void loadClosingDetails()
+                ? () => loadClosingDetails()
                 : undefined
             }
             details_state={closingDetails.state}

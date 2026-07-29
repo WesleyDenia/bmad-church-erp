@@ -23,10 +23,16 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: root_change_me
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      DEV_DB_USERNAME: ${DEV_DB_USERNAME:-church_erp_dev}
+      DEV_DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD}
+      STG_DB_USERNAME: ${STG_DB_USERNAME:-church_erp_stg}
+      STG_DB_PASSWORD: ${STG_DB_PASSWORD:?Set STG_DB_PASSWORD}
+      PROD_DB_USERNAME: ${PROD_DB_USERNAME:-church_erp_prod}
+      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:?Set PROD_DB_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql/init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+      - ./mysql/init/01-create-databases.sh:/docker-entrypoint-initdb.d/01-create-databases.sh:ro
     networks:
       - backend
     healthcheck:
