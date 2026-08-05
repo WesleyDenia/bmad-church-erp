@@ -1,0 +1,54 @@
+name: Security CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: PHP dependency audit
+        working-directory: church-erp-api
+        run: composer audit
+
+      - name: API frontend tooling dependency audit
+        working-directory: church-erp-api
+        run: npm audit --omit=dev
+
+      - name: Web dependency audit
+        working-directory: church-erp-web
+        run: npm audit --omit=dev
+
+      - name: Install secret scanner
+        run: python -m pip install detect-secrets==1.5.0
+
+      - name: Secret scan
+        run: detect-secrets scan --exclude-files '(^|/)(package-lock\.json|composer\.lock)$'

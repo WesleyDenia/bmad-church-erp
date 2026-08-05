@@ -15,7 +15,7 @@ const roleAwareAppAreaLinks = [
     href: "/leadership",
     label: "Lideranca",
     description: "Visao resumida para acompanhamento e alinhamento ministerial.",
-    allowedRoles: ["leadership"],
+    allowedRoles: ["administrator", "leadership"],
   },
   {
     href: "/communications",

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\ListFinancialEntryAuditsController;
 use App\Http\Controllers\Api\V1\ListFinancialPendingItemsController;
 use App\Http\Controllers\Api\V1\LoginController;
 use App\Http\Controllers\Api\V1\LogoutController;
+use App\Http\Controllers\Api\V1\ShowLeadershipClosingSummaryController;
 use App\Http\Controllers\Api\V1\ShowFinancialClosingSummaryController;
 use App\Http\Controllers\Api\V1\StoreChurchUserController;
 use App\Http\Controllers\Api\V1\StoreFinancialCounterpartyController;
@@ -39,6 +40,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/finance/counterparties', StoreFinancialCounterpartyController::class);
         Route::get('/finance/entries', ListFinancialEntriesController::class);
         Route::get('/finance/closing-summary', ShowFinancialClosingSummaryController::class);
+        Route::get('/leadership/closing-summary', ShowLeadershipClosingSummaryController::class)
+            ->middleware('throttle:leadership-closing-summary');
         Route::get('/finance/pending-items', ListFinancialPendingItemsController::class);
         Route::post('/finance/entries', StoreFinancialEntryController::class);
         Route::get('/finance/entries/{entry}/audits', ListFinancialEntryAuditsController::class);

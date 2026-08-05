@@ -267,6 +267,11 @@ test("app shell navigation is role-aware", () => {
       description: "Base para cadastro, busca e acompanhamento de pessoas.",
     },
     {
+      href: "/leadership",
+      label: "Lideranca",
+      description: "Visao resumida para acompanhamento e alinhamento ministerial.",
+    },
+    {
       href: "/communications",
       label: "Comunicacao",
       description: "Camada futura para modelos, handoff e mensagens preparadas.",

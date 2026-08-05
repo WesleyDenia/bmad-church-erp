@@ -63,6 +63,11 @@ class BackofficeAreaAccessTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('message', 'Acesso liberado.');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/backoffice/access/leadership')
+            ->assertOk()
+            ->assertJsonPath('message', 'Acesso liberado.');
     }
 
     public function test_backoffice_access_returns_forbidden_when_role_does_not_match_area(): void
