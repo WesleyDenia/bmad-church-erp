@@ -4,5 +4,7 @@ repos:
     hooks:
       - id: detect-secrets
         args:
+          - --baseline
+          - .secrets.baseline
           - --exclude-files
-          - '(^|/)(package-lock\.json|composer\.lock)$'
+          - '(^|/)(package-lock\.json|composer\.lock|\.secrets\.baseline)$'

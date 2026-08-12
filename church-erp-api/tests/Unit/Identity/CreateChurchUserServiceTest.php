@@ -25,7 +25,7 @@ class CreateChurchUserServiceTest extends TestCase
             'church_id' => $church->id,
             'name' => 'Carlos Pereira',
             'email' => 'carlos@example.com',
-            'password' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
             'role' => 'treasurer',
         ]);
 
@@ -44,7 +44,7 @@ class CreateChurchUserServiceTest extends TestCase
                 'church_id' => 999999,
                 'name' => 'Carlos Pereira',
                 'email' => 'carlos@example.com',
-                'password' => 'secret-password',
+                'password' => 'secret-password', // pragma: allowlist secret
                 'role' => 'treasurer',
             ]);
 

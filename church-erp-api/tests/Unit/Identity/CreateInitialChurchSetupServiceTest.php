@@ -27,7 +27,7 @@ class CreateInitialChurchSetupServiceTest extends TestCase
             'church_name' => 'Igreja Esperanca',
             'admin_name' => 'Ana Lima',
             'admin_email' => 'ana@example.com',
-            'password' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
         ]);
 
         $churchId = $result['church']->id;
@@ -61,7 +61,7 @@ class CreateInitialChurchSetupServiceTest extends TestCase
                 'church_name' => 'Igreja Esperanca',
                 'admin_name' => 'Ana Lima',
                 'admin_email' => 'ana@example.com',
-                'password' => 'secret-password',
+                'password' => 'secret-password', // pragma: allowlist secret
             ]);
 
             self::fail('Expected provisioning failure to bubble up.');
@@ -93,7 +93,7 @@ class CreateInitialChurchSetupServiceTest extends TestCase
                 'church_name' => 'Igreja Esperanca',
                 'admin_name' => 'Ana Lima',
                 'admin_email' => 'ana@example.com',
-                'password' => 'secret-password',
+                'password' => 'secret-password', // pragma: allowlist secret
             ]);
 
             self::fail('Expected provisioning failure to bubble up.');
@@ -114,14 +114,14 @@ class CreateInitialChurchSetupServiceTest extends TestCase
             'church_name' => 'Igreja Esperanca',
             'admin_name' => 'Ana Lima',
             'admin_email' => 'ana@example.com',
-            'password' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
         ]);
 
         $secondResult = $service->create([
             'church_name' => 'Igreja Esperanca',
             'admin_name' => 'Ana Lima',
             'admin_email' => 'ana@example.com',
-            'password' => 'secret-password',
+            'password' => 'secret-password', // pragma: allowlist secret
         ]);
 
         self::assertSame($firstResult['church']->id, $secondResult['church']->id);
