@@ -58,15 +58,15 @@ development_status:
   2-5-sinalizar-e-resolver-pendencias-financeiras: done
   epic-2-retrospective: done
 
-  epic-3: in-progress
+  epic-3: done
   3-1-gerar-resumo-de-fechamento-do-periodo: done 
   3-2-exibir-detalhamento-por-centro-de-custo-e-subtipo: done
   3-3-compartilhar-ou-exportar-o-resumo-de-fechamento: done
   3-4-exibir-visao-resumida-para-lideranca: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
-  epic-4: backlog
-  4-1-exibir-home-operacional-da-secretaria: backlog
+  epic-4: in-progress
+  4-1-exibir-home-operacional-da-secretaria: done
   4-2-cadastrar-e-editar-membros: backlog
   4-3-cadastrar-e-editar-visitantes: backlog
   4-4-pesquisar-e-filtrar-pessoas: backlog

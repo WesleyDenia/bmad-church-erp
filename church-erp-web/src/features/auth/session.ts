@@ -29,8 +29,8 @@ function normalizePrivateKey(value: string): string {
 
 function assertPemPrivateKey(value: string): void {
   const isPemPrivateKey =
-    value.includes("-----BEGIN PRIVATE KEY-----") ||
-    value.includes("-----BEGIN RSA PRIVATE KEY-----");
+    value.includes("-----BEGIN PRIVATE KEY-----") || // pragma: allowlist secret
+    value.includes("-----BEGIN RSA PRIVATE KEY-----"); // pragma: allowlist secret
 
   if (!isPemPrivateKey || !value.includes("-----END")) {
     throw new InternalJwtConfigurationError(

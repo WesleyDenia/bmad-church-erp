@@ -57,8 +57,8 @@ Payload minimo:
   "church_name": "Igreja Central",
   "admin_name": "Maria Silva",
   "admin_email": "maria@example.com",
-  "password": "secret-password",
-  "password_confirmation": "secret-password"
+  "password": "<senha-forte-local>",
+  "password_confirmation": "<senha-forte-local>"
 }
 ```
 

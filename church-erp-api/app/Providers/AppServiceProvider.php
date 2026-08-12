@@ -39,10 +39,27 @@ class AppServiceProvider extends ServiceProvider
                 ? Response::allow()
                 : Response::deny('Acesso negado para esta area.');
         });
+        Gate::define('view-secretary-home', function (): Response {
+            $session = request()->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $role = is_object($membership) ? (string) ($membership->role ?? '') : '';
+
+            return in_array($role, ['secretary', 'administrator'], true)
+                ? Response::allow()
+                : Response::deny('Acesso negado para esta area.');
+        });
         Gate::policy(ChurchUser::class, ChurchUserPolicy::class);
         Gate::policy(FinancialEntry::class, FinancialEntryPolicy::class);
 
         RateLimiter::for('leadership-closing-summary', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(30)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('secretary-home', function (Request $request): Limit {
             $session = $request->attributes->get('authenticated_session');
             $membership = is_array($session) ? ($session['membership'] ?? null) : null;
             $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
