@@ -38,8 +38,16 @@ docker compose -f deploy/docker-compose.server.yml up -d --build
 Quando quiser atualizar apenas um ambiente, recrie só os serviços dele:
 
 ```bash
+bash deploy/security-gate.sh stg
 docker compose -f deploy/docker-compose.server.yml up -d --build web-stg api-stg
 ```
+
+Para `stg` e `prod`, execute sempre `deploy/security-gate.sh` antes do deploy. O gate exige `pre-commit` ou `detect-secrets-hook` instalado e bloqueia a promoção se a varredura de segredos falhar.
+
+Guard-rail de segredos por ambiente:
+
+- `dev`, `local` e `development`: não exigem `detect-secrets`; o gate registra skip explícito para não bloquear ambiente de desenvolvimento.
+- `ci`, `stg`, `staging`, `prod` e `production`: exigem `pre-commit` ou `detect-secrets-hook`; sem scanner instalado, o deploy falha antes da promoção.
 
 ## Local
 

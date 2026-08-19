@@ -4,9 +4,11 @@ namespace App\Providers;
 
 use App\Domain\Finance\Models\FinancialEntry;
 use App\Domain\Identity\Models\ChurchUser;
+use App\Domain\People\Models\Person;
 use App\Policies\BackofficeAreaPolicy;
 use App\Policies\ChurchUserPolicy;
 use App\Policies\FinancialEntryPolicy;
+use App\Policies\PersonPolicy;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -50,6 +52,10 @@ class AppServiceProvider extends ServiceProvider
         });
         Gate::policy(ChurchUser::class, ChurchUserPolicy::class);
         Gate::policy(FinancialEntry::class, FinancialEntryPolicy::class);
+        Gate::policy(Person::class, PersonPolicy::class);
+        Gate::define('createMember', [PersonPolicy::class, 'createMember']);
+        Gate::define('viewMember', [PersonPolicy::class, 'viewMember']);
+        Gate::define('updateMember', [PersonPolicy::class, 'updateMember']);
 
         RateLimiter::for('leadership-closing-summary', function (Request $request): Limit {
             $session = $request->attributes->get('authenticated_session');
@@ -66,6 +72,22 @@ class AppServiceProvider extends ServiceProvider
             $userId = $request->user()?->id ?? 'guest';
 
             return Limit::perMinute(30)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('secretary-members-read', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(60)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('secretary-members-write', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(20)->by("{$userId}|{$churchId}");
         });
     }
 }
