@@ -54,6 +54,7 @@ class BuildSecretaryHomeService
     {
         return Person::query()
             ->forChurch($churchId)
+            ->where('status', '!=', 'inactive')
             ->where(function ($query): void {
                 $query
                     ->whereIn('status', ['new', 'follow_up_needed', 'needs_update'])
@@ -164,6 +165,7 @@ class BuildSecretaryHomeService
     {
         return Person::query()
             ->forChurch($churchId)
+            ->where('status', '!=', 'inactive')
             ->whereNull('phone')
             ->whereNull('email');
     }
@@ -202,7 +204,7 @@ class BuildSecretaryHomeService
     private function quickActions(): array
     {
         return [
-            ['label' => 'Cadastrar membro', 'href' => '/secretaria', 'state' => 'preparing_flow'],
+            ['label' => 'Cadastrar membro', 'href' => '/secretaria/membros/novo', 'state' => 'available'],
             ['label' => 'Cadastrar visitante', 'href' => '/secretaria', 'state' => 'preparing_flow'],
             ['label' => 'Revisar pendencias de pessoas', 'href' => '/secretaria', 'state' => 'available'],
         ];

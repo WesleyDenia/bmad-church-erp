@@ -293,7 +293,7 @@ class SecretaryHomeTest extends TestCase
      */
     private function createPerson(int $churchId, array $overrides = []): Person
     {
-        $person = new Person();
+        $person = new Person;
         $person->forceFill([
             'church_id' => $churchId,
             'person_type' => $overrides['person_type'] ?? 'member',

@@ -13,14 +13,17 @@ use App\Http\Controllers\Api\V1\ListFinancialEntryAuditsController;
 use App\Http\Controllers\Api\V1\ListFinancialPendingItemsController;
 use App\Http\Controllers\Api\V1\LoginController;
 use App\Http\Controllers\Api\V1\LogoutController;
-use App\Http\Controllers\Api\V1\ShowLeadershipClosingSummaryController;
 use App\Http\Controllers\Api\V1\ShowFinancialClosingSummaryController;
+use App\Http\Controllers\Api\V1\ShowLeadershipClosingSummaryController;
+use App\Http\Controllers\Api\V1\ShowMemberController;
 use App\Http\Controllers\Api\V1\ShowSecretaryHomeController;
 use App\Http\Controllers\Api\V1\StoreChurchUserController;
 use App\Http\Controllers\Api\V1\StoreFinancialCounterpartyController;
 use App\Http\Controllers\Api\V1\StoreFinancialEntryController;
+use App\Http\Controllers\Api\V1\StoreMemberController;
 use App\Http\Controllers\Api\V1\UpdateChurchUserController;
 use App\Http\Controllers\Api\V1\UpdateFinancialEntryController;
+use App\Http\Controllers\Api\V1\UpdateMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -46,6 +49,17 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/secretary/home', ShowSecretaryHomeController::class)
             ->name('secretary.home')
             ->middleware('throttle:secretary-home');
+        Route::post('/people/members', StoreMemberController::class)
+            ->name('people.members.store')
+            ->middleware('throttle:secretary-members-write');
+        Route::get('/people/members/{person}', ShowMemberController::class)
+            ->whereNumber('person')
+            ->name('people.members.show')
+            ->middleware('throttle:secretary-members-read');
+        Route::patch('/people/members/{person}', UpdateMemberController::class)
+            ->whereNumber('person')
+            ->name('people.members.update')
+            ->middleware('throttle:secretary-members-write');
         Route::get('/finance/pending-items', ListFinancialPendingItemsController::class);
         Route::post('/finance/entries', StoreFinancialEntryController::class);
         Route::get('/finance/entries/{entry}/audits', ListFinancialEntryAuditsController::class);
