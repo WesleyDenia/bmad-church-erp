@@ -74,6 +74,7 @@ class BuildSecretaryHomeService
         return Person::query()
             ->forChurch($churchId)
             ->where('person_type', 'visitor')
+            ->where('status', '!=', 'inactive')
             ->where('created_at', '>=', Carbon::now('UTC')->subDays(self::VISITOR_WINDOW_DAYS))
             ->orderByDesc('created_at')
             ->limit(self::VISITOR_LIMIT)
@@ -205,7 +206,7 @@ class BuildSecretaryHomeService
     {
         return [
             ['label' => 'Cadastrar membro', 'href' => '/secretaria/membros/novo', 'state' => 'available'],
-            ['label' => 'Cadastrar visitante', 'href' => '/secretaria', 'state' => 'preparing_flow'],
+            ['label' => 'Cadastrar visitante', 'href' => '/secretaria/visitantes/novo', 'state' => 'available'],
             ['label' => 'Revisar pendencias de pessoas', 'href' => '/secretaria', 'state' => 'available'],
         ];
     }

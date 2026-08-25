@@ -173,6 +173,12 @@ class SecretaryHomeTest extends TestCase
                 'created_at' => Carbon::now('UTC')->subDays(31),
             ]);
             $this->createPerson($church->id, [
+                'person_type' => 'visitor',
+                'status' => 'inactive',
+                'display_name' => 'Visitante Inativo',
+                'created_at' => Carbon::now('UTC')->subDay(),
+            ]);
+            $this->createPerson($church->id, [
                 'person_type' => 'member',
                 'status' => 'active',
                 'display_name' => 'Membro Sem Contato',
@@ -196,6 +202,11 @@ class SecretaryHomeTest extends TestCase
                 ->assertJsonPath('data.secretary_home.recent_visitors.items.0.display_name', 'Visitante 1')
                 ->assertJsonPath('data.secretary_home.people_pending_items.state', 'people_pending_items_loaded')
                 ->assertJsonPath('data.secretary_home.people_pending_items.total_count', 9)
+                ->assertJsonFragment([
+                    'label' => 'Cadastrar visitante',
+                    'href' => '/secretaria/visitantes/novo',
+                    'state' => 'available',
+                ])
                 ->assertJsonMissingPath('data.secretary_home.people_pending_items.items.0.people_preview.0.email')
                 ->assertJsonMissingPath('data.secretary_home.people_pending_items.items.0.people_preview.0.phone');
 
@@ -204,6 +215,7 @@ class SecretaryHomeTest extends TestCase
                 'display_name',
             );
             $this->assertNotContains('Visitante Antigo', $recentNames);
+            $this->assertNotContains('Visitante Inativo', $recentNames);
         } finally {
             Carbon::setTestNow();
         }

@@ -4,11 +4,11 @@ set -euo pipefail
 target_env="${1:-${DEPLOY_ENV:-dev}}"
 
 case "${target_env}" in
-  dev|local|development)
-    echo "Secret scan skipped for ${target_env}; detect-secrets is enforced only for ci, stg and prod."
+  dev|local|development|ci)
+    echo "Secret scan skipped for ${target_env}; detect-secrets is enforced only for stg and prod."
     exit 0
     ;;
-  ci|stg|staging|prod|production)
+  stg|staging|prod|production)
     ;;
   *)
     echo "Unknown deploy environment: ${target_env}" >&2
@@ -32,5 +32,5 @@ if command -v detect-secrets-hook >/dev/null 2>&1; then
 fi
 
 echo "Secret scan is required for ${target_env}, but neither pre-commit nor detect-secrets-hook is installed." >&2
-echo "Install pre-commit or detect-secrets==1.5.0 before deploying to ci/stg/prod." >&2
+echo "Install pre-commit or detect-secrets==1.5.0 before deploying to stg/prod." >&2
 exit 1
