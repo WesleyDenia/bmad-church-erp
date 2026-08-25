@@ -17,13 +17,16 @@ use App\Http\Controllers\Api\V1\ShowFinancialClosingSummaryController;
 use App\Http\Controllers\Api\V1\ShowLeadershipClosingSummaryController;
 use App\Http\Controllers\Api\V1\ShowMemberController;
 use App\Http\Controllers\Api\V1\ShowSecretaryHomeController;
+use App\Http\Controllers\Api\V1\ShowVisitorController;
 use App\Http\Controllers\Api\V1\StoreChurchUserController;
 use App\Http\Controllers\Api\V1\StoreFinancialCounterpartyController;
 use App\Http\Controllers\Api\V1\StoreFinancialEntryController;
 use App\Http\Controllers\Api\V1\StoreMemberController;
+use App\Http\Controllers\Api\V1\StoreVisitorController;
 use App\Http\Controllers\Api\V1\UpdateChurchUserController;
 use App\Http\Controllers\Api\V1\UpdateFinancialEntryController;
 use App\Http\Controllers\Api\V1\UpdateMemberController;
+use App\Http\Controllers\Api\V1\UpdateVisitorController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -60,6 +63,17 @@ Route::prefix('v1')->group(function (): void {
             ->whereNumber('person')
             ->name('people.members.update')
             ->middleware('throttle:secretary-members-write');
+        Route::post('/people/visitors', StoreVisitorController::class)
+            ->name('people.visitors.store')
+            ->middleware('throttle:secretary-visitors-write');
+        Route::get('/people/visitors/{person}', ShowVisitorController::class)
+            ->whereNumber('person')
+            ->name('people.visitors.show')
+            ->middleware('throttle:secretary-visitors-read');
+        Route::patch('/people/visitors/{person}', UpdateVisitorController::class)
+            ->whereNumber('person')
+            ->name('people.visitors.update')
+            ->middleware('throttle:secretary-visitors-write');
         Route::get('/finance/pending-items', ListFinancialPendingItemsController::class);
         Route::post('/finance/entries', StoreFinancialEntryController::class);
         Route::get('/finance/entries/{entry}/audits', ListFinancialEntryAuditsController::class);

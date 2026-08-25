@@ -22,6 +22,21 @@ class PersonPolicy
         return $this->authorizeSecretaryArea();
     }
 
+    public function createVisitor(User $user): Response
+    {
+        return $this->authorizeSecretaryArea();
+    }
+
+    public function viewVisitor(User $user): Response
+    {
+        return $this->authorizeSecretaryArea();
+    }
+
+    public function updateVisitor(User $user): Response
+    {
+        return $this->authorizeSecretaryArea();
+    }
+
     private function authorizeSecretaryArea(): Response
     {
         $session = request()->attributes->get('authenticated_session');

@@ -56,6 +56,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('createMember', [PersonPolicy::class, 'createMember']);
         Gate::define('viewMember', [PersonPolicy::class, 'viewMember']);
         Gate::define('updateMember', [PersonPolicy::class, 'updateMember']);
+        Gate::define('createVisitor', [PersonPolicy::class, 'createVisitor']);
+        Gate::define('viewVisitor', [PersonPolicy::class, 'viewVisitor']);
+        Gate::define('updateVisitor', [PersonPolicy::class, 'updateVisitor']);
 
         RateLimiter::for('leadership-closing-summary', function (Request $request): Limit {
             $session = $request->attributes->get('authenticated_session');
@@ -82,6 +85,22 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by("{$userId}|{$churchId}");
         });
         RateLimiter::for('secretary-members-write', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(20)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('secretary-visitors-read', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(60)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('secretary-visitors-write', function (Request $request): Limit {
             $session = $request->attributes->get('authenticated_session');
             $membership = is_array($session) ? ($session['membership'] ?? null) : null;
             $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';

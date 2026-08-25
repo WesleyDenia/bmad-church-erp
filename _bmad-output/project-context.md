@@ -5,7 +5,7 @@ date: '2026-04-22'
 sections_completed: ['discovery', 'technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'code_quality_rules', 'workflow_rules', 'critical_rules']
 existing_patterns_found: 12
 status: 'complete'
-rule_count: 67
+rule_count: 68
 optimized_for_llm: true
 ---
 
@@ -94,6 +94,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Each story should update its Dev Agent Record with commands/tests run and relevant implementation notes.
 - Use a fresh context window for BMAD workflows such as story creation, dev story, QA, and code review.
 - Run backend validation from `church-erp-api` and frontend validation from `church-erp-web`.
+- Do not require or run `detect-secrets`/`pre-commit` for dev, CI, story implementation, task execution, or local review. Treat secret scanning as a promotion gate only: STG/PROD must run `bash deploy/security-gate.sh stg|prod` in an environment with `pre-commit` or `detect-secrets-hook`.
 - Respect unrelated dirty worktree changes. Do not revert user or agent changes outside the current task.
 - Prefer focused changes that match the current story. Do not perform broad refactors unless the story explicitly requires them.
 - Code review should be done from a clean context and should prioritize bugs, regressions, tenancy leaks, missing tests, and architecture violations.

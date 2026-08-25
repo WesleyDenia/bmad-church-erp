@@ -46,8 +46,8 @@ Para `stg` e `prod`, execute sempre `deploy/security-gate.sh` antes do deploy. O
 
 Guard-rail de segredos por ambiente:
 
-- `dev`, `local` e `development`: não exigem `detect-secrets`; o gate registra skip explícito para não bloquear ambiente de desenvolvimento.
-- `ci`, `stg`, `staging`, `prod` e `production`: exigem `pre-commit` ou `detect-secrets-hook`; sem scanner instalado, o deploy falha antes da promoção.
+- `dev`, `local`, `development` e `ci`: não exigem `detect-secrets`; o gate registra skip explícito para não bloquear desenvolvimento ou CI.
+- `stg`, `staging`, `prod` e `production`: exigem `pre-commit` ou `detect-secrets-hook`; sem scanner instalado, o deploy falha antes da promoção.
 
 ## Local
 

@@ -46,7 +46,7 @@
 | --- | --- | --- | --- |
 | SAST | `{{command}}` | Passou | Falhou | Nao executado | {{observacao}} |
 | SCA | `{{command}}` | Passou | Falhou | Nao executado | {{observacao}} |
-| Segredos | `{{command}}` | Passou | Falhou | Nao executado | {{observacao}} |
+| Segredos | `{{command}}` | Passou | Falhou | N/A em dev/CI | {{observacao}} |
 
 ## Riscos Residuais
 
