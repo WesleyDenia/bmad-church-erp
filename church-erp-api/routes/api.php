@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ListFinancialCounterpartiesController;
 use App\Http\Controllers\Api\V1\ListFinancialEntriesController;
 use App\Http\Controllers\Api\V1\ListFinancialEntryAuditsController;
 use App\Http\Controllers\Api\V1\ListFinancialPendingItemsController;
+use App\Http\Controllers\Api\V1\ListPeopleController;
 use App\Http\Controllers\Api\V1\LoginController;
 use App\Http\Controllers\Api\V1\LogoutController;
 use App\Http\Controllers\Api\V1\ShowFinancialClosingSummaryController;
@@ -52,6 +53,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/secretary/home', ShowSecretaryHomeController::class)
             ->name('secretary.home')
             ->middleware('throttle:secretary-home');
+        Route::get('/people', ListPeopleController::class)
+            ->name('people.index')
+            ->middleware('throttle:secretary-people-read');
         Route::post('/people/members', StoreMemberController::class)
             ->name('people.members.store')
             ->middleware('throttle:secretary-members-write');

@@ -94,7 +94,7 @@ class BuildSecretaryHomeService
             'visitor_follow_up',
             'Visitantes para acompanhamento',
             'Revisar visitantes recentes',
-            '/secretaria',
+            '/secretaria/pessoas?person_type=visitor&status=new%2Cfollow_up_needed&contact=all',
             $this->visitorFollowUpQuery($churchId),
         );
         $this->appendPendingItem(
@@ -102,7 +102,7 @@ class BuildSecretaryHomeService
             'missing_contact',
             'Pessoas sem contato minimo',
             'Completar contato',
-            '/secretaria',
+            '/secretaria/pessoas?person_type=all&status=all&contact=missing_contact',
             $this->missingContactQuery($churchId),
         );
         $this->appendPendingItem(
@@ -110,7 +110,7 @@ class BuildSecretaryHomeService
             'needs_update',
             'Pessoas que precisam de atualizacao',
             'Conferir cadastro',
-            '/secretaria',
+            '/secretaria/pessoas?person_type=all&status=needs_update&contact=all',
             $this->needsUpdateQuery($churchId),
         );
 
@@ -207,7 +207,7 @@ class BuildSecretaryHomeService
         return [
             ['label' => 'Cadastrar membro', 'href' => '/secretaria/membros/novo', 'state' => 'available'],
             ['label' => 'Cadastrar visitante', 'href' => '/secretaria/visitantes/novo', 'state' => 'available'],
-            ['label' => 'Revisar pendencias de pessoas', 'href' => '/secretaria', 'state' => 'available'],
+            ['label' => 'Revisar pendencias de pessoas', 'href' => '/secretaria/pessoas?person_type=all&status=all&contact=all', 'state' => 'available'],
         ];
     }
 

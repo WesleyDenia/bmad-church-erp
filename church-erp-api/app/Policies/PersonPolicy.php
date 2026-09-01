@@ -7,6 +7,11 @@ use Illuminate\Auth\Access\Response;
 
 class PersonPolicy
 {
+    public function viewPeople(User $user): Response
+    {
+        return $this->authorizeSecretaryArea();
+    }
+
     public function createMember(User $user): Response
     {
         return $this->authorizeSecretaryArea();
