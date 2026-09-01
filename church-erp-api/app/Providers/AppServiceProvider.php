@@ -53,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ChurchUser::class, ChurchUserPolicy::class);
         Gate::policy(FinancialEntry::class, FinancialEntryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
+        Gate::define('viewPeople', [PersonPolicy::class, 'viewPeople']);
         Gate::define('createMember', [PersonPolicy::class, 'createMember']);
         Gate::define('viewMember', [PersonPolicy::class, 'viewMember']);
         Gate::define('updateMember', [PersonPolicy::class, 'updateMember']);
@@ -75,6 +76,14 @@ class AppServiceProvider extends ServiceProvider
             $userId = $request->user()?->id ?? 'guest';
 
             return Limit::perMinute(30)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('secretary-people-read', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(60)->by("{$userId}|{$churchId}");
         });
         RateLimiter::for('secretary-members-read', function (Request $request): Limit {
             $session = $request->attributes->get('authenticated_session');

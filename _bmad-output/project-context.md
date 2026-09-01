@@ -49,7 +49,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Backend domain structure is mandatory and rigid when a domain artifact is needed: `app/Domain/{DomainName}/Models`, `Services`, `Resources`, and `Repositories`.
 - Put Eloquent models close to the domain in `app/Domain/{DomainName}/Models` when they represent business entities; keep Laravel's default `App\Models\User` only when already established or explicitly required.
 - Use Laravel `FormRequest` classes for request validation and user-facing validation messages.
-- Use `JsonResource` / `ResourceCollection` for successful Laravel API responses; do not invent global response wrappers.
+- Use `JsonResource` for successful Laravel API responses. For paginated list endpoints, return `JsonResource::collection($paginator)` and preserve Laravel's standard `data`, `links`, and `meta` shape.
+- Never create custom Laravel `ResourceCollection` classes or manual collection wrappers to rename list payloads, such as `data.people`; use the Laravel default collection response shape.
 - Use Laravel policies/middleware/services for authorization and tenant scoping; never rely on frontend checks for access control.
 - Every relevant backend query, model relationship, policy, and service must preserve tenant isolation through `church_id`.
 - Next.js App Router pages live under `src/app`; BFF route handlers live under `src/app/api`.
@@ -105,6 +106,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Never let frontend checks be the only authorization or validation layer for sensitive actions.
 - Never let the browser call authenticated Laravel endpoints directly; route browser traffic through the Next.js BFF.
 - Never return passwords, secrets, internal JWTs, stack traces, or raw exception details in API/BFF responses.
+- Never create custom `ResourceCollection` wrappers for Laravel list endpoints; preserve the framework default `data`, `links`, and `meta`.
 - Never log passwords or request payloads containing secrets.
 - Do not create financial mutation flows without explicit auditability and a persisted reason when the story requires reversibility/audit.
 - Do not mix UI primitives, design-system wrappers, and operational/domain components into one layer.
