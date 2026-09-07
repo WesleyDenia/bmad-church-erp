@@ -221,7 +221,7 @@ class MemberManagementTest extends TestCase
                 ->assertJsonMissing(['Visitante', 'Outro Tenant']);
         }
 
-        foreach (['church_id', 'user_id', 'role', 'roles', 'permission', 'permissions', 'tenant', 'tenant_id', 'scope', 'person_type', 'id', 'created_at', 'updated_at', 'foo'] as $field) {
+        foreach (['church_id', 'user_id', 'role', 'roles', 'permission', 'permissions', 'tenant', 'tenant_id', 'scope', 'person_type', 'id', 'created_at', 'updated_at', 'last_contacted_at', 'return_to', 'foo'] as $field) {
             $this
                 ->withHeader('Authorization', 'Bearer '.$token)
                 ->postJson('/api/v1/people/members', [
@@ -239,6 +239,68 @@ class MemberManagementTest extends TestCase
                 ->getJson("/api/v1/people/members/{$ownVisitor->id}?{$query}")
                 ->assertUnprocessable();
         }
+    }
+
+    public function test_member_updates_resolve_missing_contact_and_needs_update_after_real_reads(): void
+    {
+        [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');
+        $token = $this->createInternalJwt($user->id, $church->id, ['secretary'], 'session-123');
+        $missingContact = $this->createPerson($church->id, [
+            'status' => 'active',
+            'display_name' => 'Membro Sem Contato',
+        ]);
+        $needsUpdate = $this->createPerson($church->id, [
+            'status' => 'needs_update',
+            'display_name' => 'Membro Para Conferir',
+            'phone' => '11999990000',
+        ]);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/people?person_type=all&status=all&contact=missing_contact')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.display_name', 'Membro Sem Contato');
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/people?person_type=member&status=needs_update&contact=all')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.display_name', 'Membro Para Conferir');
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->patchJson("/api/v1/people/members/{$missingContact->id}", [
+                'phone' => '11888880000',
+            ])
+            ->assertOk();
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->patchJson("/api/v1/people/members/{$needsUpdate->id}", [
+                'status' => 'active',
+            ])
+            ->assertOk();
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/people?person_type=all&status=all&contact=missing_contact')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/people?person_type=member&status=needs_update&contact=all')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/secretary/home')
+            ->assertOk()
+            ->assertJsonPath('data.secretary_home.people_pending_items.total_count', 0)
+            ->assertJsonPath('data.secretary_home.people_pending_items.items', []);
     }
 
     public function test_validation_normalization_duplicate_email_and_pending_home_rules(): void
@@ -314,6 +376,41 @@ class MemberManagementTest extends TestCase
         $this->assertSame('Membro Sem Contato', $activeMissingContact);
         $home->assertJsonFragment(['display_name' => 'Membro Sem Contato']);
         $home->assertJsonMissing(['Membro Inativo Sem Contato']);
+    }
+
+    public function test_patch_partial_and_no_change_update_is_idempotent_without_misleading_audit(): void
+    {
+        [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');
+        $token = $this->createInternalJwt($user->id, $church->id, ['secretary'], 'session-123');
+        $member = $this->createPerson($church->id, [
+            'status' => 'active',
+            'display_name' => 'Membro Parcial',
+            'email' => 'parcial@example.com',
+        ]);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->patchJson("/api/v1/people/members/{$member->id}", [
+                'phone' => '11988887777',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.member.status', 'active')
+            ->assertJsonPath('data.member.phone', '11988887777');
+
+        Log::spy();
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->patchJson("/api/v1/people/members/{$member->id}", [
+                'display_name' => 'Membro Parcial',
+                'status' => 'active',
+                'phone' => '11988887777',
+                'email' => 'parcial@example.com',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.member.display_name', 'Membro Parcial');
+
+        Log::shouldNotHaveReceived('info');
     }
 
     public function test_route_middleware_policy_resource_indexes_and_source_logs_are_safe(): void

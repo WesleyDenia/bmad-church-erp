@@ -169,6 +169,7 @@ class PeopleSearchTest extends TestCase
         $this->createPerson($church->id, ['person_type' => 'member', 'status' => 'needs_update', 'display_name' => 'Caio Email', 'email' => 'caio@example.com']);
         $this->createPerson($church->id, ['person_type' => 'member', 'status' => 'active', 'display_name' => 'Davi Completo', 'phone' => '11888880000', 'email' => 'davi@example.com']);
         $this->createPerson($church->id, ['person_type' => 'visitor', 'status' => 'contacted', 'display_name' => 'Eva Contatada']);
+        $this->createPerson($church->id, ['person_type' => 'member', 'status' => 'inactive', 'display_name' => 'Fabio Inativo Sem Contato']);
 
         $this
             ->withHeader('Authorization', 'Bearer '.$token)
@@ -183,7 +184,8 @@ class PeopleSearchTest extends TestCase
             ->getJson('/api/v1/people?contact=missing_contact')
             ->assertOk()
             ->assertJsonPath('meta.total', 2)
-            ->assertJsonPath('data.0.contact_summary', 'Contato pendente');
+            ->assertJsonPath('data.0.contact_summary', 'Contato pendente')
+            ->assertJsonMissing(['Fabio Inativo Sem Contato']);
 
         $this
             ->withHeader('Authorization', 'Bearer '.$token)

@@ -41,6 +41,7 @@ test("secretary home source keeps browser behind the BFF and avoids forbidden la
   const pageSource = readSource("../src/app/secretaria/page.tsx");
   const routeSource = readSource("../src/app/api/secretary/home/route.ts");
   const contractSource = readSource("../src/features/secretaria/secretary-home.ts");
+  const homeServiceSource = readSource("../../church-erp-api/app/Domain/People/Services/BuildSecretaryHomeService.php");
 
   assert.equal(existsSync(new URL("../src/app/api/secretary/home/route.ts", import.meta.url)), true);
   assert.match(pageSource, /AreaGuard/);
@@ -50,6 +51,9 @@ test("secretary home source keeps browser behind the BFF and avoids forbidden la
   assert.match(routeSource, /cache:\s*"no-store"/);
   assert.match(routeSource, /AUTH_SESSION_COOKIE_NAME/);
   assert.doesNotMatch(contractSource, /\b(id|church_id|phone|email|token|headers|Authorization)\b/);
+  assert.match(homeServiceSource, /\/secretaria\/pessoas\?person_type=visitor&status=new%2Cfollow_up_needed&contact=all/);
+  assert.match(homeServiceSource, /\/secretaria\/pessoas\?person_type=all&status=all&contact=missing_contact/);
+  assert.match(homeServiceSource, /\/secretaria\/pessoas\?person_type=member&status=needs_update&contact=all/);
 
   const shellSource = readSource("../src/components/operational/secretary-home-shell.tsx");
   const peopleFollowupSource = readSource("../src/components/operational/people-followup-block.tsx");
@@ -167,7 +171,7 @@ test("secretary BFF calls Laravel server side and sanitizes sensitive error payl
 
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), {
-      message: "Server error",
+      message: "Nao foi possivel carregar a secretaria agora.",
     });
     assert.equal(calls.length, 1);
   } finally {
@@ -176,7 +180,7 @@ test("secretary BFF calls Laravel server side and sanitizes sensitive error payl
   }
 });
 
-test("secretary BFF rejects scope parameters and clears the session cookie on 401", async () => {
+test("secretary BFF rejects scope parameters and clears the session cookie on sanitized 401", async () => {
   const restoreEnv = setEnv({
     API_BASE_URL: "http://api.test",
     INTERNAL_API_AUDIENCE: "church-erp-api",
@@ -187,7 +191,7 @@ test("secretary BFF rejects scope parameters and clears the session cookie on 40
   globalThis.fetch = async () =>
     new Response(
       JSON.stringify({
-        message: "Sessao invalida. Entre novamente.",
+        message: "SQLSTATE leaked Pessoa Sensivel",
         token: "internal-token",
       }),
       {
@@ -231,6 +235,48 @@ test("secretary BFF rejects scope parameters and clears the session cookie on 40
       unauthorizedResponse.headers.get("set-cookie") ?? "",
       new RegExp(`${AUTH_SESSION_COOKIE_NAME}=`),
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("secretary BFF sanitizes forbidden upstream messages", async () => {
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        message: "Pessoa Sensivel existe neste tenant",
+        trace: "stack trace",
+      }),
+      {
+        status: 403,
+        headers: {
+          "content-type": "application/json",
+        },
+      },
+    );
+
+  try {
+    const { GET } = await import("../src/app/api/secretary/home/route.ts");
+    const response = await GET(
+      new Request("http://web.test/api/secretary/home", {
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), {
+      message: "Acesso negado para esta area.",
+    });
   } finally {
     globalThis.fetch = originalFetch;
     restoreEnv();

@@ -41,14 +41,16 @@ class UpdateMemberService
                     'email',
                 ])))->save();
 
-                Log::info('people_member_changed', [
-                    'event' => 'people_member_changed',
-                    'actor_user_id' => (int) Auth::id(),
-                    'church_id' => $payload['church_id'],
-                    'person_id' => $member->id,
-                    'action' => 'updated',
-                    'changed_fields' => $changes,
-                ]);
+                if ($changes !== []) {
+                    Log::info('people_member_changed', [
+                        'event' => 'people_member_changed',
+                        'actor_user_id' => (int) Auth::id(),
+                        'church_id' => $payload['church_id'],
+                        'person_id' => $member->id,
+                        'action' => 'updated',
+                        'changed_fields' => $changes,
+                    ]);
+                }
 
                 return $member->fresh() ?? $member;
             });

@@ -78,6 +78,7 @@ class ListPeopleService
 
         if ($contact === 'missing_contact') {
             $query
+                ->where('status', '!=', 'inactive')
                 ->whereNull('phone')
                 ->whereNull('email');
 

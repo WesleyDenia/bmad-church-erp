@@ -57,7 +57,12 @@ class BuildSecretaryHomeService
             ->where('status', '!=', 'inactive')
             ->where(function ($query): void {
                 $query
-                    ->whereIn('status', ['new', 'follow_up_needed', 'needs_update'])
+                    ->whereIn('status', ['new', 'follow_up_needed'])
+                    ->orWhere(function ($needsUpdateQuery): void {
+                        $needsUpdateQuery
+                            ->where('person_type', 'member')
+                            ->where('status', 'needs_update');
+                    })
                     ->orWhere(function ($contactQuery): void {
                         $contactQuery
                             ->whereNull('phone')
@@ -110,7 +115,7 @@ class BuildSecretaryHomeService
             'needs_update',
             'Pessoas que precisam de atualizacao',
             'Conferir cadastro',
-            '/secretaria/pessoas?person_type=all&status=needs_update&contact=all',
+            '/secretaria/pessoas?person_type=member&status=needs_update&contact=all',
             $this->needsUpdateQuery($churchId),
         );
 
@@ -175,6 +180,7 @@ class BuildSecretaryHomeService
     {
         return Person::query()
             ->forChurch($churchId)
+            ->where('person_type', 'member')
             ->where('status', 'needs_update');
     }
 
