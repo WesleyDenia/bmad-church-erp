@@ -202,7 +202,7 @@ function isValidationErrors(value: unknown): value is Record<string, string[]> {
 function buildSafeBody(status: number, body: Record<string, unknown>): VisitorErrorResponse {
   if (status === 401) {
     return {
-      message: typeof body.message === "string" ? body.message : "Sessao invalida. Entre novamente.",
+      message: "Sessao invalida. Entre novamente.",
     };
   }
 

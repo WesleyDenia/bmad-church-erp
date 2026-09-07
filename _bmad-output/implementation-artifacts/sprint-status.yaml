@@ -65,13 +65,13 @@ development_status:
   3-4-exibir-visao-resumida-para-lideranca: done
   epic-3-retrospective: done
 
-  epic-4: in-progress
+  epic-4: done
   4-1-exibir-home-operacional-da-secretaria: done
   4-2-cadastrar-e-editar-membros: done
   4-3-cadastrar-e-editar-visitantes: done
   4-4-pesquisar-e-filtrar-pessoas: done
-  4-5-resolver-pendencias-operacionais-de-pessoas: backlog
-  epic-4-retrospective: optional
+  4-5-resolver-pendencias-operacionais-de-pessoas: done
+  epic-4-retrospective: done
 
   epic-5: backlog
   5-1-manter-modelos-pre-definidos-de-comunicacao: backlog

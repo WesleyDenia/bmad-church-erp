@@ -19,6 +19,10 @@ import {
   extractVisitorValidationErrors,
   readVisitor,
 } from "@/features/people/visitor";
+import {
+  personResolutionReturnLabel,
+  sanitizePersonResolutionReturn,
+} from "@/features/people/person-resolution-return";
 import type {
   VisitorFormState,
   VisitorFormValues,
@@ -35,10 +39,12 @@ type VisitorFormProps =
   | {
       mode: "create";
       visitorId?: never;
+      returnHref?: string;
     }
   | {
       mode: "edit";
       visitorId: string;
+      returnHref?: string;
     };
 
 function extractMessage(body: VisitorResponse | VisitorErrorResponse): string {
@@ -47,7 +53,7 @@ function extractMessage(body: VisitorResponse | VisitorErrorResponse): string {
     : "Nao foi possivel concluir agora.";
 }
 
-export function VisitorForm({ mode, visitorId }: VisitorFormProps) {
+export function VisitorForm({ mode, visitorId, returnHref }: VisitorFormProps) {
   const [state, setState] = useState<VisitorFormState>(
     mode === "create" ? "creating_ready" : "loading_visitor_form",
   );
@@ -231,6 +237,11 @@ export function VisitorForm({ mode, visitorId }: VisitorFormProps) {
 
   const isBusy = state === "loading_visitor_form" || state === "saving_visitor";
   const canShowForm = shouldRenderVisitorForm(mode, state, hasLoadedInitialVisitor);
+  const safeReturnHref = sanitizePersonResolutionReturn(returnHref);
+  const returnToPendingLabel = personResolutionReturnLabel(safeReturnHref);
+  const showPendingReturn = mode === "edit"
+    && state === "visitor_saved"
+    && safeReturnHref.startsWith("/secretaria/pessoas");
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-10 sm:px-10 lg:px-12">
@@ -380,6 +391,11 @@ export function VisitorForm({ mode, visitorId }: VisitorFormProps) {
                   }}
                 >
                   Cadastrar outro visitante
+                </Button>
+              ) : null}
+              {mode === "edit" && state === "visitor_saved" && showPendingReturn ? (
+                <Button asChild variant="secondary">
+                  <Link href={safeReturnHref}>{returnToPendingLabel}</Link>
                 </Button>
               ) : null}
               <Button asChild variant="ghost">

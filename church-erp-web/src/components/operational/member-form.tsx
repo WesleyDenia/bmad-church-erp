@@ -20,6 +20,10 @@ import {
   extractMemberValidationErrors,
   readMember,
 } from "@/features/people/member";
+import {
+  personResolutionReturnLabel,
+  sanitizePersonResolutionReturn,
+} from "@/features/people/person-resolution-return";
 
 type MemberFormState =
   | "loading_member_form"
@@ -43,10 +47,12 @@ type MemberFormProps =
   | {
       mode: "create";
       memberId?: never;
+      returnHref?: string;
     }
   | {
       mode: "edit";
       memberId: string;
+      returnHref?: string;
     };
 
 const EMPTY_VALUES: MemberFormValues = {
@@ -81,7 +87,7 @@ function firstErrorField(errors: MemberFieldErrors): keyof MemberPayload | null 
   return null;
 }
 
-export function MemberForm({ mode, memberId }: MemberFormProps) {
+export function MemberForm({ mode, memberId, returnHref }: MemberFormProps) {
   const [state, setState] = useState<MemberFormState>(
     mode === "create" ? "creating_ready" : "loading_member_form",
   );
@@ -264,6 +270,11 @@ export function MemberForm({ mode, memberId }: MemberFormProps) {
 
   const isBusy = state === "loading_member_form" || state === "saving_member";
   const canShowForm = !["denied_or_session_invalid", "not_found"].includes(state);
+  const safeReturnHref = sanitizePersonResolutionReturn(returnHref);
+  const returnToPendingLabel = personResolutionReturnLabel(safeReturnHref);
+  const showPendingReturn = mode === "edit"
+    && state === "member_saved"
+    && safeReturnHref.startsWith("/secretaria/pessoas");
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-10 sm:px-10 lg:px-12">
@@ -413,6 +424,11 @@ export function MemberForm({ mode, memberId }: MemberFormProps) {
                   }}
                 >
                   Cadastrar outro membro
+                </Button>
+              ) : null}
+              {mode === "edit" && state === "member_saved" && showPendingReturn ? (
+                <Button asChild variant="secondary">
+                  <Link href={safeReturnHref}>{returnToPendingLabel}</Link>
                 </Button>
               ) : null}
               <Button asChild variant="ghost">

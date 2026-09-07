@@ -8,6 +8,11 @@ import {
   normalizePersonSearchResponse,
 } from "../src/features/people/person-search.ts";
 import {
+  appendPersonResolutionReturn,
+  personResolutionReturnLabel,
+  sanitizePersonResolutionReturn,
+} from "../src/features/people/person-resolution-return.ts";
+import {
   DEFAULT_PERSON_SEARCH_FILTERS,
   buildPersonSearchQuery,
   parsePersonSearchFilters,
@@ -49,6 +54,7 @@ test("people search source keeps browser behind the BFF and covers required UI s
     "../src/app/api/secretary/people/route.ts",
     "../src/app/secretaria/pessoas/page.tsx",
     "../src/components/operational/person-search-list.tsx",
+    "../src/features/people/person-resolution-return.ts",
     "../src/features/people/person-search.ts",
     "../src/features/people/person-search-state.ts",
   ];
@@ -59,6 +65,7 @@ test("people search source keeps browser behind the BFF and covers required UI s
 
   const page = readSource("../src/app/secretaria/pessoas/page.tsx");
   const component = readSource("../src/components/operational/person-search-list.tsx");
+  const returnHelper = readSource("../src/features/people/person-resolution-return.ts");
   const route = readSource("../src/app/api/secretary/people/route.ts");
   const state = readSource("../src/features/people/person-search-state.ts");
   const homeService = readSource("../../church-erp-api/app/Domain/People/Services/BuildSecretaryHomeService.php");
@@ -78,6 +85,10 @@ test("people search source keeps browser behind the BFF and covers required UI s
   assert.match(component, /Visitante/);
   assert.match(component, /URLSearchParams/);
   assert.match(component, /router\.replace/);
+  assert.match(component, /appendPersonResolutionReturn/);
+  assert.match(component, /sanitizePersonResolutionReturn/);
+  assert.match(returnHelper, /PERSON_RESOLUTION_ALLOWED_RETURN_PATHS/);
+  assert.match(returnHelper, /return_to/);
   assert.match(component, /rawQueryString !== "" \? rawQueryString : buildPersonSearchQuery\(filters\)\.toString\(\)/);
   assert.match(state, /DEFAULT_PERSON_SEARCH_FILTERS/);
   assert.doesNotMatch(component, /\/api\/v1\/people|API_BASE_URL|last_contacted_at|email|phone/);
@@ -91,11 +102,48 @@ test("people search source keeps browser behind the BFF and covers required UI s
   assert.match(homeService, /\/secretaria\/pessoas\?person_type=all&status=all&contact=all/);
   assert.match(homeService, /\/secretaria\/pessoas\?person_type=visitor&status=new%2Cfollow_up_needed&contact=all/);
   assert.match(homeService, /\/secretaria\/pessoas\?person_type=all&status=all&contact=missing_contact/);
-  assert.match(homeService, /\/secretaria\/pessoas\?person_type=all&status=needs_update&contact=all/);
+  assert.match(homeService, /\/secretaria\/pessoas\?person_type=member&status=needs_update&contact=all/);
 
   const visibleSource = `${page}\n${component}`;
 
   assert.doesNotMatch(visibleSource, /\b(dashboard|widget|KPI|performance|BI)\b/i);
+});
+
+test("person resolution return helper accepts only safe secretary paths and labels pending queues", () => {
+  assert.equal(
+    sanitizePersonResolutionReturn("/secretaria/pessoas?q=%20Ana%20&person_type=visitor&status=new%2Cfollow_up_needed&contact=all&page=2"),
+    "/secretaria/pessoas?q=Ana&person_type=visitor&status=new%2Cfollow_up_needed&contact=all&page=2",
+  );
+  assert.equal(sanitizePersonResolutionReturn("/secretaria"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("https://evil.test/secretaria/pessoas"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("//evil.test/secretaria/pessoas"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("/\\evil.test/secretaria/pessoas"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("/secretaria/../admin"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("/secretaria/pessoas?tenant=other"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("/secretaria/pessoas?status=active&status=inactive"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("/secretaria/pessoas?status[]=active"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn("/secretaria/pessoas?per_page=51"), "/secretaria");
+  assert.equal(sanitizePersonResolutionReturn(`/secretaria/pessoas?q=${"a".repeat(81)}`), "/secretaria");
+
+  assert.equal(
+    appendPersonResolutionReturn(
+      "/secretaria/visitantes/7/editar",
+      "/secretaria/pessoas?person_type=visitor&status=new%2Cfollow_up_needed&contact=all",
+    ),
+    "/secretaria/visitantes/7/editar?return_to=%2Fsecretaria%2Fpessoas%3Fperson_type%3Dvisitor%26status%3Dnew%252Cfollow_up_needed%26contact%3Dall",
+  );
+  assert.equal(
+    personResolutionReturnLabel("/secretaria/pessoas?person_type=all&status=all&contact=missing_contact"),
+    "Voltar para pendencias de contato",
+  );
+  assert.equal(
+    personResolutionReturnLabel("/secretaria/pessoas?person_type=visitor&status=new%2Cfollow_up_needed&contact=all"),
+    "Voltar para visitantes em acompanhamento",
+  );
+  assert.equal(
+    personResolutionReturnLabel("/secretaria/pessoas?person_type=member&status=needs_update&contact=all"),
+    "Voltar para cadastros para conferir",
+  );
 });
 
 test("people search contract helpers minimize paginated upstream responses", () => {

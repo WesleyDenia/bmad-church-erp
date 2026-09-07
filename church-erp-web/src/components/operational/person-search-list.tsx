@@ -15,6 +15,10 @@ import {
   type PersonSearchItem,
 } from "@/features/people/person-search";
 import {
+  appendPersonResolutionReturn,
+  sanitizePersonResolutionReturn,
+} from "@/features/people/person-resolution-return";
+import {
   DEFAULT_PERSON_SEARCH_FILTERS,
   PERSON_SEARCH_CONTACT_OPTIONS,
   PERSON_SEARCH_STATUS_OPTIONS,
@@ -71,7 +75,13 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-function ResultsList({ items }: { items: PersonSearchItem[] }) {
+function ResultsList({
+  items,
+  returnHref,
+}: {
+  items: PersonSearchItem[];
+  returnHref: string;
+}) {
   return (
     <ul className="divide-y divide-[color:var(--color-border)]">
       {items.map((person) => (
@@ -94,7 +104,9 @@ function ResultsList({ items }: { items: PersonSearchItem[] }) {
             {person.status_label}
           </span>
           <Button asChild variant="secondary" size="sm">
-            <Link href={person.primary_action_href}>{person.primary_action_label}</Link>
+            <Link href={appendPersonResolutionReturn(person.primary_action_href, returnHref)}>
+              {person.primary_action_label}
+            </Link>
           </Button>
         </li>
       ))}
@@ -270,6 +282,12 @@ function PersonSearchContent({
   const isLoading = state === "loading_people_search";
   const canGoPrevious = !!result && result.currentPage > 1 && !isLoading;
   const canGoNext = !!result && result.currentPage < result.lastPage && !isLoading;
+  const currentReturnHref = useMemo(
+    () => sanitizePersonResolutionReturn(
+      rawQueryString === "" ? "/secretaria/pessoas" : `/secretaria/pessoas?${rawQueryString}`,
+    ),
+    [rawQueryString],
+  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10 sm:px-10 lg:px-12">
@@ -390,7 +408,7 @@ function PersonSearchContent({
           </div>
         ) : result ? (
           <>
-            <ResultsList items={result.items} />
+            <ResultsList items={result.items} returnHref={currentReturnHref} />
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-[color:var(--color-muted)]">
                 Pagina {result.currentPage} de {result.lastPage}

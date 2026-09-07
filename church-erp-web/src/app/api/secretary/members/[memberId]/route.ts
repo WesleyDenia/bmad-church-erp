@@ -187,7 +187,7 @@ function isValidationErrors(value: unknown): value is Record<string, string[]> {
 function buildSafeBody(status: number, body: Record<string, unknown>): MemberErrorResponse {
   if (status === 401) {
     return {
-      message: typeof body.message === "string" ? body.message : "Sessao invalida. Entre novamente.",
+      message: "Sessao invalida. Entre novamente.",
     };
   }
 
@@ -209,7 +209,7 @@ function buildSafeBody(status: number, body: Record<string, unknown>): MemberErr
 
   if (status >= 500) {
     return {
-      message: "Server error",
+      message: "Nao foi possivel concluir agora. Tente novamente em instantes.",
     };
   }
 

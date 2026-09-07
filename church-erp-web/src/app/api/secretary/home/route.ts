@@ -79,19 +79,13 @@ function buildSafeBody(
 ): SecretaryHomeErrorResponse {
   if (status === 401) {
     return {
-      message:
-        typeof body.message === "string"
-          ? body.message
-          : "Sessao invalida. Entre novamente.",
+      message: "Sessao invalida. Entre novamente.",
     };
   }
 
   if (status === 403) {
     return {
-      message:
-        typeof body.message === "string"
-          ? body.message
-          : "Acesso negado para esta area.",
+      message: "Acesso negado para esta area.",
     };
   }
 
@@ -101,7 +95,7 @@ function buildSafeBody(
 
   if (status >= 500) {
     return {
-      message: "Server error",
+      message: "Nao foi possivel carregar a secretaria agora.",
     };
   }
 

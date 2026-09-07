@@ -221,6 +221,67 @@ class SecretaryHomeTest extends TestCase
         }
     }
 
+    public function test_people_pending_items_use_exact_resolution_contract_without_empty_categories(): void
+    {
+        [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');
+        $token = $this->createInternalJwt($user->id, $church->id, ['secretary'], 'session-123');
+
+        $this->createPerson($church->id, [
+            'person_type' => 'visitor',
+            'status' => 'new',
+            'display_name' => 'Visitante Novo',
+            'phone' => '11999990000',
+        ]);
+        $this->createPerson($church->id, [
+            'person_type' => 'member',
+            'status' => 'active',
+            'display_name' => 'Pessoa Sem Contato',
+        ]);
+        $this->createPerson($church->id, [
+            'person_type' => 'member',
+            'status' => 'needs_update',
+            'display_name' => 'Membro Conferir',
+            'email' => 'conferir@example.com',
+        ]);
+        $this->createPerson($church->id, [
+            'person_type' => 'visitor',
+            'status' => 'needs_update',
+            'display_name' => 'Visitante Status Fora Do Contrato',
+            'phone' => '11888880000',
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/secretary/home')
+            ->assertOk()
+            ->assertJsonPath('data.secretary_home.people_pending_items.state', 'people_pending_items_loaded')
+            ->assertJsonPath('data.secretary_home.people_pending_items.total_count', 3);
+
+        $items = collect($response->json('data.secretary_home.people_pending_items.items'));
+
+        $this->assertSame(
+            ['missing_contact', 'needs_update', 'visitor_follow_up'],
+            $items->pluck('category')->sort()->values()->all(),
+        );
+        $this->assertSame(
+            '/secretaria/pessoas?person_type=visitor&status=new%2Cfollow_up_needed&contact=all',
+            $items->firstWhere('category', 'visitor_follow_up')['href'] ?? null,
+        );
+        $this->assertSame(
+            '/secretaria/pessoas?person_type=all&status=all&contact=missing_contact',
+            $items->firstWhere('category', 'missing_contact')['href'] ?? null,
+        );
+        $this->assertSame(
+            '/secretaria/pessoas?person_type=member&status=needs_update&contact=all',
+            $items->firstWhere('category', 'needs_update')['href'] ?? null,
+        );
+        $this->assertSame(1, $items->firstWhere('category', 'needs_update')['count'] ?? null);
+        $this->assertNotContains(
+            'Visitante Status Fora Do Contrato',
+            $items->flatMap(fn (array $item): array => array_column($item['people_preview'], 'display_name'))->all(),
+        );
+    }
+
     public function test_empty_home_returns_honest_empty_states_and_fixed_non_persisted_checklist(): void
     {
         [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');

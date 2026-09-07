@@ -47,6 +47,7 @@ test("member management source keeps browser behind BFF and avoids forbidden UI 
     "../src/app/secretaria/membros/[memberId]/editar/page.tsx",
     "../src/components/operational/member-form.tsx",
     "../src/features/people/member.ts",
+    "../src/features/people/person-resolution-return.ts",
   ];
 
   for (const path of paths) {
@@ -63,10 +64,16 @@ test("member management source keeps browser behind BFF and avoids forbidden UI 
 
   assert.match(createPage, /AreaGuard[\s\S]*area="secretaria"/);
   assert.match(editPage, /AreaGuard[\s\S]*area="secretaria"/);
+  assert.match(editPage, /searchParams: Promise/);
+  assert.match(editPage, /sanitizePersonResolutionReturn/);
+  assert.match(editPage, /<MemberForm mode="edit" memberId=\{memberId\} returnHref=\{returnHref\}/);
   assert.match(secretaryHomeService, /'href' => '\/secretaria\/membros\/novo'/);
   assert.equal(form.includes("\"/api/secretary/members\""), true);
   assert.match(form, /fetch\(endpoint/);
-  assert.doesNotMatch(form, /\/api\/v1\/people\/members|API_BASE_URL/);
+  assert.match(form, /returnHref\?: string/);
+  assert.match(form, /personResolutionReturnLabel/);
+  assert.match(form, /<Link href=\{safeReturnHref\}>\{returnToPendingLabel\}<\/Link>/);
+  assert.doesNotMatch(form, /fetch\([^)]*return_to|\/api\/v1\/people\/members|API_BASE_URL/);
   assert.match(createRoute, /callLaravel\("\/api\/v1\/people\/members"/);
   assert.match(itemRoute, /callLaravel\(`\/api\/v1\/people\/members\/\$\{memberId\}`/);
   assert.match(createRoute, /AUTH_SESSION_COOKIE_NAME/);
@@ -78,6 +85,7 @@ test("member management source keeps browser behind BFF and avoids forbidden UI 
   assert.doesNotMatch(`${createRoute}\n${itemRoute}`, /Access-Control-Allow-Origin/);
   assert.match(form, /setSavedMember\(null\);[\s\S]*const payload/);
   assert.match(form, /mode === "create" && state === "member_saved"/);
+  assert.match(form, /mode === "edit"[\s\S]*state === "member_saved"[\s\S]*safeReturnHref\.startsWith\("\/secretaria\/pessoas"\)/);
 
   const visibleSource = `${createPage}\n${editPage}\n${form}\n${homeShell}`;
 
@@ -231,7 +239,9 @@ test("member BFF POST validates same-origin, payload allowlist and sanitizes ups
     assert.equal(badOrigin.status, 403);
     assert.equal(extraField.status, 422);
     assert.equal(upstreamFailure.status, 500);
-    assert.deepEqual(await upstreamFailure.json(), { message: "Server error" });
+    assert.deepEqual(await upstreamFailure.json(), {
+      message: "Nao foi possivel concluir agora. Tente novamente em instantes.",
+    });
     assert.equal(calls.length, 1);
   } finally {
     globalThis.fetch = originalFetch;
@@ -253,7 +263,7 @@ test("member BFF GET and PATCH validate memberId and clear cookie on 401", async
 
     calls.push(url);
 
-    return new Response(JSON.stringify({ message: "Sessao invalida. Entre novamente." }), {
+    return new Response(JSON.stringify({ message: "SQLSTATE leaked member name" }), {
       status: 401,
       headers: { "content-type": "application/json" },
     });
@@ -292,6 +302,25 @@ test("member BFF GET and PATCH validate memberId and clear cookie on 401", async
       }),
       { params: Promise.resolve({ memberId: "12" }) },
     );
+    const queryGet = await GET(
+      new Request("http://web.test/api/secretary/members/12?return_to=/secretaria/pessoas", {
+        headers: { cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token` },
+      }),
+      { params: Promise.resolve({ memberId: "12" }) },
+    );
+    const queryPatch = await PATCH(
+      new Request("http://web.test/api/secretary/members/12?return_to=/secretaria/pessoas", {
+        method: "PATCH",
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+          host: "web.test",
+          origin: "http://web.test",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ display_name: "Ana" }),
+      }),
+      { params: Promise.resolve({ memberId: "12" }) },
+    );
     const unauthorized = await GET(
       new Request("http://web.test/api/secretary/members/12", {
         headers: { cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token` },
@@ -315,13 +344,17 @@ test("member BFF GET and PATCH validate memberId and clear cookie on 401", async
     assert.equal(invalidGet.status, 422);
     assert.equal(invalidPatch.status, 422);
     assert.equal(missingOriginPatch.status, 403);
+    assert.equal(queryGet.status, 422);
+    assert.equal(queryPatch.status, 422);
     assert.equal(calls.length, 2);
     assert.equal(unauthorized.status, 401);
+    assert.deepEqual(await unauthorized.json(), { message: "Sessao invalida. Entre novamente." });
     assert.match(
       unauthorized.headers.get("set-cookie") ?? "",
       new RegExp(`${AUTH_SESSION_COOKIE_NAME}=`),
     );
     assert.equal(unauthorizedPatch.status, 401);
+    assert.deepEqual(await unauthorizedPatch.json(), { message: "Sessao invalida. Entre novamente." });
     assert.match(
       unauthorizedPatch.headers.get("set-cookie") ?? "",
       new RegExp(`${AUTH_SESSION_COOKIE_NAME}=`),

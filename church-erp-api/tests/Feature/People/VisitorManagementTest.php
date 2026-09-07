@@ -226,7 +226,7 @@ class VisitorManagementTest extends TestCase
                 ->assertJsonMissing(['Membro', 'Outro Tenant']);
         }
 
-        foreach (['church_id', 'user_id', 'role', 'roles', 'permission', 'permissions', 'tenant', 'tenant_id', 'scope', 'person_type', 'id', 'created_at', 'updated_at', 'foo'] as $field) {
+        foreach (['church_id', 'user_id', 'role', 'roles', 'permission', 'permissions', 'tenant', 'tenant_id', 'scope', 'person_type', 'id', 'created_at', 'updated_at', 'last_contacted_at', 'return_to', 'foo'] as $field) {
             $this
                 ->withHeader('Authorization', 'Bearer '.$token)
                 ->postJson('/api/v1/people/visitors', [
@@ -244,6 +244,53 @@ class VisitorManagementTest extends TestCase
                 ->getJson("/api/v1/people/visitors/{$ownMember->id}?{$query}")
                 ->assertUnprocessable();
         }
+    }
+
+    public function test_visitor_update_resolves_follow_up_after_real_read_without_touching_last_contacted_at(): void
+    {
+        [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');
+        $token = $this->createInternalJwt($user->id, $church->id, ['secretary'], 'session-123');
+        $visitor = $this->createPerson($church->id, [
+            'person_type' => 'visitor',
+            'status' => 'follow_up_needed',
+            'display_name' => 'Visitante Para Acompanhar',
+            'email' => 'visitante@example.com',
+            'last_contacted_at' => null,
+        ]);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/people?person_type=visitor&status=new,follow_up_needed&contact=all')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.display_name', 'Visitante Para Acompanhar');
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->patchJson("/api/v1/people/visitors/{$visitor->id}", [
+                'status' => 'contacted',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.visitor.status', 'contacted');
+
+        $this->assertDatabaseHas('people', [
+            'id' => $visitor->id,
+            'status' => 'contacted',
+            'last_contacted_at' => null,
+        ]);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/people?person_type=visitor&status=new,follow_up_needed&contact=all')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
+
+        $this
+            ->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/v1/secretary/home')
+            ->assertOk()
+            ->assertJsonPath('data.secretary_home.people_pending_items.total_count', 0)
+            ->assertJsonPath('data.secretary_home.people_pending_items.items', []);
     }
 
     public function test_validation_normalization_duplicate_email_statuses_and_secretary_home_rules(): void
