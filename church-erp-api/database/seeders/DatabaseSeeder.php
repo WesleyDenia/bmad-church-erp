@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Communications\Services\ProvisionBaseCommunicationTemplatesService;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,6 +16,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        app(ProvisionBaseCommunicationTemplatesService::class)->provision();
+
         // User::factory(10)->create();
 
         User::factory()->create([
