@@ -73,8 +73,8 @@ development_status:
   4-5-resolver-pendencias-operacionais-de-pessoas: done
   epic-4-retrospective: done
 
-  epic-5: backlog
-  5-1-manter-modelos-pre-definidos-de-comunicacao: backlog
+  epic-5: in-progress
+  5-1-manter-modelos-pre-definidos-de-comunicacao: done
   5-2-preparar-mensagem-a-partir-de-dados-de-pessoas: backlog
   5-3-acionar-pendencia-pronta-para-comunicacao: backlog
   5-4-fazer-handoff-externo-por-copiar-ou-partilhar: backlog

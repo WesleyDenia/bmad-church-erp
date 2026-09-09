@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Domain\Communications\Models\CommunicationTemplate;
 use App\Domain\Finance\Models\FinancialEntry;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Domain\People\Models\Person;
 use App\Policies\BackofficeAreaPolicy;
 use App\Policies\ChurchUserPolicy;
+use App\Policies\CommunicationTemplatePolicy;
 use App\Policies\FinancialEntryPolicy;
 use App\Policies\PersonPolicy;
 use Illuminate\Auth\Access\Response;
@@ -51,8 +53,10 @@ class AppServiceProvider extends ServiceProvider
                 : Response::deny('Acesso negado para esta area.');
         });
         Gate::policy(ChurchUser::class, ChurchUserPolicy::class);
+        Gate::policy(CommunicationTemplate::class, CommunicationTemplatePolicy::class);
         Gate::policy(FinancialEntry::class, FinancialEntryPolicy::class);
         Gate::policy(Person::class, PersonPolicy::class);
+        Gate::define('viewCommunicationTemplates', [CommunicationTemplatePolicy::class, 'viewCommunicationTemplates']);
         Gate::define('viewPeople', [PersonPolicy::class, 'viewPeople']);
         Gate::define('createMember', [PersonPolicy::class, 'createMember']);
         Gate::define('viewMember', [PersonPolicy::class, 'viewMember']);
@@ -116,6 +120,14 @@ class AppServiceProvider extends ServiceProvider
             $userId = $request->user()?->id ?? 'guest';
 
             return Limit::perMinute(20)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('communication-templates-read', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(60)->by("{$userId}|{$churchId}");
         });
     }
 }

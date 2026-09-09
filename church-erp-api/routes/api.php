@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\HealthCheckController;
 use App\Http\Controllers\Api\V1\InitialCategoryDefaultsController;
 use App\Http\Controllers\Api\V1\InitialChurchSetupController;
 use App\Http\Controllers\Api\V1\ListChurchUsersController;
+use App\Http\Controllers\Api\V1\ListCommunicationTemplatesController;
 use App\Http\Controllers\Api\V1\ListFinancialCategoriesController;
 use App\Http\Controllers\Api\V1\ListFinancialCounterpartiesController;
 use App\Http\Controllers\Api\V1\ListFinancialEntriesController;
@@ -78,6 +79,9 @@ Route::prefix('v1')->group(function (): void {
             ->whereNumber('person')
             ->name('people.visitors.update')
             ->middleware('throttle:secretary-visitors-write');
+        Route::get('/communications/templates', ListCommunicationTemplatesController::class)
+            ->name('communications.templates.index')
+            ->middleware('throttle:communication-templates-read');
         Route::get('/finance/pending-items', ListFinancialPendingItemsController::class);
         Route::post('/finance/entries', StoreFinancialEntryController::class);
         Route::get('/finance/entries/{entry}/audits', ListFinancialEntryAuditsController::class);
