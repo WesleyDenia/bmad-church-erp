@@ -83,6 +83,22 @@ test("BFF env example exposes internal API variables", () => {
   assert.doesNotMatch(envExample, /BEGIN PRIVATE KEY/); // pragma: allowlist secret
 });
 
+test("communications message drafts BFF route is registered behind Laravel boundary", () => {
+  const routeSource = readFileSync(new URL("../src/app/api/communications/message-drafts/route.ts", import.meta.url), "utf8");
+  const composerSource = readFileSync(new URL("../src/components/operational/communication-message-composer.tsx", import.meta.url), "utf8");
+  const contractSource = readFileSync(new URL("../src/features/communications/message-draft.ts", import.meta.url), "utf8");
+
+  assert.equal(existsSync(new URL("../src/app/api/communications/message-drafts/route.ts", import.meta.url)), true);
+  assert.match(routeSource, /export async function POST/);
+  assert.doesNotMatch(routeSource, /export async function (GET|PUT|PATCH|DELETE)/);
+  assert.match(routeSource, /callLaravel\("\/api\/v1\/communications\/message-drafts"/);
+  assert.match(routeSource, /cache:\s*"no-store"/);
+  assert.match(routeSource, /AUTH_SESSION_COOKIE_NAME/);
+  assert.match(composerSource, /fetch\("\/api\/communications\/message-drafts"/);
+  assert.doesNotMatch(composerSource, /api\/v1|API_BASE_URL|Authorization|Bearer/);
+  assert.match(contractSource, /COMMUNICATION_MESSAGE_DRAFT_STATES/);
+});
+
 test("internal session signing fails fast when the private key env is missing", () => {
   const restoreEnv = setEnv({
     INTERNAL_JWT_PRIVATE_KEY: "",
