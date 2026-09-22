@@ -373,3 +373,16 @@ test("communication templates BFF clears cookie on sanitized 401 and sanitizes 4
     restoreEnv();
   }
 });
+
+test("communication templates screen exposes message preparation flow after template selection", () => {
+  const listSource = readSource("../src/components/operational/communication-template-list.tsx");
+  const composerSource = readSource("../src/components/operational/communication-message-composer.tsx");
+
+  assert.match(listSource, /CommunicationMessageComposer/);
+  assert.match(listSource, /onSelectTemplate/);
+  assert.doesNotMatch(listSource, /Preparar em etapa futura/);
+  assert.match(composerSource, /fetch\("\/api\/communications\/message-drafts"/);
+  assert.match(composerSource, /fetch\("\/api\/secretary\/people"/);
+  assert.match(composerSource, /<Textarea/);
+  assert.doesNotMatch(composerSource, /dangerouslySetInnerHTML|api\/v1|API_BASE_URL|Authorization|Bearer/);
+});

@@ -75,7 +75,7 @@ development_status:
 
   epic-5: in-progress
   5-1-manter-modelos-pre-definidos-de-comunicacao: done
-  5-2-preparar-mensagem-a-partir-de-dados-de-pessoas: backlog
+  5-2-preparar-mensagem-a-partir-de-dados-de-pessoas: done
   5-3-acionar-pendencia-pronta-para-comunicacao: backlog
   5-4-fazer-handoff-externo-por-copiar-ou-partilhar: backlog
   epic-5-retrospective: optional

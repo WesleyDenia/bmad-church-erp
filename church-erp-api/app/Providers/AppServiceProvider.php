@@ -8,6 +8,7 @@ use App\Domain\Identity\Models\ChurchUser;
 use App\Domain\People\Models\Person;
 use App\Policies\BackofficeAreaPolicy;
 use App\Policies\ChurchUserPolicy;
+use App\Policies\CommunicationMessageDraftPolicy;
 use App\Policies\CommunicationTemplatePolicy;
 use App\Policies\FinancialEntryPolicy;
 use App\Policies\PersonPolicy;
@@ -64,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('createVisitor', [PersonPolicy::class, 'createVisitor']);
         Gate::define('viewVisitor', [PersonPolicy::class, 'viewVisitor']);
         Gate::define('updateVisitor', [PersonPolicy::class, 'updateVisitor']);
+        Gate::define('prepareCommunicationMessageDraft', [CommunicationMessageDraftPolicy::class, 'prepareCommunicationMessageDraft']);
 
         RateLimiter::for('leadership-closing-summary', function (Request $request): Limit {
             $session = $request->attributes->get('authenticated_session');
@@ -128,6 +130,14 @@ class AppServiceProvider extends ServiceProvider
             $userId = $request->user()?->id ?? 'guest';
 
             return Limit::perMinute(60)->by("{$userId}|{$churchId}");
+        });
+        RateLimiter::for('communication-message-drafts', function (Request $request): Limit {
+            $session = $request->attributes->get('authenticated_session');
+            $membership = is_array($session) ? ($session['membership'] ?? null) : null;
+            $churchId = is_object($membership) ? ($membership->church_id ?? 'unknown') : 'unknown';
+            $userId = $request->user()?->id ?? 'guest';
+
+            return Limit::perMinute(30)->by("{$userId}|{$churchId}");
         });
     }
 }

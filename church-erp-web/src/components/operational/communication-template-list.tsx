@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Surface } from "@/components/design-system/surface";
 import { Button } from "@/components/ui/button";
+import { CommunicationMessageComposer } from "@/components/operational/communication-message-composer";
 import {
   categoryLabel,
   isBaseTemplatesOnly,
@@ -82,7 +83,15 @@ function StatusMessage({ state, message }: { state: CommunicationTemplateState; 
   );
 }
 
-function TemplateRows({ templates }: { templates: CommunicationTemplate[] }) {
+function TemplateRows({
+  templates,
+  selectedTemplateKey,
+  onSelectTemplate,
+}: {
+  templates: CommunicationTemplate[];
+  selectedTemplateKey: string | null;
+  onSelectTemplate: (template: CommunicationTemplate) => void;
+}) {
   return (
     <ul className="mt-6 grid gap-4">
       {templates.map((template) => (
@@ -104,8 +113,14 @@ function TemplateRows({ templates }: { templates: CommunicationTemplate[] }) {
           <span className="text-sm font-medium text-[color:var(--color-foreground)]">
             {suggestedChannelLabel(template.suggested_channel)}
           </span>
-          <Button type="button" variant="secondary" size="sm" disabled>
-            Preparar em etapa futura
+          <Button
+            type="button"
+            variant={selectedTemplateKey === template.template_key ? "default" : "secondary"}
+            size="sm"
+            onClick={() => onSelectTemplate(template)}
+            disabled={template.status !== "active"}
+          >
+            {selectedTemplateKey === template.template_key ? "Selecionado" : "Selecionar"}
           </Button>
         </li>
       ))}
@@ -119,6 +134,7 @@ export function CommunicationTemplateList() {
     templates: [],
     message: null,
   });
+  const [selectedTemplate, setSelectedTemplate] = useState<CommunicationTemplate | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const loadTemplates = useCallback(async (): Promise<void> => {
@@ -168,6 +184,11 @@ export function CommunicationTemplateList() {
         templates: normalized.data,
         message: null,
       });
+      setSelectedTemplate((current) => (
+        current && normalized.data.some((template) => template.template_key === current.template_key)
+          ? current
+          : normalized.data[0] ?? null
+      ));
     } catch {
       if (controller.signal.aborted) {
         return;
@@ -216,7 +237,11 @@ export function CommunicationTemplateList() {
         </div>
 
         {hasTemplates ? (
-          <TemplateRows templates={uiState.templates} />
+          <TemplateRows
+            templates={uiState.templates}
+            selectedTemplateKey={selectedTemplate?.template_key ?? null}
+            onSelectTemplate={setSelectedTemplate}
+          />
         ) : uiState.state === "loading_communication_templates" ? (
           <div className="mt-6 grid gap-4" aria-hidden="true">
             {[0, 1, 2, 3].map((item) => (
@@ -225,6 +250,13 @@ export function CommunicationTemplateList() {
           </div>
         ) : null}
       </Surface>
+
+      {hasTemplates ? (
+        <CommunicationMessageComposer
+          key={selectedTemplate?.template_key ?? "no-template"}
+          selectedTemplate={selectedTemplate}
+        />
+      ) : null}
     </main>
   );
 }

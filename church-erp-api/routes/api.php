@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\ShowMemberController;
 use App\Http\Controllers\Api\V1\ShowSecretaryHomeController;
 use App\Http\Controllers\Api\V1\ShowVisitorController;
 use App\Http\Controllers\Api\V1\StoreChurchUserController;
+use App\Http\Controllers\Api\V1\StoreCommunicationMessageDraftController;
 use App\Http\Controllers\Api\V1\StoreFinancialCounterpartyController;
 use App\Http\Controllers\Api\V1\StoreFinancialEntryController;
 use App\Http\Controllers\Api\V1\StoreMemberController;
@@ -82,6 +83,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/communications/templates', ListCommunicationTemplatesController::class)
             ->name('communications.templates.index')
             ->middleware('throttle:communication-templates-read');
+        Route::post('/communications/message-drafts', StoreCommunicationMessageDraftController::class)
+            ->name('communications.message-drafts.store')
+            ->middleware('throttle:communication-message-drafts');
         Route::get('/finance/pending-items', ListFinancialPendingItemsController::class);
         Route::post('/finance/entries', StoreFinancialEntryController::class);
         Route::get('/finance/entries/{entry}/audits', ListFinancialEntryAuditsController::class);
