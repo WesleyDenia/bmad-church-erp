@@ -337,6 +337,14 @@ class CommunicationMessageDraftTest extends TestCase
             ])
             ->assertUnprocessable();
 
+        $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($secretary->id, $church->id, ['secretary'], 'session-invalid-template-audit'))
+            ->postJson('/api/v1/communications/message-drafts', [
+                ...$payload,
+                'template_key' => 'Modelo Invalido auditada@example.com',
+            ])
+            ->assertUnprocessable();
+
         foreach (['forbidden', 'not_found', 'validation_failed'] as $outcome) {
             Log::shouldHaveReceived('info')
                 ->with('communication_message_draft_attempted', \Mockery::on(function (array $context) use ($outcome): bool {
@@ -361,6 +369,16 @@ class CommunicationMessageDraftTest extends TestCase
                         && ! str_contains($encoded, 'trace');
                 }));
         }
+
+        Log::shouldHaveReceived('info')
+            ->with('communication_message_draft_attempted', \Mockery::on(function (array $context): bool {
+                $encoded = json_encode($context, JSON_THROW_ON_ERROR);
+
+                return ($context['outcome'] ?? null) === 'validation_failed'
+                    && ($context['template_key'] ?? null) === 'invalid_template_key'
+                    && ! str_contains($encoded, 'Modelo Invalido')
+                    && ! str_contains($encoded, 'auditada@example.com');
+            }));
     }
 
     public function test_query_extra_nested_invalid_json_and_sensitive_payload_fields_are_rejected_before_domain_logic(): void
@@ -410,6 +428,19 @@ class CommunicationMessageDraftTest extends TestCase
                     'person_type' => 'visitor',
                     'person_id' => $person->id,
                     ...$extra,
+                ])
+                ->assertUnprocessable()
+                ->assertJsonPath('message', 'Revise os dados para preparar a mensagem.')
+                ->assertJsonMissingPath('data');
+        }
+
+        foreach (['Modelo Local', 'modelo local', 'modelo/local', str_repeat('a', 81)] as $invalidTemplateKey) {
+            $this
+                ->withHeader('Authorization', 'Bearer '.$token)
+                ->postJson('/api/v1/communications/message-drafts', [
+                    'template_key' => $invalidTemplateKey,
+                    'person_type' => 'visitor',
+                    'person_id' => $person->id,
                 ])
                 ->assertUnprocessable()
                 ->assertJsonPath('message', 'Revise os dados para preparar a mensagem.')

@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class StoreCommunicationMessageDraftRequest extends FormRequest
 {
+    private const TEMPLATE_KEY_PATTERN = '/\A[a-z0-9_:-]{1,80}\z/';
+
     /**
      * @var list<string>
      */
@@ -69,7 +71,7 @@ class StoreCommunicationMessageDraftRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'template_key' => ['required', 'string', 'max:80'],
+            'template_key' => ['required', 'string', 'max:80', 'regex:'.self::TEMPLATE_KEY_PATTERN],
             'person_type' => ['required', 'string', Rule::in(['member', 'visitor'])],
             'person_id' => ['required', 'integer', 'min:1', 'max:9007199254740991'],
         ];
@@ -221,7 +223,7 @@ class StoreCommunicationMessageDraftRequest extends FormRequest
             'church_id' => is_object($membership) ? ($membership->church_id ?? null) : null,
             'person_type' => $this->safeString($payload['person_type'] ?? null, 20),
             'person_id' => $this->safePositiveInt($payload['person_id'] ?? null),
-            'template_key' => $this->safeString($payload['template_key'] ?? null, 80),
+            'template_key' => $this->safeTemplateKey($payload['template_key'] ?? null),
             'outcome' => $outcome,
             'timestamp' => Carbon::now('UTC')->toISOString(),
             'correlation_id' => $this->correlationId(),
@@ -245,6 +247,17 @@ class StoreCommunicationMessageDraftRequest extends FormRequest
     private function safeString(mixed $value, int $maxLength): ?string
     {
         return is_string($value) ? mb_substr($value, 0, $maxLength) : null;
+    }
+
+    private function safeTemplateKey(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        return preg_match(self::TEMPLATE_KEY_PATTERN, $value) === 1
+            ? $value
+            : 'invalid_template_key';
     }
 
     private function safePositiveInt(mixed $value): ?int

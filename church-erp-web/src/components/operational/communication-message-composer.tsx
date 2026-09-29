@@ -12,6 +12,7 @@ import {
   normalizeCommunicationMessageDraftResponse,
   type CommunicationMessageDraftResponse,
   type CommunicationMessageDraftState,
+  type SecretaryHomeCommunicationContext,
 } from "@/features/communications/message-draft";
 import {
   normalizePersonSearchResponse,
@@ -20,6 +21,8 @@ import {
 
 type ComposerProps = {
   selectedTemplate: CommunicationTemplate | null;
+  secretaryHomeContext: SecretaryHomeCommunicationContext | null;
+  contextState: "communication_context_loaded" | "communication_context_invalid" | null;
 };
 
 type ComposerState = {
@@ -34,6 +37,10 @@ type ComposerState = {
 
 function personKey(person: PersonSearchItem): string {
   return `${person.person_type}:${person.id}`;
+}
+
+function contextPersonKey(context: SecretaryHomeCommunicationContext): string {
+  return `${context.person_type}:${context.person_id}`;
 }
 
 function parsePersonKey(value: string): { person_type: "member" | "visitor"; person_id: number } | null {
@@ -60,13 +67,17 @@ function hasTemplateAndPerson(template: CommunicationTemplate | null, selectedPe
   return template !== null && parsePersonKey(selectedPersonKey) !== null;
 }
 
-export function CommunicationMessageComposer({ selectedTemplate }: ComposerProps) {
+export function CommunicationMessageComposer({
+  selectedTemplate,
+  secretaryHomeContext,
+  contextState,
+}: ComposerProps) {
   const [composer, setComposer] = useState<ComposerState>({
-    state: "loading_people_for_message",
+    state: contextState ?? "loading_people_for_message",
     people: [],
-    selectedPersonKey: "",
+    selectedPersonKey: secretaryHomeContext ? contextPersonKey(secretaryHomeContext) : "",
     query: "",
-    message: null,
+    message: contextState === "communication_context_invalid" ? "O contexto informado nao pode ser usado. Escolha uma pessoa manualmente." : null,
     draft: null,
     draftText: "",
   });
@@ -141,14 +152,33 @@ export function CommunicationMessageComposer({ selectedTemplate }: ComposerProps
 
       setComposer((current) => {
         const currentPersonStillVisible = normalized.data.some((person) => personKey(person) === current.selectedPersonKey);
-        const nextPersonKey = currentPersonStillVisible ? current.selectedPersonKey : "";
+        const nextPersonKey = secretaryHomeContext
+          ? contextPersonKey(secretaryHomeContext)
+          : currentPersonStillVisible ? current.selectedPersonKey : "";
+        const hasLoadedContext = secretaryHomeContext && selectedTemplate?.template_key === secretaryHomeContext.template_key;
+
+        if (contextState === "communication_context_invalid") {
+          return {
+            ...current,
+            state: "communication_context_invalid",
+            people: normalized.data,
+            selectedPersonKey: "",
+            draft: null,
+            draftText: "",
+            message: "O contexto informado nao pode ser usado. Escolha uma pessoa manualmente.",
+          };
+        }
 
         return {
           ...current,
-          state: hasTemplateAndPerson(selectedTemplate, nextPersonKey) ? "ready_to_prepare_message" : "validation_error",
+          state: hasLoadedContext
+            ? "communication_context_loaded"
+            : hasTemplateAndPerson(selectedTemplate, nextPersonKey) ? "ready_to_prepare_message" : "validation_error",
           people: normalized.data,
           selectedPersonKey: nextPersonKey,
-          message: normalized.data.length === 0 ? "Nenhuma pessoa encontrada para estes criterios." : null,
+          message: hasLoadedContext
+            ? "Pendencia da secretaria carregada. Prepare o rascunho quando estiver pronta."
+            : normalized.data.length === 0 ? "Nenhuma pessoa encontrada para estes criterios." : null,
         };
       });
     } catch {
@@ -166,7 +196,7 @@ export function CommunicationMessageComposer({ selectedTemplate }: ComposerProps
         message: "Nao foi possivel carregar as pessoas agora.",
       }));
     }
-  }, [selectedTemplate]);
+  }, [contextState, secretaryHomeContext, selectedTemplate]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -275,7 +305,10 @@ export function CommunicationMessageComposer({ selectedTemplate }: ComposerProps
 
   const isLoadingPeople = composer.state === "loading_people_for_message";
   const isGenerating = composer.state === "generating_message_draft";
-  const canPrepare = selectedTemplate !== null && selectedPerson !== null && !isGenerating;
+  const canPrepare = selectedTemplate !== null && parsePersonKey(composer.selectedPersonKey) !== null && !isGenerating;
+  const hasContextSelection = secretaryHomeContext !== null
+    && composer.selectedPersonKey === contextPersonKey(secretaryHomeContext);
+  const shouldShowContextOption = hasContextSelection && selectedPerson === null;
 
   return (
     <Surface className="mt-6 p-6 sm:p-8">
@@ -318,9 +351,14 @@ export function CommunicationMessageComposer({ selectedTemplate }: ComposerProps
               id="message-person-select"
               value={composer.selectedPersonKey}
               onChange={(event) => handlePersonChange(event.target.value)}
-              disabled={isLoadingPeople || composer.people.length === 0}
+              disabled={isLoadingPeople || (composer.people.length === 0 && !hasContextSelection)}
             >
               <option value="">{isLoadingPeople ? "Carregando pessoas" : "Selecione uma pessoa"}</option>
+              {shouldShowContextOption ? (
+                <option value={composer.selectedPersonKey}>
+                  Pendencia da secretaria carregada
+                </option>
+              ) : null}
               {composer.people.map((person) => (
                 <option key={personKey(person)} value={personKey(person)}>
                   {person.display_name} - {person.person_type_label} - {person.status_label}
@@ -334,6 +372,13 @@ export function CommunicationMessageComposer({ selectedTemplate }: ComposerProps
               <p className="font-semibold">{selectedPerson.display_name}</p>
               <p className="text-[color:var(--color-muted)]">
                 {selectedPerson.person_type_label} - {selectedPerson.status_label} - {selectedPerson.contact_summary}
+              </p>
+            </div>
+          ) : secretaryHomeContext && composer.selectedPersonKey === contextPersonKey(secretaryHomeContext) ? (
+            <div className="rounded-md border border-[color:var(--color-border)] bg-[#f8faf9] p-4 text-sm leading-6 text-[color:var(--color-foreground)]">
+              <p className="font-semibold">Pendencia da secretaria carregada</p>
+              <p className="text-[color:var(--color-muted)]">
+                Prepare o rascunho sem nova busca manual.
               </p>
             </div>
           ) : null}

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { AUTH_SESSION_COOKIE_NAME } from "../src/features/auth/session-constants.ts";
 import {
+  COMMUNICATION_PENDING_PERSON_ALLOWLIST,
   SECRETARY_HOME_PERSON_ALLOWLIST,
   readSecretaryHome,
 } from "../src/features/secretaria/secretary-home.ts";
@@ -50,21 +51,29 @@ test("secretary home source keeps browser behind the BFF and avoids forbidden la
   assert.match(routeSource, /callLaravel\("\/api\/v1\/secretary\/home"/);
   assert.match(routeSource, /cache:\s*"no-store"/);
   assert.match(routeSource, /AUTH_SESSION_COOKIE_NAME/);
-  assert.doesNotMatch(contractSource, /\b(id|church_id|phone|email|token|headers|Authorization)\b/);
+  assert.doesNotMatch(contractSource, /\b(church_id|phone|email|token|headers|Authorization)\b/);
   assert.match(homeServiceSource, /\/secretaria\/pessoas\?person_type=visitor&status=new%2Cfollow_up_needed&contact=all/);
   assert.match(homeServiceSource, /\/secretaria\/pessoas\?person_type=all&status=all&contact=missing_contact/);
   assert.match(homeServiceSource, /\/secretaria\/pessoas\?person_type=member&status=needs_update&contact=all/);
+  assert.match(homeServiceSource, /BuildCommunicationPendingBlockService/);
 
   const shellSource = readSource("../src/components/operational/secretary-home-shell.tsx");
   const peopleFollowupSource = readSource("../src/components/operational/people-followup-block.tsx");
+  const communicationPendingSource = readSource("../src/components/operational/communication-pending-block.tsx");
 
   assert.match(shellSource, /import Link from "next\/link"/);
   assert.match(shellSource, /!\s*isDenied\s*&&\s*<QuickActions/);
   assert.match(shellSource, /!\s*isDenied\s*&&\s*\(\s*<section className="mt-6 grid gap-6/);
   assert.doesNotMatch(shellSource, /home:\s*current\.home/);
+  assert.match(shellSource, /lastReliableCountsRef/);
+  assert.doesNotMatch(shellSource, /lastReliableHomeRef/);
   assert.doesNotMatch(shellSource, /error instanceof Error\s*\?\s*error\.message/);
   assert.match(shellSource, /Fluxo em preparacao para uma proxima etapa/);
   assert.match(peopleFollowupSource, /<Link href=\{item\.href\}>/);
+  assert.match(communicationPendingSource, /<Link href=\{item\.href\}>/);
+  assert.match(communicationPendingSource, /communication_pending_loaded/);
+  assert.match(communicationPendingSource, /blocked_missing_contact/);
+  assert.match(communicationPendingSource, /empty_communication_pending/);
 
   const visibleSource = [
     pageSource,
@@ -87,11 +96,20 @@ test("secretary home contract exposes only the approved person fields", () => {
     "next_step_label",
     "href",
   ]);
+  assert.deepEqual([...COMMUNICATION_PENDING_PERSON_ALLOWLIST], [
+    "person_id",
+    "person_type",
+    "display_name",
+    "status",
+    "status_label",
+    "contact_summary",
+  ]);
 
   const home = readSecretaryHome({
     data: {
       secretary_home: {
         state: "secretary_home_loaded",
+        extra_root: "discarded",
         recent_visitors: {
           state: "recent_visitors_loaded",
           window_days: 30,
@@ -103,6 +121,7 @@ test("secretary home contract exposes only the approved person fields", () => {
               contact_summary: "Email informado",
               next_step_label: "Acompanhar visitante",
               href: "/secretaria",
+              unexpected_profile: "discarded",
             },
           ],
         },
@@ -118,6 +137,66 @@ test("secretary home contract exposes only the approved person fields", () => {
     "next_step_label",
     "href",
   ]);
+});
+
+test("secretary home contract accepts actionable communication pending blocks without raw contact data", () => {
+  const home = readSecretaryHome({
+    data: {
+      secretary_home: {
+        state: "secretary_home_loaded",
+        people_pending_items: {
+          state: "empty_people_pending_items",
+          total_count: 0,
+          items: [],
+        },
+        recent_visitors: {
+          state: "empty_recent_visitors",
+          window_days: 30,
+          limit: 5,
+          items: [],
+        },
+        communication_pending: {
+          state: "communication_pending_loaded",
+          summary: "Ha acompanhamentos prontos para preparar mensagem.",
+          total_count: 1,
+          extra_block: "discarded",
+          items: [
+            {
+              category: "visitor_follow_up_ready",
+              label: "Visitantes prontos para primeiro contato",
+              count: 1,
+              next_step_label: "Preparar mensagem",
+              template_key: "visitante_primeiro_contato",
+              href: "/communications?template_key=visitante_primeiro_contato&person_type=visitor&person_id=7&source=secretary_home",
+              extra_item: "discarded",
+              people_preview: [
+                {
+                  person_id: 7,
+                  person_type: "visitor",
+                  display_name: "Ana Visitante",
+                  status: "follow_up_needed",
+                  status_label: "Precisa de acompanhamento",
+                  contact_summary: "Contato disponivel",
+                  extra_preview: "discarded",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  });
+
+  assert.equal(home?.communication_pending.state, "communication_pending_loaded");
+  assert.deepEqual(Object.keys(home.communication_pending.items[0].people_preview[0]), [
+    "person_id",
+    "person_type",
+    "display_name",
+    "status",
+    "status_label",
+    "contact_summary",
+  ]);
+  assert.doesNotMatch(JSON.stringify(home.communication_pending), /\b(phone|email|church_id|body_template|token|headers)\b/i);
 });
 
 test("secretary BFF calls Laravel server side and sanitizes sensitive error payloads", async () => {
@@ -164,7 +243,7 @@ test("secretary BFF calls Laravel server side and sanitizes sensitive error payl
     const response = await GET(
       new Request("http://web.test/api/secretary/home", {
         headers: {
-          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+          cookie: `x-${AUTH_SESSION_COOKIE_NAME}=attacker-token; ${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
         },
       }),
     );

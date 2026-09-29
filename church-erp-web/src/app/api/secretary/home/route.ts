@@ -25,10 +25,20 @@ const SCOPE_QUERY_PARAMETERS = [
 
 function readToken(request: Request): string | null {
   return readSessionTokenFromCookieValue(
-    request.headers.get("cookie")?.match(
-      new RegExp(`${AUTH_SESSION_COOKIE_NAME}=([^;]+)`),
-    )?.[1],
+    readCookieValue(request.headers.get("cookie"), AUTH_SESSION_COOKIE_NAME),
   );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function readCookieValue(cookieHeader: string | null, name: string): string | undefined {
+  if (!cookieHeader) {
+    return undefined;
+  }
+
+  return cookieHeader.match(new RegExp(`(?:^|;\\s*)${escapeRegExp(name)}=([^;]*)`))?.[1];
 }
 
 function validateSecretaryQuery(url: URL): SecretaryHomeErrorResponse | null {

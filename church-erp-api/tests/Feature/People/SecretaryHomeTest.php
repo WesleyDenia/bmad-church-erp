@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\People;
 
+use App\Domain\Communications\Models\CommunicationTemplate;
 use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Domain\People\Models\Person;
@@ -60,6 +61,7 @@ class SecretaryHomeTest extends TestCase
     {
         foreach (['secretary', 'administrator'] as $role) {
             [$user, $church] = $this->seedMembership($role, "{$role}@example.com", "igreja-{$role}");
+            $this->createTemplate($church->id, ['template_key' => 'visitante_primeiro_contato']);
             $this->createPerson($church->id, [
                 'person_type' => 'visitor',
                 'status' => 'new',
@@ -79,7 +81,8 @@ class SecretaryHomeTest extends TestCase
                 ->assertJsonMissingPath('data.secretary_home.recent_visitors.items.0.id')
                 ->assertJsonMissingPath('data.secretary_home.recent_visitors.items.0.church_id')
                 ->assertJsonPath('data.secretary_home.event_schedule.state', 'event_schedule_unavailable')
-                ->assertJsonPath('data.secretary_home.communication_pending.state', 'communication_pending_unavailable')
+                ->assertJsonPath('data.secretary_home.communication_pending.state', 'communication_pending_loaded')
+                ->assertJsonPath('data.secretary_home.communication_pending.total_count', 1)
                 ->assertJsonPath('data.secretary_home.weekly_checklist.state', 'weekly_checklist_ready')
                 ->assertJsonPath('data.secretary_home.weekly_checklist.items.0.state', 'not_started');
 
@@ -282,6 +285,132 @@ class SecretaryHomeTest extends TestCase
         );
     }
 
+    public function test_communication_pending_derives_ready_and_blocked_items_with_minimized_response(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-29T12:00:00Z'));
+
+        try {
+            [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');
+            [, $otherChurch] = $this->seedMembership('secretary', 'outra@example.com', 'igreja-outra');
+            $this->createTemplate(null, ['template_key' => 'visitante_primeiro_contato']);
+            $this->createTemplate($church->id, ['template_key' => 'atualizacao_cadastro']);
+            $this->createTemplate($otherChurch->id, [
+                'template_key' => 'visitante_primeiro_contato',
+                'body_template' => 'Segredo de outro tenant',
+            ]);
+
+            $visitorFollowUp = $this->createPerson($church->id, [
+                'person_type' => 'visitor',
+                'status' => 'follow_up_needed',
+                'display_name' => 'Ana Visitante',
+                'phone' => '+351999999999',
+                'email' => 'ana@example.com',
+                'created_at' => Carbon::now('UTC')->subDays(3),
+            ]);
+            $this->createPerson($church->id, [
+                'person_type' => 'visitor',
+                'status' => 'new',
+                'display_name' => 'Bia Visitante',
+                'email' => 'bia@example.com',
+                'created_at' => Carbon::now('UTC')->subDays(1),
+            ]);
+            $this->createPerson($church->id, [
+                'person_type' => 'member',
+                'status' => 'needs_update',
+                'display_name' => 'Maria Membro',
+                'phone' => '1133334444',
+                'created_at' => Carbon::now('UTC')->subDays(2),
+            ]);
+            $this->createPerson($church->id, [
+                'person_type' => 'visitor',
+                'status' => 'new',
+                'display_name' => 'Carlos Sem Contato',
+                'phone' => null,
+                'email' => null,
+                'created_at' => Carbon::now('UTC')->subDays(4),
+            ]);
+            $this->createPerson($otherChurch->id, [
+                'person_type' => 'visitor',
+                'status' => 'follow_up_needed',
+                'display_name' => 'Pessoa Outro Tenant',
+                'phone' => '+351111111111',
+            ]);
+
+            $response = $this
+                ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['secretary'], 'session-communication'))
+                ->getJson('/api/v1/secretary/home')
+                ->assertOk()
+                ->assertJsonPath('data.secretary_home.communication_pending.state', 'communication_pending_loaded')
+                ->assertJsonPath('data.secretary_home.communication_pending.total_count', 4)
+                ->assertJsonMissing(['Pessoa Outro Tenant', '+351999999999', 'ana@example.com', 'Segredo de outro tenant'])
+                ->assertJsonMissingPath('data.secretary_home.communication_pending.items.0.people_preview.0.phone')
+                ->assertJsonMissingPath('data.secretary_home.communication_pending.items.0.people_preview.0.email')
+                ->assertJsonMissingPath('data.secretary_home.communication_pending.items.0.people_preview.0.church_id')
+                ->assertJsonMissingPath('data.secretary_home.communication_pending.items.0.people_preview.0.created_at')
+                ->assertJsonMissingPath('data.secretary_home.communication_pending.items.0.body_template');
+
+            $items = collect($response->json('data.secretary_home.communication_pending.items'));
+
+            self::assertSame([
+                'visitor_follow_up_ready',
+                'member_update_ready',
+                'missing_contact_for_communication',
+            ], $items->pluck('category')->all());
+
+            $visitorItem = $items->firstWhere('category', 'visitor_follow_up_ready');
+            self::assertSame('visitante_primeiro_contato', $visitorItem['template_key'] ?? null);
+            self::assertSame(
+                "/communications?template_key=visitante_primeiro_contato&person_type=visitor&person_id={$visitorFollowUp->id}&source=secretary_home",
+                $visitorItem['href'] ?? null,
+            );
+            self::assertSame(['Ana Visitante', 'Bia Visitante'], array_column($visitorItem['people_preview'], 'display_name'));
+            self::assertSame('Contato disponivel', $visitorItem['people_preview'][0]['contact_summary'] ?? null);
+            self::assertSame($visitorFollowUp->id, $visitorItem['people_preview'][0]['person_id'] ?? null);
+
+            $missingContact = $items->firstWhere('category', 'missing_contact_for_communication');
+            self::assertSame('/secretaria/pessoas?person_type=all&status=all&contact=missing_contact', $missingContact['href'] ?? null);
+            self::assertSame('Contato pendente', $missingContact['people_preview'][0]['contact_summary'] ?? null);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_communication_pending_reports_missing_template_without_people_preview_or_person_id(): void
+    {
+        [$user, $church] = $this->seedMembership('administrator', 'admin@example.com', 'igreja-admin');
+        $this->createTemplate($church->id, [
+            'template_key' => 'atualizacao_cadastro',
+            'status' => 'inactive',
+        ]);
+        $this->createPerson($church->id, [
+            'person_type' => 'member',
+            'status' => 'needs_update',
+            'display_name' => 'Membro Sem Modelo',
+            'phone' => '1133334444',
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-admin'))
+            ->getJson('/api/v1/secretary/home')
+            ->assertOk()
+            ->assertJsonPath('data.secretary_home.communication_pending.state', 'communication_pending_loaded')
+            ->assertJsonMissingPath('data.secretary_home.communication_pending.items.0.people_preview.0.person_id');
+
+        self::assertStringNotContainsString(
+            'Membro Sem Modelo',
+            json_encode($response->json('data.secretary_home.communication_pending'), JSON_THROW_ON_ERROR),
+        );
+
+        $items = collect($response->json('data.secretary_home.communication_pending.items'));
+        $missingTemplate = $items->firstWhere('category', 'missing_template_for_communication');
+
+        self::assertNotNull($missingTemplate);
+        self::assertSame('atualizacao_cadastro', $missingTemplate['template_key'] ?? null);
+        self::assertSame('/communications', $missingTemplate['href'] ?? null);
+        self::assertSame([], $missingTemplate['people_preview'] ?? null);
+        self::assertSame(1, $missingTemplate['count'] ?? null);
+    }
+
     public function test_empty_home_returns_honest_empty_states_and_fixed_non_persisted_checklist(): void
     {
         [$user, $church] = $this->seedMembership('secretary', 'secretaria@example.com', 'igreja-central');
@@ -293,6 +422,8 @@ class SecretaryHomeTest extends TestCase
             ->assertJsonPath('data.secretary_home.state', 'empty_secretary_home')
             ->assertJsonPath('data.secretary_home.people_pending_items.state', 'empty_people_pending_items')
             ->assertJsonPath('data.secretary_home.people_pending_items.total_count', 0)
+            ->assertJsonPath('data.secretary_home.communication_pending.state', 'empty_communication_pending')
+            ->assertJsonPath('data.secretary_home.communication_pending.total_count', 0)
             ->assertJsonPath('data.secretary_home.recent_visitors.state', 'empty_recent_visitors')
             ->assertJsonCount(4, 'data.secretary_home.weekly_checklist.items')
             ->assertJsonPath('data.secretary_home.weekly_checklist.items.3.key', 'prepare_future_communications')
@@ -333,6 +464,13 @@ class SecretaryHomeTest extends TestCase
         self::assertStringContainsString('->limit(3)', $source);
         self::assertStringContainsString('private function pendingPeopleQuery', $source);
         self::assertStringNotContainsString("->orderBy('display_name')\n            ->get();", $source);
+
+        $communicationSource = file_get_contents(app_path('Domain/Communications/Services/BuildCommunicationPendingBlockService.php'));
+
+        self::assertIsString($communicationSource);
+        self::assertStringContainsString('->limit(self::PREVIEW_LIMIT)', $communicationSource);
+        self::assertStringContainsString('activeBaseOrTenant($churchId)', $communicationSource);
+        self::assertStringNotContainsString('body_template', $communicationSource);
     }
 
     /**
@@ -382,6 +520,31 @@ class SecretaryHomeTest extends TestCase
         $person->save();
 
         return $person;
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function createTemplate(?int $churchId, array $overrides = []): CommunicationTemplate
+    {
+        $template = new CommunicationTemplate;
+        $template->forceFill([
+            'church_id' => $churchId,
+            'template_key' => $overrides['template_key'] ?? 'modelo_teste',
+            'name' => $overrides['name'] ?? 'Modelo Teste',
+            'short_description' => $overrides['short_description'] ?? 'Descricao curta sem dados pessoais.',
+            'body_template' => $overrides['body_template'] ?? 'Mensagem para {{nome}} com {{contato}} e {{status}}.',
+            'category' => $overrides['category'] ?? 'weekly_notice',
+            'suggested_channel' => $overrides['suggested_channel'] ?? 'external_handoff',
+            'status' => $overrides['status'] ?? 'active',
+            'sort_order' => $overrides['sort_order'] ?? 10,
+            'created_at' => $overrides['created_at'] ?? Carbon::now('UTC'),
+            'updated_at' => $overrides['updated_at'] ?? Carbon::now('UTC'),
+        ]);
+
+        $template->save();
+
+        return $template;
     }
 
     /**

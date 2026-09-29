@@ -21,6 +21,7 @@ import {
   decodeJwtPayload,
   InternalJwtConfigurationError,
 } from "../src/features/auth/session.ts";
+import { parseSecretaryHomeCommunicationContext } from "../src/features/communications/message-draft.ts";
 
 function setEnv(overrides) {
   const previous = new Map();
@@ -85,8 +86,11 @@ test("BFF env example exposes internal API variables", () => {
 
 test("communications message drafts BFF route is registered behind Laravel boundary", () => {
   const routeSource = readFileSync(new URL("../src/app/api/communications/message-drafts/route.ts", import.meta.url), "utf8");
+  const listSource = readFileSync(new URL("../src/components/operational/communication-template-list.tsx", import.meta.url), "utf8");
   const composerSource = readFileSync(new URL("../src/components/operational/communication-message-composer.tsx", import.meta.url), "utf8");
+  const communicationPendingSource = readFileSync(new URL("../src/components/operational/communication-pending-block.tsx", import.meta.url), "utf8");
   const contractSource = readFileSync(new URL("../src/features/communications/message-draft.ts", import.meta.url), "utf8");
+  const validDeepLink = new URLSearchParams("template_key=visitante_primeiro_contato&person_type=visitor&person_id=7&source=secretary_home");
 
   assert.equal(existsSync(new URL("../src/app/api/communications/message-drafts/route.ts", import.meta.url)), true);
   assert.match(routeSource, /export async function POST/);
@@ -94,9 +98,32 @@ test("communications message drafts BFF route is registered behind Laravel bound
   assert.match(routeSource, /callLaravel\("\/api\/v1\/communications\/message-drafts"/);
   assert.match(routeSource, /cache:\s*"no-store"/);
   assert.match(routeSource, /AUTH_SESSION_COOKIE_NAME/);
+  assert.match(listSource, /useSearchParams/);
+  assert.match(listSource, /parseSecretaryHomeCommunicationContext/);
   assert.match(composerSource, /fetch\("\/api\/communications\/message-drafts"/);
-  assert.doesNotMatch(composerSource, /api\/v1|API_BASE_URL|Authorization|Bearer/);
+  assert.match(composerSource, /<Button type="button" onClick=\{\(\) => void prepareDraft\(\)\}/);
+  assert.equal(composerSource.match(/void prepareDraft/g)?.length, 1);
+  assert.match(communicationPendingSource, /<Link href=\{item\.href\}>/);
+  assert.doesNotMatch([listSource, composerSource, communicationPendingSource].join("\n"), /api\/v1|API_BASE_URL|Authorization|Bearer/);
   assert.match(contractSource, /COMMUNICATION_MESSAGE_DRAFT_STATES/);
+  assert.deepEqual(parseSecretaryHomeCommunicationContext(validDeepLink), {
+    state: "communication_context_loaded",
+    context: {
+      template_key: "visitante_primeiro_contato",
+      person_type: "visitor",
+      person_id: 7,
+      source: "secretary_home",
+    },
+  });
+  assert.deepEqual(
+    parseSecretaryHomeCommunicationContext(
+      new URLSearchParams(validDeepLink.toString() + "&church_id=9"),
+    ),
+    {
+      state: "communication_context_invalid",
+      context: null,
+    },
+  );
 });
 
 test("internal session signing fails fast when the private key env is missing", () => {
