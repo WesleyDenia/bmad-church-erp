@@ -18,10 +18,13 @@ type SecretaryHomeUiState = {
   state: SecretaryHomeState;
   home: SecretaryHome | null;
   message: string | null;
-  recovered_counts: {
-    pending_total: number;
-    recent_visitors_total: number;
-  } | null;
+  recovered_counts: RecoveredCounts | null;
+};
+
+type RecoveredCounts = {
+  pending_total: number;
+  recent_visitors_total: number;
+  communication_total: number;
 };
 
 function extractMessage(body: SecretaryHomeResponse | SecretaryHomeErrorResponse): string {
@@ -54,6 +57,7 @@ function aggregateCounts(home: SecretaryHome | null) {
   return {
     pending_total: home.people_pending_items.total_count,
     recent_visitors_total: home.recent_visitors.items.length,
+    communication_total: home.communication_pending.total_count,
   };
 }
 
@@ -99,7 +103,7 @@ export function SecretaryHomeShell() {
     message: null,
     recovered_counts: null,
   });
-  const lastReliableHomeRef = useRef<SecretaryHome | null>(null);
+  const lastReliableCountsRef = useRef<RecoveredCounts | null>(null);
 
   const loadHome = useCallback(async (signal?: AbortSignal): Promise<void> => {
     setUiState((current) => ({
@@ -120,7 +124,7 @@ export function SecretaryHomeShell() {
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          lastReliableHomeRef.current = null;
+          lastReliableCountsRef.current = null;
           setUiState({
             state: "denied_or_session_invalid",
             home: null,
@@ -131,7 +135,7 @@ export function SecretaryHomeShell() {
           return;
         }
 
-        const recoveredCounts = aggregateCounts(lastReliableHomeRef.current);
+        const recoveredCounts = lastReliableCountsRef.current;
 
         setUiState({
           state: recoveredCounts ? "technical_recovered_without_pii" : "server_error",
@@ -153,14 +157,14 @@ export function SecretaryHomeShell() {
       });
 
       if (nextState === "secretary_home_loaded" || nextState === "empty_secretary_home") {
-        lastReliableHomeRef.current = home;
+        lastReliableCountsRef.current = aggregateCounts(home);
       }
     } catch {
       if (signal?.aborted) {
         return;
       }
 
-      const recoveredCounts = aggregateCounts(lastReliableHomeRef.current);
+      const recoveredCounts = lastReliableCountsRef.current;
 
       setUiState({
         state: recoveredCounts ? "technical_recovered_without_pii" : "server_error",

@@ -13,6 +13,7 @@ import {
 import { callLaravel } from "@/lib/api/client";
 
 const ALLOWED_FIELDS = ["template_key", "person_type", "person_id"] as const;
+const TEMPLATE_KEY_PATTERN = /^[a-z0-9_:-]{1,80}$/;
 
 function readToken(request: Request): string | null {
   return readSessionTokenFromCookieValue(
@@ -109,6 +110,7 @@ async function readPayload(request: Request): Promise<CommunicationMessageDraftP
     keys.length !== ALLOWED_FIELDS.length
     || keys.some((key) => !ALLOWED_FIELDS.includes(key as (typeof ALLOWED_FIELDS)[number]))
     || typeof record.template_key !== "string"
+    || !TEMPLATE_KEY_PATTERN.test(record.template_key)
     || (record.person_type !== "member" && record.person_type !== "visitor")
     || typeof record.person_id !== "number"
     || !Number.isSafeInteger(record.person_id)

@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Surface } from "@/components/design-system/surface";
 import { Button } from "@/components/ui/button";
 import { CommunicationMessageComposer } from "@/components/operational/communication-message-composer";
+import { parseSecretaryHomeCommunicationContext } from "@/features/communications/message-draft";
 import {
   categoryLabel,
   isBaseTemplatesOnly,
@@ -129,12 +131,19 @@ function TemplateRows({
 }
 
 export function CommunicationTemplateList() {
+  const searchParams = useSearchParams();
+  const contextQuery = searchParams.toString();
+  const contextResult = useMemo(
+    () => parseSecretaryHomeCommunicationContext(new URLSearchParams(contextQuery)),
+    [contextQuery],
+  );
   const [uiState, setUiState] = useState<CommunicationTemplateUiState>({
     state: "loading_communication_templates",
     templates: [],
     message: null,
   });
   const [selectedTemplate, setSelectedTemplate] = useState<CommunicationTemplate | null>(null);
+  const [contextTemplateUnavailable, setContextTemplateUnavailable] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const loadTemplates = useCallback(async (): Promise<void> => {
@@ -184,11 +193,26 @@ export function CommunicationTemplateList() {
         templates: normalized.data,
         message: null,
       });
-      setSelectedTemplate((current) => (
-        current && normalized.data.some((template) => template.template_key === current.template_key)
+      const contextTemplate = contextResult.context
+        ? normalized.data.find((template) => (
+          template.template_key === contextResult.context?.template_key && template.status === "active"
+        )) ?? null
+        : null;
+
+      setContextTemplateUnavailable(contextResult.state === "communication_context_loaded" && contextTemplate === null);
+      setSelectedTemplate((current) => {
+        if (contextResult.state === "communication_context_invalid") {
+          return null;
+        }
+
+        if (contextResult.context) {
+          return contextTemplate;
+        }
+
+        return current && normalized.data.some((template) => template.template_key === current.template_key)
           ? current
-          : normalized.data[0] ?? null
-      ));
+          : normalized.data[0] ?? null;
+      });
     } catch {
       if (controller.signal.aborted) {
         return;
@@ -200,7 +224,7 @@ export function CommunicationTemplateList() {
         message: "Nao foi possivel carregar os modelos de comunicacao agora.",
       });
     }
-  }, []);
+  }, [contextResult.context, contextResult.state]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -214,6 +238,8 @@ export function CommunicationTemplateList() {
 
   const hasTemplates = uiState.templates.length > 0;
   const canRetry = uiState.state === "server_error";
+  const effectiveContextState = contextTemplateUnavailable ? "communication_context_invalid" : contextResult.state;
+  const secretaryHomeContext = effectiveContextState === "communication_context_loaded" ? contextResult.context : null;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-10 sm:px-10 lg:px-12">
@@ -228,6 +254,15 @@ export function CommunicationTemplateList() {
             </h1>
             <div className="mt-4 max-w-2xl">
               <StatusMessage state={uiState.state} message={uiState.message} />
+              {effectiveContextState === "communication_context_loaded" ? (
+                <p className="mt-2 text-sm leading-7 text-[color:var(--color-accent)]" aria-live="polite">
+                  Pendencia da secretaria carregada para preparacao.
+                </p>
+              ) : effectiveContextState === "communication_context_invalid" ? (
+                <p className="mt-2 text-sm leading-7 text-[#9f1239]" aria-live="polite">
+                  O contexto informado nao pode ser usado. Escolha modelo e pessoa manualmente.
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -255,6 +290,8 @@ export function CommunicationTemplateList() {
         <CommunicationMessageComposer
           key={selectedTemplate?.template_key ?? "no-template"}
           selectedTemplate={selectedTemplate}
+          secretaryHomeContext={secretaryHomeContext}
+          contextState={effectiveContextState}
         />
       ) : null}
     </main>

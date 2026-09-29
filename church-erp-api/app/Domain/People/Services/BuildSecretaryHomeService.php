@@ -2,6 +2,7 @@
 
 namespace App\Domain\People\Services;
 
+use App\Domain\Communications\Services\BuildCommunicationPendingBlockService;
 use App\Domain\People\Models\Person;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -12,6 +13,10 @@ class BuildSecretaryHomeService
     private const VISITOR_WINDOW_DAYS = 30;
 
     private const VISITOR_LIMIT = 5;
+
+    public function __construct(
+        private readonly BuildCommunicationPendingBlockService $communicationPendingBlock,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -32,12 +37,7 @@ class BuildSecretaryHomeService
                 'next_step_label' => null,
                 'items' => [],
             ],
-            'communication_pending' => [
-                'state' => 'communication_pending_unavailable',
-                'summary' => 'As comunicacoes pendentes serao preparadas na etapa de comunicacao.',
-                'next_step_label' => null,
-                'items' => [],
-            ],
+            'communication_pending' => $this->communicationPendingBlock->build($churchId),
             'weekly_checklist' => [
                 'state' => 'weekly_checklist_ready',
                 'items' => [

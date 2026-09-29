@@ -6,6 +6,7 @@ import {
   COMMUNICATION_MESSAGE_DRAFT_PAYLOAD_ALLOWLIST,
   COMMUNICATION_MESSAGE_DRAFT_RESPONSE_ALLOWLIST,
   COMMUNICATION_MESSAGE_DRAFT_STATES,
+  parseSecretaryHomeCommunicationContext,
   normalizeCommunicationMessageDraftResponse,
 } from "../src/features/communications/message-draft.ts";
 
@@ -53,6 +54,8 @@ test("message draft contract keeps snake_case payload response and UI states", (
   assert.deepEqual([...COMMUNICATION_MESSAGE_DRAFT_STATES], [
     "loading_people_for_message",
     "ready_to_prepare_message",
+    "communication_context_loaded",
+    "communication_context_invalid",
     "generating_message_draft",
     "message_draft_ready",
     "draft_has_missing_contact",
@@ -131,6 +134,41 @@ test("message draft contract keeps snake_case payload response and UI states", (
   assert.equal(normalizeCommunicationMessageDraftResponse({ data: { draft: {} } }), null);
 });
 
+test("message draft context parser accepts only minimized secretary-home deep links", () => {
+  assert.deepEqual(
+    parseSecretaryHomeCommunicationContext(
+      new URLSearchParams("template_key=visitante_primeiro_contato&person_type=visitor&person_id=7&source=secretary_home"),
+    ),
+    {
+      state: "communication_context_loaded",
+      context: {
+        template_key: "visitante_primeiro_contato",
+        person_type: "visitor",
+        person_id: 7,
+        source: "secretary_home",
+      },
+    },
+  );
+
+  for (const query of [
+    "template_key=visitante_primeiro_contato&person_type=visitor&person_id=7&source=secretary_home&church_id=9",
+    "template_key=visitante_primeiro_contato&person_type=visitor&person_id=7&source=secretary_home&phone=123",
+    "template_key=visitante_primeiro_contato&person_type=visitor&person_id=bad&source=secretary_home",
+    "template_key=visitante_primeiro_contato&person_type=visitor&source=secretary_home",
+    "source=manual",
+  ]) {
+    assert.deepEqual(parseSecretaryHomeCommunicationContext(new URLSearchParams(query)), {
+      state: "communication_context_invalid",
+      context: null,
+    });
+  }
+
+  assert.deepEqual(parseSecretaryHomeCommunicationContext(new URLSearchParams("")), {
+    state: null,
+    context: null,
+  });
+});
+
 test("message draft source stays behind BFF and renders editable text only", () => {
   const pageSource = readSource("../src/app/communications/page.tsx");
   const listSource = readSource("../src/components/operational/communication-template-list.tsx");
@@ -141,9 +179,14 @@ test("message draft source stays behind BFF and renders editable text only", () 
   assert.equal(existsSync(new URL("../src/app/api/communications/message-drafts/route.ts", import.meta.url)), true);
   assert.match(pageSource, /AreaGuard[\s\S]*area="communications"/);
   assert.match(listSource, /onSelectTemplate/);
+  assert.match(listSource, /useSearchParams/);
+  assert.match(listSource, /parseSecretaryHomeCommunicationContext/);
   assert.doesNotMatch([pageSource, listSource, composerSource].join("\n"), /api\/v1|API_BASE_URL|Authorization|Bearer/);
   assert.match(composerSource, /fetch\("\/api\/secretary\/people/);
   assert.match(composerSource, /fetch\("\/api\/communications\/message-drafts"/);
+  assert.match(composerSource, /communication_context_loaded/);
+  assert.match(composerSource, /communication_context_invalid/);
+  assert.doesNotMatch(composerSource, /localStorage|sessionStorage|console\./);
   assert.match(composerSource, /<Textarea/);
   assert.doesNotMatch(composerSource, /dangerouslySetInnerHTML|markdown|rich text|WhatsApp|copiar|partilhar|enviar mensagem|webhook|scheduler|fila/i);
   assert.doesNotMatch([pageSource, listSource, composerSource].join("\n"), /\b(dashboard|widget|KPI|performance|BI)\b/i);
@@ -254,6 +297,23 @@ test("message draft BFF rejects extra fields before Laravel call", async () => {
       assert.doesNotMatch(JSON.stringify(await response.json()), /ana@example.com|\+351999999999|body_template/i);
     }
 
+    const invalidTemplateKeyResponse = await POST(
+      new Request("http://web.test/api/communications/message-drafts", {
+        method: "POST",
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          template_key: "Visitante Primeiro Contato",
+          person_type: "visitor",
+          person_id: 7,
+        }),
+      }),
+    );
+
+    assert.equal(invalidTemplateKeyResponse.status, 422);
+    assert.doesNotMatch(JSON.stringify(await invalidTemplateKeyResponse.json()), /Visitante Primeiro Contato/);
     assert.equal(calls, 0);
   } finally {
     globalThis.fetch = originalFetch;

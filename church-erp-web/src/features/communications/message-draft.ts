@@ -44,6 +44,8 @@ export type CommunicationMessageDraftErrorResponse = {
 export type CommunicationMessageDraftState =
   | "loading_people_for_message"
   | "ready_to_prepare_message"
+  | "communication_context_loaded"
+  | "communication_context_invalid"
   | "generating_message_draft"
   | "message_draft_ready"
   | "draft_has_missing_contact"
@@ -66,6 +68,8 @@ export const COMMUNICATION_MESSAGE_DRAFT_RESPONSE_ALLOWLIST = [
 export const COMMUNICATION_MESSAGE_DRAFT_STATES = [
   "loading_people_for_message",
   "ready_to_prepare_message",
+  "communication_context_loaded",
+  "communication_context_invalid",
   "generating_message_draft",
   "message_draft_ready",
   "draft_has_missing_contact",
@@ -73,6 +77,63 @@ export const COMMUNICATION_MESSAGE_DRAFT_STATES = [
   "denied_or_session_invalid",
   "server_error",
 ] as const;
+
+export type SecretaryHomeCommunicationContext = {
+  template_key: string;
+  person_type: "member" | "visitor";
+  person_id: number;
+  source: "secretary_home";
+};
+
+export type SecretaryHomeCommunicationContextParseResult = {
+  state: "communication_context_loaded" | "communication_context_invalid" | null;
+  context: SecretaryHomeCommunicationContext | null;
+};
+
+const CONTEXT_FIELDS = ["template_key", "person_type", "person_id", "source"] as const;
+
+export function parseSecretaryHomeCommunicationContext(searchParams: URLSearchParams): SecretaryHomeCommunicationContextParseResult {
+  const keys = [...searchParams.keys()];
+
+  if (keys.length === 0) {
+    return {
+      state: null,
+      context: null,
+    };
+  }
+
+  const hasOnlyAllowedFields = keys.every((key) => CONTEXT_FIELDS.includes(key as (typeof CONTEXT_FIELDS)[number]));
+  const templateKey = searchParams.get("template_key");
+  const personType = searchParams.get("person_type");
+  const personId = Number(searchParams.get("person_id"));
+  const source = searchParams.get("source");
+
+  if (
+    keys.length !== CONTEXT_FIELDS.length
+    || !hasOnlyAllowedFields
+    || typeof templateKey !== "string"
+    || !/^[a-z0-9_:-]{1,80}$/.test(templateKey)
+    || (personType !== "member" && personType !== "visitor")
+    || !Number.isSafeInteger(personId)
+    || personId < 1
+    || source !== "secretary_home"
+  ) {
+    return {
+      state: "communication_context_invalid",
+      context: null,
+    };
+  }
+
+  return {
+    state: "communication_context_loaded",
+    context: {
+      template_key: templateKey,
+      person_type: personType,
+      person_id: personId,
+      source,
+    },
+  };
+}
 
 export function normalizeCommunicationMessageDraftResponse(value: unknown): CommunicationMessageDraftResponse | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {

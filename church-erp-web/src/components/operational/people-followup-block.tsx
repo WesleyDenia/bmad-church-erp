@@ -12,6 +12,7 @@ type PeopleFollowupBlockProps = {
   recovered_counts?: {
     pending_total: number;
     recent_visitors_total: number;
+    communication_total: number;
   } | null;
 };
 
@@ -38,7 +39,7 @@ export function PeopleFollowupBlock({
           Leitura tecnica limitada
         </h2>
         <p className="mt-3 text-sm leading-7 text-[color:var(--color-muted)]">
-          A ultima leitura confiavel preservou {recovered_counts.pending_total} pendencia{recovered_counts.pending_total === 1 ? "" : "s"} e {recovered_counts.recent_visitors_total} visitante{recovered_counts.recent_visitors_total === 1 ? "" : "s"} recente{recovered_counts.recent_visitors_total === 1 ? "" : "s"}, sem nomes ou contatos.
+          A ultima leitura confiavel preservou {recovered_counts.pending_total} pendencia{recovered_counts.pending_total === 1 ? "" : "s"}, {recovered_counts.recent_visitors_total} visitante{recovered_counts.recent_visitors_total === 1 ? "" : "s"} recente{recovered_counts.recent_visitors_total === 1 ? "" : "s"} e {recovered_counts.communication_total} preparo{recovered_counts.communication_total === 1 ? "" : "s"} de mensagem, sem nomes ou contatos.
         </p>
       </Surface>
     );
