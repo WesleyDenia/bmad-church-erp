@@ -85,7 +85,7 @@ export function categoryLabel(category: string): string {
 }
 
 export function suggestedChannelLabel(channel: string): string {
-  return channel === "external_handoff" ? "Handoff externo futuro" : "Canal a definir";
+  return channel === "external_handoff" ? "WhatsApp ou canal externo" : "Canal a definir";
 }
 
 function normalizeCommunicationTemplate(value: unknown): CommunicationTemplate | null {

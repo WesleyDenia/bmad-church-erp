@@ -20,7 +20,7 @@ const roleAwareAppAreaLinks = [
   {
     href: "/communications",
     label: "Comunicacao",
-    description: "Camada futura para modelos, handoff e mensagens preparadas.",
+    description: "Prepare, copie ou partilhe mensagens pelo canal que preferir.",
     allowedRoles: ["administrator", "secretary"],
   },
   {

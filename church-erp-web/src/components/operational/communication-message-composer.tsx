@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Surface } from "@/components/design-system/surface";
+import { CommunicationMessageHandoffActions } from "@/components/operational/communication-message-handoff-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -14,6 +15,13 @@ import {
   type CommunicationMessageDraftState,
   type SecretaryHomeCommunicationContext,
 } from "@/features/communications/message-draft";
+import {
+  canPresentCommunicationHandoff,
+  COMMUNICATION_HANDOFF_MAX_CODE_POINTS,
+  countCommunicationMessageCodePoints,
+  isCurrentCommunicationDraftRequest,
+  shouldPreserveCommunicationDraftForPerson,
+} from "@/features/communications/message-handoff";
 import {
   normalizePersonSearchResponse,
   type PersonSearchItem,
@@ -33,6 +41,8 @@ type ComposerState = {
   message: string | null;
   draft: CommunicationMessageDraftResponse | null;
   draftText: string;
+  draftRevision: number;
+  draftEditMessage: string | null;
 };
 
 function personKey(person: PersonSearchItem): string {
@@ -80,8 +90,11 @@ export function CommunicationMessageComposer({
     message: contextState === "communication_context_invalid" ? "O contexto informado nao pode ser usado. Escolha uma pessoa manualmente." : null,
     draft: null,
     draftText: "",
+    draftRevision: 0,
+    draftEditMessage: null,
   });
   const abortRef = useRef<AbortController | null>(null);
+  const draftRequestRef = useRef(0);
 
   const selectedPerson = useMemo(
     () => composer.people.find((person) => personKey(person) === composer.selectedPersonKey) ?? null,
@@ -89,6 +102,7 @@ export function CommunicationMessageComposer({
   );
 
   const loadPeople = useCallback(async (query: string): Promise<void> => {
+    draftRequestRef.current += 1;
     abortRef.current?.abort();
 
     const controller = new AbortController();
@@ -128,6 +142,7 @@ export function CommunicationMessageComposer({
           selectedPersonKey: "",
           draft: null,
           draftText: "",
+          draftEditMessage: null,
           message: messageFromBody(body, "Nao foi possivel carregar as pessoas agora."),
         }));
 
@@ -144,6 +159,7 @@ export function CommunicationMessageComposer({
           selectedPersonKey: "",
           draft: null,
           draftText: "",
+          draftEditMessage: null,
           message: "Nao foi possivel carregar as pessoas agora.",
         }));
 
@@ -165,17 +181,31 @@ export function CommunicationMessageComposer({
             selectedPersonKey: "",
             draft: null,
             draftText: "",
+            draftRevision: current.draftRevision + 1,
+            draftEditMessage: null,
             message: "O contexto informado nao pode ser usado. Escolha uma pessoa manualmente.",
           };
         }
 
+        const preserveDraft = shouldPreserveCommunicationDraftForPerson(
+          current.selectedPersonKey,
+          nextPersonKey,
+          current.draft !== null,
+        );
+
         return {
           ...current,
-          state: hasLoadedContext
-            ? "communication_context_loaded"
-            : hasTemplateAndPerson(selectedTemplate, nextPersonKey) ? "ready_to_prepare_message" : "validation_error",
+          state: preserveDraft && current.draft
+            ? hasMissingContact(current.draft) ? "draft_has_missing_contact" : "message_draft_ready"
+            : hasLoadedContext
+              ? "communication_context_loaded"
+              : hasTemplateAndPerson(selectedTemplate, nextPersonKey) ? "ready_to_prepare_message" : "validation_error",
           people: normalized.data,
           selectedPersonKey: nextPersonKey,
+          draft: preserveDraft ? current.draft : null,
+          draftText: preserveDraft ? current.draftText : "",
+          draftRevision: preserveDraft ? current.draftRevision : current.draftRevision + 1,
+          draftEditMessage: preserveDraft ? current.draftEditMessage : null,
           message: hasLoadedContext
             ? "Pendencia da secretaria carregada. Prepare o rascunho quando estiver pronta."
             : normalized.data.length === 0 ? "Nenhuma pessoa encontrada para estes criterios." : null,
@@ -193,6 +223,7 @@ export function CommunicationMessageComposer({
         selectedPersonKey: "",
         draft: null,
         draftText: "",
+        draftEditMessage: null,
         message: "Nao foi possivel carregar as pessoas agora.",
       }));
     }
@@ -209,12 +240,14 @@ export function CommunicationMessageComposer({
   }, [loadPeople]);
 
   function handlePersonChange(value: string): void {
+    draftRequestRef.current += 1;
     setComposer((current) => ({
       ...current,
       selectedPersonKey: value,
       state: hasTemplateAndPerson(selectedTemplate, value) ? "ready_to_prepare_message" : "validation_error",
       draft: null,
       draftText: "",
+      draftEditMessage: null,
       message: null,
     }));
   }
@@ -232,11 +265,16 @@ export function CommunicationMessageComposer({
       return;
     }
 
+    const requestId = draftRequestRef.current + 1;
+    draftRequestRef.current = requestId;
+    const requestedPersonKey = composer.selectedPersonKey;
+
     setComposer((current) => ({
       ...current,
       state: "generating_message_draft",
       draft: null,
       draftText: "",
+      draftEditMessage: null,
       message: null,
     }));
 
@@ -255,6 +293,10 @@ export function CommunicationMessageComposer({
       });
       const body = await response.json();
 
+      if (requestId !== draftRequestRef.current) {
+        return;
+      }
+
       if (!response.ok) {
         setComposer((current) => ({
           ...current,
@@ -265,6 +307,7 @@ export function CommunicationMessageComposer({
               : "server_error",
           draft: null,
           draftText: "",
+          draftEditMessage: null,
           message: messageFromBody(body, "Nao foi possivel preparar a mensagem agora."),
         }));
 
@@ -279,28 +322,66 @@ export function CommunicationMessageComposer({
           state: "server_error",
           draft: null,
           draftText: "",
+          draftEditMessage: null,
           message: "Nao foi possivel preparar a mensagem agora.",
         }));
 
         return;
       }
 
-      setComposer((current) => ({
-        ...current,
-        state: hasMissingContact(normalized) ? "draft_has_missing_contact" : "message_draft_ready",
-        draft: normalized,
-        draftText: normalized.data.draft.message_body,
-        message: null,
-      }));
+      setComposer((current) => {
+        if (!isCurrentCommunicationDraftRequest(
+          requestId,
+          draftRequestRef.current,
+          requestedPersonKey,
+          current.selectedPersonKey,
+        )) {
+          return current;
+        }
+
+        return {
+          ...current,
+          state: hasMissingContact(normalized) ? "draft_has_missing_contact" : "message_draft_ready",
+          draft: normalized,
+          draftText: normalized.data.draft.message_body,
+          draftRevision: current.draftRevision + 1,
+          draftEditMessage: null,
+          message: null,
+        };
+      });
     } catch {
+      if (requestId !== draftRequestRef.current) {
+        return;
+      }
+
       setComposer((current) => ({
         ...current,
         state: "server_error",
         draft: null,
         draftText: "",
+        draftEditMessage: null,
         message: "Nao foi possivel preparar a mensagem agora.",
       }));
     }
+  }
+
+  function handleDraftChange(nextText: string): void {
+    const codePointCount = countCommunicationMessageCodePoints(nextText);
+
+    if (codePointCount > COMMUNICATION_HANDOFF_MAX_CODE_POINTS) {
+      setComposer((current) => ({
+        ...current,
+        draftEditMessage: "A mensagem pode ter no maximo 5000 caracteres.",
+      }));
+      return;
+    }
+
+    setComposer((current) => ({
+      ...current,
+      draftText: nextText,
+      draftRevision: current.draftRevision + 1,
+      draftEditMessage: null,
+    }));
   }
 
   const isLoadingPeople = composer.state === "loading_people_for_message";
@@ -309,6 +390,7 @@ export function CommunicationMessageComposer({
   const hasContextSelection = secretaryHomeContext !== null
     && composer.selectedPersonKey === contextPersonKey(secretaryHomeContext);
   const shouldShowContextOption = hasContextSelection && selectedPerson === null;
+  const canShowHandoff = canPresentCommunicationHandoff(composer.state, composer.draft !== null);
 
   return (
     <Surface className="mt-6 p-6 sm:p-8">
@@ -397,17 +479,6 @@ export function CommunicationMessageComposer({
         <div className="grid content-start gap-4">
           {composer.draft ? (
             <>
-              {composer.draft.data.draft.missing_fields.length > 0 ? (
-                <div className="grid gap-2 rounded-md border border-[#fbbf24] bg-[#fffbeb] p-4">
-                  {composer.draft.data.draft.missing_fields.map((field) => (
-                    <p key={`${field.field}-${field.placeholder ?? field.label}`} className="text-sm leading-6 text-[#92400e]">
-                      <span className="font-semibold">{field.label}:</span> {field.message}
-                      {field.placeholder ? ` ${field.placeholder}` : ""}
-                    </p>
-                  ))}
-                </div>
-              ) : null}
-
               <label className="text-sm font-semibold text-[color:var(--color-foreground)]" htmlFor="message-draft-text">
                 Rascunho editavel
               </label>
@@ -415,8 +486,28 @@ export function CommunicationMessageComposer({
                 id="message-draft-text"
                 className="min-h-[18rem] resize-y text-base leading-7"
                 value={composer.draftText}
-                onChange={(event) => setComposer((current) => ({ ...current, draftText: event.target.value }))}
+                onChange={(event) => handleDraftChange(event.target.value)}
+                aria-describedby="message-draft-count message-draft-edit-feedback"
               />
+              <div className="flex flex-wrap items-start justify-between gap-2 text-sm leading-6">
+                <p id="message-draft-count" className="text-[color:var(--color-muted)]">
+                  {countCommunicationMessageCodePoints(composer.draftText)}/{COMMUNICATION_HANDOFF_MAX_CODE_POINTS} caracteres
+                </p>
+                {composer.draftEditMessage ? (
+                  <p id="message-draft-edit-feedback" role="alert" className="text-[#9f1239]">
+                    {composer.draftEditMessage}
+                  </p>
+                ) : (
+                  <span id="message-draft-edit-feedback" />
+                )}
+              </div>
+              {canShowHandoff ? (
+                <CommunicationMessageHandoffActions
+                  draftText={composer.draftText}
+                  draftRevision={composer.draftRevision}
+                  missingFields={composer.draft.data.draft.missing_fields}
+                />
+              ) : null}
             </>
           ) : (
             <div className="min-h-[18rem] rounded-md border border-dashed border-[color:var(--color-border)] bg-[#f8faf9] p-5 text-sm leading-7 text-[color:var(--color-muted)]">

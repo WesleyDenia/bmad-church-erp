@@ -6,6 +6,7 @@ import {
   COMMUNICATION_TEMPLATE_ALLOWLIST,
   COMMUNICATION_TEMPLATE_STATES,
   normalizeCommunicationTemplateResponse,
+  suggestedChannelLabel,
 } from "../src/features/communications/communication-template.ts";
 
 function setEnv(overrides) {
@@ -89,6 +90,7 @@ test("communication template contract keeps snake_case fields and strips non-all
   });
   assert.equal(normalizeCommunicationTemplateResponse({ data: {} }), null);
   assert.equal(normalizeCommunicationTemplateResponse({ templates: [] }), null);
+  assert.equal(suggestedChannelLabel("external_handoff"), "WhatsApp ou canal externo");
 });
 
 test("communication templates source stays behind BFF and avoids forbidden visible language", () => {
@@ -114,7 +116,7 @@ test("communication templates source stays behind BFF and avoids forbidden visib
   const visibleSource = [pageSource, componentSource].join("\n");
 
   assert.doesNotMatch(visibleSource, /\b(dashboard|widget|KPI|performance|BI)\b/i);
-  assert.doesNotMatch(visibleSource, /WhatsApp|envio automatico|enviar mensagem/i);
+  assert.doesNotMatch(visibleSource, /envio automatico|enviar mensagem/i);
   assert.match(componentSource, /sm:px-10/);
   assert.match(componentSource, /lg:px-12/);
   assert.match(componentSource, /md:grid-cols-\[1fr_12rem_12rem_11rem\]/);
@@ -377,6 +379,7 @@ test("communication templates BFF clears cookie on sanitized 401 and sanitizes 4
 test("communication templates screen exposes message preparation flow after template selection", () => {
   const listSource = readSource("../src/components/operational/communication-template-list.tsx");
   const composerSource = readSource("../src/components/operational/communication-message-composer.tsx");
+  const handoffSource = readSource("../src/components/operational/communication-message-handoff-actions.tsx");
 
   assert.match(listSource, /CommunicationMessageComposer/);
   assert.match(listSource, /onSelectTemplate/);
@@ -384,5 +387,8 @@ test("communication templates screen exposes message preparation flow after temp
   assert.match(composerSource, /fetch\("\/api\/communications\/message-drafts"/);
   assert.match(composerSource, /fetch\("\/api\/secretary\/people"/);
   assert.match(composerSource, /<Textarea/);
+  assert.match(composerSource, /CommunicationMessageHandoffActions/);
+  assert.match(handoffSource, /Copiar mensagem/);
+  assert.match(handoffSource, /Partilhar mensagem/);
   assert.doesNotMatch(composerSource, /dangerouslySetInnerHTML|api\/v1|API_BASE_URL|Authorization|Bearer/);
 });

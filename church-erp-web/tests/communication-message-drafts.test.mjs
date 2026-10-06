@@ -173,6 +173,8 @@ test("message draft source stays behind BFF and renders editable text only", () 
   const pageSource = readSource("../src/app/communications/page.tsx");
   const listSource = readSource("../src/components/operational/communication-template-list.tsx");
   const composerSource = readSource("../src/components/operational/communication-message-composer.tsx");
+  const handoffSource = readSource("../src/components/operational/communication-message-handoff-actions.tsx");
+  const handoffContractSource = readSource("../src/features/communications/message-handoff.ts");
   const routeSource = readSource("../src/app/api/communications/message-drafts/route.ts");
   const contractSource = readSource("../src/features/communications/message-draft.ts");
 
@@ -188,7 +190,14 @@ test("message draft source stays behind BFF and renders editable text only", () 
   assert.match(composerSource, /communication_context_invalid/);
   assert.doesNotMatch(composerSource, /localStorage|sessionStorage|console\./);
   assert.match(composerSource, /<Textarea/);
-  assert.doesNotMatch(composerSource, /dangerouslySetInnerHTML|markdown|rich text|WhatsApp|copiar|partilhar|enviar mensagem|webhook|scheduler|fila/i);
+  assert.match(composerSource, /CommunicationMessageHandoffActions/);
+  assert.match(composerSource, /draftText=\{composer\.draftText\}/);
+  assert.match(composerSource, /draftRevision=\{composer\.draftRevision\}/);
+  assert.match(composerSource, /countCommunicationMessageCodePoints/);
+  assert.doesNotMatch(composerSource, /maxLength=/);
+  assert.doesNotMatch([composerSource, handoffSource, handoffContractSource].join("\n"), /dangerouslySetInnerHTML|markdown|rich text|webhook|scheduler|fila/i);
+  assert.doesNotMatch(handoffSource, /fetch\(/);
+  assert.doesNotMatch(handoffSource, /useEffect\(\(\) => \{\s*(?:void\s+)?(?:shareCommunicationMessage|writeCommunicationMessageToClipboard)/);
   assert.doesNotMatch([pageSource, listSource, composerSource].join("\n"), /\b(dashboard|widget|KPI|performance|BI)\b/i);
   assert.doesNotMatch(contractSource, /\b(church_id|phone|email|body_template|message_body inicial|token|headers|Authorization)\b/);
   assert.match(routeSource, /callLaravel\("\/api\/v1\/communications\/message-drafts"/);
