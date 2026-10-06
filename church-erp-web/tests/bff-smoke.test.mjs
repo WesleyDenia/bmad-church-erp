@@ -345,7 +345,7 @@ test("app shell navigation is role-aware", () => {
     {
       href: "/communications",
       label: "Comunicacao",
-      description: "Camada futura para modelos, handoff e mensagens preparadas.",
+      description: "Prepare, copie ou partilhe mensagens pelo canal que preferir.",
     },
     {
       href: "/admin/users",
@@ -369,7 +369,7 @@ test("app shell navigation is role-aware", () => {
     {
       href: "/communications",
       label: "Comunicacao",
-      description: "Camada futura para modelos, handoff e mensagens preparadas.",
+      description: "Prepare, copie ou partilhe mensagens pelo canal que preferir.",
     },
   ]);
   assert.equal(canAccessAppArea("leadership", "treasury"), false);
@@ -388,7 +388,7 @@ test("app shell navigation is role-aware", () => {
     {
       href: "/communications",
       label: "Comunicacao",
-      description: "Camada futura para modelos, handoff e mensagens preparadas.",
+      description: "Prepare, copie ou partilhe mensagens pelo canal que preferir.",
     },
   ]);
   assert.equal(canAccessAppArea(["secretary", "leadership"], "communications"), true);
