@@ -1,6 +1,29 @@
 #!/bin/sh
 set -eu
 
+read_env_or_file() {
+  name="$1"
+  eval "value=\${${name}:-}"
+  eval "file=\${${name}_FILE:-}"
+
+  if [ -n "${value}" ] && [ -n "${file}" ]; then
+    echo "Set only one of ${name} or ${name}_FILE." >&2
+    exit 1
+  fi
+
+  if [ -n "${file}" ]; then
+    if [ ! -r "${file}" ]; then
+      echo "Secret file for ${name} is not readable." >&2
+      exit 1
+    fi
+
+    cat "${file}"
+    return
+  fi
+
+  printf "%s" "${value}"
+}
+
 require_value() {
   name="$1"
   value="$2"
@@ -48,10 +71,15 @@ TO '${username}'@'%';
 SQL
 }
 
-require_value "MYSQL_ROOT_PASSWORD" "${MYSQL_ROOT_PASSWORD:-}"
-require_value "DEV_DB_PASSWORD" "${DEV_DB_PASSWORD:-}"
-require_value "STG_DB_PASSWORD" "${STG_DB_PASSWORD:-}"
-require_value "PROD_DB_PASSWORD" "${PROD_DB_PASSWORD:-}"
+MYSQL_ROOT_PASSWORD="$(read_env_or_file MYSQL_ROOT_PASSWORD)"
+DEV_DB_PASSWORD="$(read_env_or_file DEV_DB_PASSWORD)"
+STG_DB_PASSWORD="$(read_env_or_file STG_DB_PASSWORD)"
+PROD_DB_PASSWORD="$(read_env_or_file PROD_DB_PASSWORD)"
+
+require_value "MYSQL_ROOT_PASSWORD" "${MYSQL_ROOT_PASSWORD}"
+require_value "DEV_DB_PASSWORD" "${DEV_DB_PASSWORD}"
+require_value "STG_DB_PASSWORD" "${STG_DB_PASSWORD}"
+require_value "PROD_DB_PASSWORD" "${PROD_DB_PASSWORD}"
 
 DEV_DB_USERNAME="${DEV_DB_USERNAME:-church_erp_dev}"
 STG_DB_USERNAME="${STG_DB_USERNAME:-church_erp_stg}"

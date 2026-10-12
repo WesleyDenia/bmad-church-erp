@@ -1,167 +1,262 @@
 services:
-  web-dev:
-    build:
-      context: ../church-erp-web
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_APP_NAME: Church ERP Dev
-        NEXT_PUBLIC_APP_URL: https://dev.teudominio.pt
-        API_BASE_URL: http://api-dev:8000
-        INTERNAL_API_AUDIENCE: church-erp-api-dev
-        INTERNAL_API_ISSUER: church-erp-web-dev
-    restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_APP_NAME: Church ERP Dev
-      NEXT_PUBLIC_APP_URL: https://dev.teudominio.pt
-      API_BASE_URL: http://api-dev:8000
-      INTERNAL_API_AUDIENCE: church-erp-api-dev
-      INTERNAL_API_ISSUER: church-erp-web-dev
-    networks:
-      edge:
-        aliases:
-          - web-dev
-
   api-dev:
+    image: church-erp-api-dev:${DEV_IMAGE_TAG:-local}
     build:
       context: ../church-erp-api
       dockerfile: Dockerfile
     restart: unless-stopped
+    init: true
     environment:
       APP_NAME: Church ERP API Dev
       APP_ENV: development
-      APP_DEBUG: "true"
-      APP_URL: https://dev.api.teudominio.pt
-      APP_KEY: ${API_DEV_APP_KEY:?Set API_DEV_APP_KEY}
+      APP_DEBUG: "false"
+      APP_URL: http://${DEV_DOMAIN:?Set DEV_DOMAIN}
+      APP_KEY_FILE: /run/secrets/api_dev_app_key
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_dev
       DB_USERNAME: ${DEV_DB_USERNAME:-church_erp_dev}
-      DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD}
+      DB_PASSWORD_FILE: /run/secrets/dev_db_password
+      INTERNAL_API_AUDIENCE: church-erp-api-dev
+      INTERNAL_API_ISSUER: church-erp-web-dev
+      INTERNAL_JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_dev_public_key
+    secrets:
+      - api_dev_app_key
+      - dev_db_password
+      - jwt_dev_public_key
     volumes:
       - api_dev_storage:/var/www/html/storage
     networks:
-      edge:
-        aliases:
-          - api-dev
-      backend:
+      - app-dev
+      - database
     healthcheck:
-      test: ["CMD-SHELL", "php -v >/dev/null || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "php -r '$$response = @file_get_contents(\"http://127.0.0.1:8080/up\"); exit($$response === false ? 1 : 0);'"]
+      interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
 
-  web-stg:
+  web-dev:
+    image: church-erp-web-dev:${DEV_IMAGE_TAG:-local}
     build:
       context: ../church-erp-web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_APP_NAME: Church ERP Staging
-        NEXT_PUBLIC_APP_URL: https://stg.teudominio.pt
-        API_BASE_URL: http://api-stg:8000
-        INTERNAL_API_AUDIENCE: church-erp-api-stg
-        INTERNAL_API_ISSUER: church-erp-web-stg
+        NEXT_PUBLIC_APP_NAME: Church ERP Dev
+        NEXT_PUBLIC_APP_URL: http://${DEV_DOMAIN:?Set DEV_DOMAIN}
+        API_BASE_URL: http://api-dev:8080
+        INTERNAL_API_AUDIENCE: church-erp-api-dev
+        INTERNAL_API_ISSUER: church-erp-web-dev
     restart: unless-stopped
+    init: true
     environment:
-      NEXT_PUBLIC_APP_NAME: Church ERP Staging
-      NEXT_PUBLIC_APP_URL: https://stg.teudominio.pt
-      API_BASE_URL: http://api-stg:8000
-      INTERNAL_API_AUDIENCE: church-erp-api-stg
-      INTERNAL_API_ISSUER: church-erp-web-stg
+      NEXT_PUBLIC_APP_NAME: Church ERP Dev
+      NEXT_PUBLIC_APP_URL: http://${DEV_DOMAIN:?Set DEV_DOMAIN}
+      API_BASE_URL: http://api-dev:8080
+      INTERNAL_API_AUDIENCE: church-erp-api-dev
+      INTERNAL_API_ISSUER: church-erp-web-dev
+      INTERNAL_JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_dev_private_key
+    secrets:
+      - jwt_dev_private_key
+    depends_on:
+      api-dev:
+        condition: service_healthy
     networks:
-      edge:
-        aliases:
-          - web-stg
+      - edge
+      - app-dev
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   api-stg:
+    image: church-erp-api-stg:${STG_IMAGE_TAG:-local}
     build:
       context: ../church-erp-api
       dockerfile: Dockerfile
     restart: unless-stopped
+    init: true
     environment:
       APP_NAME: Church ERP API Staging
       APP_ENV: staging
       APP_DEBUG: "false"
-      APP_URL: https://stg.api.teudominio.pt
-      APP_KEY: ${API_STG_APP_KEY:?Set API_STG_APP_KEY}
+      APP_URL: https://${STG_DOMAIN:?Set STG_DOMAIN}
+      APP_KEY_FILE: /run/secrets/api_stg_app_key
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_stg
       DB_USERNAME: ${STG_DB_USERNAME:-church_erp_stg}
-      DB_PASSWORD: ${STG_DB_PASSWORD:?Set STG_DB_PASSWORD}
+      DB_PASSWORD_FILE: /run/secrets/stg_db_password
+      INTERNAL_API_AUDIENCE: church-erp-api-stg
+      INTERNAL_API_ISSUER: church-erp-web-stg
+      INTERNAL_JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_stg_public_key
+    secrets:
+      - api_stg_app_key
+      - stg_db_password
+      - jwt_stg_public_key
     volumes:
       - api_stg_storage:/var/www/html/storage
     networks:
-      edge:
-        aliases:
-          - api-stg
-      backend:
+      - app-stg
+      - database
     healthcheck:
-      test: ["CMD-SHELL", "php -v >/dev/null || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "php -r '$$response = @file_get_contents(\"http://127.0.0.1:8080/up\"); exit($$response === false ? 1 : 0);'"]
+      interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
 
-  web-prod:
+  web-stg:
+    image: church-erp-web-stg:${STG_IMAGE_TAG:-local}
     build:
       context: ../church-erp-web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_APP_NAME: Church ERP
-        NEXT_PUBLIC_APP_URL: https://teudominio.pt
-        API_BASE_URL: http://api-prod:8000
-        INTERNAL_API_AUDIENCE: church-erp-api-prod
-        INTERNAL_API_ISSUER: church-erp-web-prod
+        NEXT_PUBLIC_APP_NAME: Church ERP Staging
+        NEXT_PUBLIC_APP_URL: https://${STG_DOMAIN:?Set STG_DOMAIN}
+        API_BASE_URL: http://api-stg:8080
+        INTERNAL_API_AUDIENCE: church-erp-api-stg
+        INTERNAL_API_ISSUER: church-erp-web-stg
     restart: unless-stopped
+    init: true
     environment:
-      NEXT_PUBLIC_APP_NAME: Church ERP
-      NEXT_PUBLIC_APP_URL: https://teudominio.pt
-      API_BASE_URL: http://api-prod:8000
-      INTERNAL_API_AUDIENCE: church-erp-api-prod
-      INTERNAL_API_ISSUER: church-erp-web-prod
+      NEXT_PUBLIC_APP_NAME: Church ERP Staging
+      NEXT_PUBLIC_APP_URL: https://${STG_DOMAIN:?Set STG_DOMAIN}
+      API_BASE_URL: http://api-stg:8080
+      INTERNAL_API_AUDIENCE: church-erp-api-stg
+      INTERNAL_API_ISSUER: church-erp-web-stg
+      INTERNAL_JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_stg_private_key
+    secrets:
+      - jwt_stg_private_key
+    depends_on:
+      api-stg:
+        condition: service_healthy
     networks:
-      edge:
-        aliases:
-          - web-prod
+      - edge
+      - app-stg
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   api-prod:
+    image: church-erp-api-prod:${PROD_IMAGE_TAG:-local}
     build:
       context: ../church-erp-api
       dockerfile: Dockerfile
     restart: unless-stopped
+    init: true
     environment:
       APP_NAME: Church ERP API
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: https://api.teudominio.pt
-      APP_KEY: ${API_PROD_APP_KEY:?Set API_PROD_APP_KEY}
+      APP_URL: https://${PROD_DOMAIN:?Set PROD_DOMAIN}
+      APP_KEY_FILE: /run/secrets/api_prod_app_key
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_prod
       DB_USERNAME: ${PROD_DB_USERNAME:-church_erp_prod}
-      DB_PASSWORD: ${PROD_DB_PASSWORD:?Set PROD_DB_PASSWORD}
+      DB_PASSWORD_FILE: /run/secrets/prod_db_password
+      INTERNAL_API_AUDIENCE: church-erp-api-prod
+      INTERNAL_API_ISSUER: church-erp-web-prod
+      INTERNAL_JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_prod_public_key
+    secrets:
+      - api_prod_app_key
+      - prod_db_password
+      - jwt_prod_public_key
     volumes:
       - api_prod_storage:/var/www/html/storage
     networks:
-      edge:
-        aliases:
-          - api-prod
-      backend:
+      - app-prod
+      - database
     healthcheck:
-      test: ["CMD-SHELL", "php -v >/dev/null || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "php -r '$$response = @file_get_contents(\"http://127.0.0.1:8080/up\"); exit($$response === false ? 1 : 0);'"]
+      interval: 15s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
+
+  web-prod:
+    image: church-erp-web-prod:${PROD_IMAGE_TAG:-local}
+    build:
+      context: ../church-erp-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_APP_NAME: Church ERP
+        NEXT_PUBLIC_APP_URL: https://${PROD_DOMAIN:?Set PROD_DOMAIN}
+        API_BASE_URL: http://api-prod:8080
+        INTERNAL_API_AUDIENCE: church-erp-api-prod
+        INTERNAL_API_ISSUER: church-erp-web-prod
+    restart: unless-stopped
+    init: true
+    environment:
+      NEXT_PUBLIC_APP_NAME: Church ERP
+      NEXT_PUBLIC_APP_URL: https://${PROD_DOMAIN:?Set PROD_DOMAIN}
+      API_BASE_URL: http://api-prod:8080
+      INTERNAL_API_AUDIENCE: church-erp-api-prod
+      INTERNAL_API_ISSUER: church-erp-web-prod
+      INTERNAL_JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_prod_private_key
+    secrets:
+      - jwt_prod_private_key
+    depends_on:
+      api-prod:
+        condition: service_healthy
+    networks:
+      - edge
+      - app-prod
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   edge:
     external: true
     name: church-erp-edge
-  backend:
+  database:
     external: true
-    name: church-erp-backend
+    name: church-erp-database
+  app-dev:
+    name: church-erp-app-dev
+  app-stg:
+    name: church-erp-app-stg
+  app-prod:
+    name: church-erp-app-prod
+
+secrets:
+  dev_db_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/dev-db-password
+  stg_db_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/stg-db-password
+  prod_db_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/prod-db-password
+  api_dev_app_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/api-dev-app-key
+  api_stg_app_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/api-stg-app-key
+  api_prod_app_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/api-prod-app-key
+  jwt_dev_public_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-dev-public-key
+  jwt_stg_public_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-stg-public-key
+  jwt_prod_public_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-prod-public-key
+  jwt_dev_private_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-dev-private-key
+  jwt_stg_private_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-stg-private-key
+  jwt_prod_private_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-prod-private-key
 
 volumes:
   api_dev_storage:

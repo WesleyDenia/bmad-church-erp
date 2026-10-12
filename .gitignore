@@ -25,6 +25,10 @@ Homestead.yaml
 Homestead.json
 /.vagrant
 .phpunit.result.cache
+.deploy-secrets/
+.deploy-backups/
+.deploy-releases/
+deploy/.env
 
 /public/build
 /storage/pail

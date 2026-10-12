@@ -3,3 +3,9 @@
 node_modules
 npm-debug.log
 Dockerfile
+.env*
+.deploy-secrets
+.secrets*
+*.pem
+*.key
+coverage

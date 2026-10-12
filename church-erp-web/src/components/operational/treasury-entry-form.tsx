@@ -197,7 +197,15 @@ export function TreasuryEntryForm({
       return;
     }
 
-    openPendingSelection(pendingSelectionEntry);
+    // The edit flow changes several local states. Schedule it after this effect
+    // completes so React does not perform a cascading synchronous render.
+    const timer = window.setTimeout(() => {
+      openPendingSelection(pendingSelectionEntry);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [pendingSelectionAction, pendingSelectionActivationKey, pendingSelectionEntry]);
 
   const filteredCategories = categories.filter(

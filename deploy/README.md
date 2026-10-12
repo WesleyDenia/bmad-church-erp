@@ -1,65 +1,100 @@
 # Deploy
 
-## Servidor
+Esta stack usa Docker Compose e separa os três ambientes de aplicação (`dev`,
+`stg` e `prod`). Caddy é o único serviço exposto à Internet: termina TLS para
+`stg` e `prod`, e encaminha `dev` explicitamente por HTTP. A API e o MySQL não
+têm portas públicas; o browser comunica apenas com o frontend/BFF.
 
-Defina os segredos em um arquivo `.env` local ou no secret manager do servidor
-antes de subir a infraestrutura. No minimo, configure:
+## Pré-requisitos do servidor
 
-```bash
-MYSQL_ROOT_PASSWORD=
-DEV_DB_PASSWORD=
-STG_DB_PASSWORD=
-PROD_DB_PASSWORD=
-API_DEV_APP_KEY=
-API_STG_APP_KEY=
-API_PROD_APP_KEY=
-```
+- Docker Engine com Docker Compose v2, Git e OpenSSL;
+- portas TCP 80 e 443 abertas;
+- registos DNS `A`/`AAAA` de `STG_DOMAIN` e `PROD_DOMAIN` a apontar para o
+  servidor antes do primeiro arranque. O Caddy obtém e renova os certificados
+  TLS automaticamente para esses ambientes;
+- dois diretórios persistentes, fora do repositório, para segredos e cópias de
+  segurança. Proteja-os com permissões do utilizador de deploy e faça cópia do
+  segundo para armazenamento externo.
 
-Para ambiente local, configure tambem:
+## Configuração inicial do servidor
 
-```bash
-API_LOCAL_APP_KEY=
-LOCAL_INTERNAL_JWT_PUBLIC_KEY=
-LOCAL_INTERNAL_JWT_PRIVATE_KEY=
-```
-
-Suba a infraestrutura compartilhada uma vez:
+No servidor, a partir da raiz do repositório:
 
 ```bash
-docker compose -f deploy/docker-compose.infra.yml up -d
+bash deploy/bootstrap.sh server
 ```
 
-Depois suba os ambientes de aplicação:
+Na primeira execução o script cria `deploy/.env` e para, para que sejam
+preenchidos os domínios, email ACME e caminhos externos. Edite esse ficheiro,
+mantendo-o sem passwords ou chaves:
+
+```dotenv
+DEPLOY_SECRETS_DIR=/srv/church-erp/secrets
+DEPLOY_BACKUP_DIR=/srv/church-erp/backups
+ACME_EMAIL=admin@example.com
+DEV_DOMAIN=localhost
+STG_DOMAIN=stg.example.com
+PROD_DOMAIN=app.example.com
+```
+
+Execute novamente `bash deploy/bootstrap.sh server`. Ele cria apenas os
+segredos que ainda não existem, com permissões restritas, cria a infraestrutura
+partilhada e não inicia nenhum ambiente de aplicação. Nunca versione
+`deploy/.env`, o diretório de segredos ou as cópias de segurança.
+
+## Publicar um ambiente
+
+O deploy é intencionalmente manual nesta fase:
 
 ```bash
-docker compose -f deploy/docker-compose.server.yml up -d --build
+bash deploy/release.sh dev
+bash deploy/release.sh stg
+bash deploy/release.sh prod
 ```
 
-Quando quiser atualizar apenas um ambiente, recrie só os serviços dele:
+`release.sh` recusa uma árvore Git com alterações; faça commit antes de publicar.
+Em emergência, `--allow-dirty` permite uma publicação explícita de uma árvore
+alterada. Pode atribuir uma tag de imagem concreta com `RELEASE_TAG`:
 
 ```bash
-bash deploy/security-gate.sh stg
-docker compose -f deploy/docker-compose.server.yml up -d --build web-stg api-stg
+RELEASE_TAG=2026.10.07.1 bash deploy/release.sh stg
 ```
 
-Para `stg` e `prod`, execute sempre `deploy/security-gate.sh` antes do deploy. O gate exige `pre-commit` ou `detect-secrets-hook` instalado e bloqueia a promoção se a varredura de segredos falhar.
+Em cada release, o script executa o gate de segredos, cria uma cópia SQL do
+database do ambiente, constrói imagens etiquetadas com o commit/tag, executa as
+migrations uma única vez, espera pelos health checks e faz smoke test ao
+frontend. Se os containers novos não ficarem saudáveis, restaura as imagens da
+última release bem-sucedida. Migrations não são revertidas automaticamente; a
+cópia criada antes do deploy é a salvaguarda para uma recuperação de dados.
 
-Guard-rail de segredos por ambiente:
+Para `stg` e `prod`, o gate requer `pre-commit` ou `detect-secrets-hook`
+instalado. Instale um deles no host de deploy antes da primeira promoção.
 
-- `dev`, `local`, `development` e `ci`: não exigem `detect-secrets`; o gate registra skip explícito para não bloquear desenvolvimento ou CI.
-- `stg`, `staging`, `prod` e `production`: exigem `pre-commit` ou `detect-secrets-hook`; sem scanner instalado, o deploy falha antes da promoção.
-
-## Local
+## Desenvolvimento local
 
 ```bash
-docker compose -f deploy/docker-compose.local.yml up -d --build
+bash deploy/bootstrap.sh local
 ```
 
-Depois acesse `http://localhost:8080`.
+O script gera segredos de desenvolvimento em `.deploy-secrets/`, inicia MySQL,
+aplica migrations de forma explícita e inicia a stack. A aplicação fica em
+`http://localhost:8080`. Para parar a stack local:
 
-## Observações
+```bash
+docker compose -f deploy/docker-compose.local.yml down
+```
 
-- Troque `teudominio.pt` antes de usar fora de ambiente controlado.
-- Nunca grave senhas, `APP_KEY` ou chaves JWT nos arquivos versionados; use `.env` local ou secret manager.
-- No servidor, `nginx` e `mysql` ficam isolados da stack de aplicação para reduzir risco operacional.
-- O MySQL compartilhado cria três databases: `church_erp_dev`, `church_erp_stg` e `church_erp_prod`, cada um com usuario proprio e grants explicitos.
+O ambiente local usa Nginx como proxy HTTP. Na configuração partilhada de
+servidor, o Caddy mantém a rota `dev` igualmente em HTTP, sem solicitar um
+certificado; `stg` e `prod` continuam obrigatoriamente em HTTPS.
+
+## Limites atuais e próximo passo
+
+- Os ambientes têm databases, utilizadores, redes de aplicação, volumes e
+  chaves JWT distintos, mas partilham o mesmo host e a mesma instância MySQL.
+  Produção deve migrar para um host ou serviço de base de dados dedicado quando
+  o risco operacional justificar essa separação.
+- As imagens são imutáveis no host pelo respetivo commit/tag, mas ainda são
+  construídas no servidor. Um registry e CI são o passo seguinte para promoção
+  de artefactos já construídos; não foram ativados nesta fase.
+- Teste periodicamente a restauração das cópias SQL num ambiente isolado.

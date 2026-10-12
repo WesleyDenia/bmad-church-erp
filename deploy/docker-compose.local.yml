@@ -1,64 +1,90 @@
 services:
   reverse-proxy:
-    image: nginx:1.27-alpine
+    image: nginx:1.27.5-alpine
     restart: unless-stopped
+    init: true
     ports:
       - "8080:80"
     volumes:
       - ./nginx/conf.d/local.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - web-dev
-      - api-dev
+      web-dev:
+        condition: service_healthy
     networks:
       - edge
 
   mysql-core:
-    image: mysql:8.4
+    image: mysql:8.4.8
     restart: unless-stopped
+    init: true
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --skip-name-resolve
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       DEV_DB_USERNAME: ${DEV_DB_USERNAME:-church_erp_dev}
-      DEV_DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD}
+      DEV_DB_PASSWORD_FILE: /run/secrets/dev_db_password
       STG_DB_USERNAME: ${STG_DB_USERNAME:-church_erp_stg}
-      STG_DB_PASSWORD: ${STG_DB_PASSWORD:?Set STG_DB_PASSWORD}
+      STG_DB_PASSWORD_FILE: /run/secrets/stg_db_password
       PROD_DB_USERNAME: ${PROD_DB_USERNAME:-church_erp_prod}
-      PROD_DB_PASSWORD: ${PROD_DB_PASSWORD:?Set PROD_DB_PASSWORD}
+      PROD_DB_PASSWORD_FILE: /run/secrets/prod_db_password
+    secrets:
+      - mysql_root_password
+      - dev_db_password
+      - stg_db_password
+      - prod_db_password
     volumes:
       - mysql_local_data:/var/lib/mysql
       - ./mysql/init/01-create-databases.sh:/docker-entrypoint-initdb.d/01-create-databases.sh:ro
     networks:
-      - backend
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$(cat /run/secrets/mysql_root_password)\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   api-dev:
     build:
       context: ../church-erp-api
       dockerfile: Dockerfile
     restart: unless-stopped
+    init: true
     environment:
       APP_NAME: Church ERP API Local
       APP_ENV: local
       APP_DEBUG: "true"
-      APP_URL: http://localhost:8080/api
-      APP_KEY: ${API_LOCAL_APP_KEY:?Set API_LOCAL_APP_KEY}
+      APP_URL: http://localhost:8080
+      APP_KEY_FILE: /run/secrets/api_local_app_key
       DB_CONNECTION: mysql
       DB_HOST: mysql-core
       DB_PORT: 3306
       DB_DATABASE: church_erp_dev
       DB_USERNAME: ${DEV_DB_USERNAME:-church_erp_dev}
-      DB_PASSWORD: ${DEV_DB_PASSWORD:?Set DEV_DB_PASSWORD}
+      DB_PASSWORD_FILE: /run/secrets/dev_db_password
       INTERNAL_API_AUDIENCE: church-erp-api-local
       INTERNAL_API_ISSUER: church-erp-web-local
-      INTERNAL_JWT_PUBLIC_KEY: ${LOCAL_INTERNAL_JWT_PUBLIC_KEY:?Set LOCAL_INTERNAL_JWT_PUBLIC_KEY}
+      INTERNAL_JWT_PUBLIC_KEY_FILE: /run/secrets/jwt_local_public_key
+    secrets:
+      - api_local_app_key
+      - dev_db_password
+      - jwt_local_public_key
     volumes:
       - api_local_storage:/var/www/html/storage
     depends_on:
-      - mysql-core
+      mysql-core:
+        condition: service_healthy
     networks:
-      - edge
-      - backend
+      - app-dev
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "php -r '$$response = @file_get_contents(\"http://127.0.0.1:8080/up\"); exit($$response === false ? 1 : 0);'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   web-dev:
     build:
@@ -67,25 +93,53 @@ services:
       args:
         NEXT_PUBLIC_APP_NAME: Church ERP Local
         NEXT_PUBLIC_APP_URL: http://localhost:8080
-        API_BASE_URL: http://api-dev:8000
+        API_BASE_URL: http://api-dev:8080
         INTERNAL_API_AUDIENCE: church-erp-api-local
         INTERNAL_API_ISSUER: church-erp-web-local
     restart: unless-stopped
+    init: true
     environment:
       NEXT_PUBLIC_APP_NAME: Church ERP Local
       NEXT_PUBLIC_APP_URL: http://localhost:8080
-      API_BASE_URL: http://api-dev:8000
+      API_BASE_URL: http://api-dev:8080
       INTERNAL_API_AUDIENCE: church-erp-api-local
       INTERNAL_API_ISSUER: church-erp-web-local
-      INTERNAL_JWT_PRIVATE_KEY: ${LOCAL_INTERNAL_JWT_PRIVATE_KEY:?Set LOCAL_INTERNAL_JWT_PRIVATE_KEY}
+      INTERNAL_JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_local_private_key
+    secrets:
+      - jwt_local_private_key
     depends_on:
-    - api-dev
+      api-dev:
+        condition: service_healthy
     networks:
       - edge
+      - app-dev
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   edge:
-  backend:
+  app-dev:
+  database:
+
+secrets:
+  mysql_root_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/mysql-root-password
+  dev_db_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/dev-db-password
+  stg_db_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/stg-db-password
+  prod_db_password:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/prod-db-password
+  api_local_app_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/api-local-app-key
+  jwt_local_public_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-local-public-key
+  jwt_local_private_key:
+    file: ${DEPLOY_SECRETS_DIR:?Set DEPLOY_SECRETS_DIR}/jwt-local-private-key
 
 volumes:
   mysql_local_data:

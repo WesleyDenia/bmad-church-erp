@@ -3,3 +3,11 @@ vendor
 node_modules
 npm-debug.log
 Dockerfile
+.env*
+.deploy-secrets
+.secrets*
+*.pem
+*.key
+storage/logs
+storage/framework
+bootstrap/cache/*.php
