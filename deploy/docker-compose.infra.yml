@@ -25,7 +25,10 @@ services:
       retries: 3
 
   mysql-core:
-    image: mysql:8.4.8
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
+    image: church-erp-mysql:8.4.8
     container_name: church-erp-mysql
     restart: unless-stopped
     init: true

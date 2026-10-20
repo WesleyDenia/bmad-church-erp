@@ -3,7 +3,7 @@ const roleAwareAppAreaLinks = [
     href: "/treasury",
     label: "Tesouraria",
     description: "Fluxo operacional para lancamentos, pendencias e fechamento.",
-    allowedRoles: ["treasurer"],
+    allowedRoles: ["administrator", "treasurer"],
   },
   {
     href: "/secretaria",

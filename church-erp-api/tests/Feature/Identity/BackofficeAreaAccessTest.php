@@ -52,7 +52,7 @@ class BackofficeAreaAccessTest extends TestCase
         config()->set('services.internal_jwt.public_key', $details['key']);
     }
 
-    public function test_backoffice_access_allows_secretary_style_access_for_bootstrap_administrator(): void
+    public function test_backoffice_access_allows_operational_areas_for_bootstrap_administrator(): void
     {
         [$user, $church] = $this->seedMembership('administrator');
         $token = $this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123');
@@ -65,7 +65,17 @@ class BackofficeAreaAccessTest extends TestCase
             ->assertJsonPath('message', 'Acesso liberado.');
 
         $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/backoffice/access/treasury')
+            ->assertOk()
+            ->assertJsonPath('message', 'Acesso liberado.');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
             ->getJson('/api/v1/backoffice/access/leadership')
+            ->assertOk()
+            ->assertJsonPath('message', 'Acesso liberado.');
+
+        $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/backoffice/access/communications')
             ->assertOk()
             ->assertJsonPath('message', 'Acesso liberado.');
     }

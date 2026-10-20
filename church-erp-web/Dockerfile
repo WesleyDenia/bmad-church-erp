@@ -35,9 +35,8 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --chown=node:node docker/entrypoint.sh /usr/local/bin/church-erp-web-start
 
-RUN chmod +x /usr/local/bin/church-erp-web-start
-
-USER node
+RUN apk add --no-cache su-exec \
+    && chmod +x /usr/local/bin/church-erp-web-start
 
 EXPOSE 3000
 

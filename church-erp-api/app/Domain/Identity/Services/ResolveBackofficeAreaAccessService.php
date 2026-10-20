@@ -8,7 +8,7 @@ class ResolveBackofficeAreaAccessService
      * @var array<string, list<string>>
      */
     private const ROLE_AREA_MATRIX = [
-        'administrator' => ['secretaria', 'leadership', 'communications'],
+        'administrator' => ['treasury', 'secretaria', 'leadership', 'communications'],
         'secretary' => ['secretaria', 'communications'],
         'treasurer' => ['treasury'],
         'leadership' => ['leadership'],

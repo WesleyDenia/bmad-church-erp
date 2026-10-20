@@ -1,5 +1,8 @@
 #!/bin/sh
-set -eu
+# This file is sourced by the MySQL image entrypoint when it is not executable.
+# Do not enable `nounset` here: shell options would leak back into that
+# entrypoint and make its optional MYSQL_ONETIME_PASSWORD variable fatal.
+set -e
 
 read_env_or_file() {
   name="$1"

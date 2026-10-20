@@ -66,6 +66,14 @@ generate_key_pair_if_missing() {
   fi
 }
 
+ensure_database_accounts() {
+  local compose_file="$1"
+  shift
+
+  docker compose "$@" -f "${compose_file}" exec -T mysql-core \
+    sh /docker-entrypoint-initdb.d/01-create-databases.sh
+}
+
 case "${mode}" in
   local|server)
     ;;
@@ -120,6 +128,7 @@ export DEPLOY_SECRETS_DIR="${secrets_dir}"
 if [ "${mode}" = "local" ]; then
   docker compose -f "${script_dir}/docker-compose.local.yml" config --quiet
   docker compose -f "${script_dir}/docker-compose.local.yml" up -d --build --wait mysql-core
+  ensure_database_accounts "${script_dir}/docker-compose.local.yml"
   docker compose -f "${script_dir}/docker-compose.local.yml" run --rm --no-deps api-dev php artisan migrate --force
   docker compose -f "${script_dir}/docker-compose.local.yml" up -d --build --wait
   echo "Local environment is ready at http://localhost:8080."
@@ -129,4 +138,5 @@ fi
 export DEPLOY_ENV_FILE="${env_file}"
 docker compose --env-file "${env_file}" -f "${script_dir}/docker-compose.infra.yml" config --quiet
 docker compose --env-file "${env_file}" -f "${script_dir}/docker-compose.infra.yml" up -d --wait
+ensure_database_accounts "${script_dir}/docker-compose.infra.yml" --env-file "${env_file}"
 echo "Shared server infrastructure is ready. Deploy an application with: bash deploy/release.sh dev|stg|prod"

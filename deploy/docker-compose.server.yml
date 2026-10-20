@@ -57,6 +57,7 @@ services:
       INTERNAL_API_AUDIENCE: church-erp-api-dev
       INTERNAL_API_ISSUER: church-erp-web-dev
       INTERNAL_JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_dev_private_key
+      AUTH_COOKIE_SECURE: "false"
     secrets:
       - jwt_dev_private_key
     depends_on:

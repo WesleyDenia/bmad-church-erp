@@ -15,4 +15,8 @@ if [ -z "${INTERNAL_JWT_PRIVATE_KEY:-}" ]; then
   exit 1
 fi
 
+if [ "$(id -u)" = "0" ]; then
+  exec su-exec node node server.js
+fi
+
 exec node server.js

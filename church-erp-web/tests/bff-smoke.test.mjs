@@ -17,10 +17,24 @@ import {
 } from "../src/features/auth/access-response-runtime.js";
 import { normalizeInitialSetupResponse } from "../src/features/auth/initial-setup-response.js";
 import {
+  buildSessionCookieOptions,
   createInternalJwt,
   decodeJwtPayload,
   InternalJwtConfigurationError,
 } from "../src/features/auth/session.ts";
+
+test("session cookie uses secure transport by default in production and permits explicit HTTP development", () => {
+  const restoreEnv = setEnv({ NODE_ENV: "production", AUTH_COOKIE_SECURE: undefined });
+  try {
+    assert.equal(buildSessionCookieOptions().secure, true);
+    process.env.AUTH_COOKIE_SECURE = "false";
+    assert.equal(buildSessionCookieOptions().secure, false);
+    process.env.AUTH_COOKIE_SECURE = "unexpected";
+    assert.equal(buildSessionCookieOptions().secure, true);
+  } finally {
+    restoreEnv();
+  }
+});
 import { parseSecretaryHomeCommunicationContext } from "../src/features/communications/message-draft.ts";
 
 function setEnv(overrides) {
@@ -333,6 +347,11 @@ test("web baseline contains route shells and BFF boundary files", () => {
 test("app shell navigation is role-aware", () => {
   assert.deepEqual(getAccessibleAppAreaLinks("administrator"), [
     {
+      href: "/treasury",
+      label: "Tesouraria",
+      description: "Fluxo operacional para lancamentos, pendencias e fechamento.",
+    },
+    {
       href: "/secretaria",
       label: "Secretaria",
       description: "Base para cadastro, busca e acompanhamento de pessoas.",
@@ -396,6 +415,10 @@ test("app shell navigation is role-aware", () => {
 });
 
 test("protected routes are denied server-side before the browser renders content", () => {
+  assert.deepEqual(getRouteAccessDecision(["administrator"], "/treasury"), {
+    area: "treasury",
+    allowed: true,
+  });
   assert.deepEqual(getRouteAccessDecision(["leadership"], "/treasury"), {
     area: "treasury",
     allowed: false,
@@ -1447,11 +1470,14 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
     const url = typeof input === "string" ? input : input.toString();
 
     if (url === "http://web.test/api/auth/me") {
+      const cookie = init?.headers?.cookie ?? "";
+      const role = cookie.includes("leadership-token") ? "leadership" : "administrator";
+
       return new Response(
         JSON.stringify({
           data: {
-            roles: ["administrator"],
-            role: "administrator",
+            roles: [role],
+            role,
           },
         }),
         {
@@ -1489,13 +1515,10 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
 
       return new Response(
         JSON.stringify({
-          message: "Acesso negado para esta area.",
-          errors: {
-            church_id: ["Nao foi possivel aplicar a igreja correta."],
-          },
+          message: "Acesso liberado.",
         }),
         {
-          status: 403,
+          status: 200,
           headers: {
             "content-type": "application/json",
           },
@@ -1746,7 +1769,8 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       "../src/app/api/finance/entries/route.ts"
     );
 
-    const deniedProxyResponse = await proxy(createNextLikeRequest("/treasury", "runtime-token"));
+    const allowedProxyResponse = await proxy(createNextLikeRequest("/treasury", "runtime-token"));
+    const deniedProxyResponse = await proxy(createNextLikeRequest("/treasury", "leadership-token"));
     const authMeResponse = await authMeGET(
       new Request("http://web.test/api/auth/me", {
         headers: {
@@ -1838,6 +1862,7 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       },
     );
 
+    assert.equal(allowedProxyResponse.status, 200);
     assert.equal(deniedProxyResponse.status, 307);
     assert.equal(
       deniedProxyResponse.headers.get("location"),
@@ -1849,9 +1874,9 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       message: "Sessao invalida. Entre novamente.",
     });
 
-    assert.equal(accessResponse.status, 403);
+    assert.equal(accessResponse.status, 200);
     assert.deepEqual(await accessResponse.json(), {
-      message: "Acesso negado para esta area.",
+      message: "Acesso liberado.",
     });
 
     assert.equal(categoryDefaultsResponse.status, 200);

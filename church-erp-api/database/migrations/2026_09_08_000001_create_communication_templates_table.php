@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('communication_templates', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('church_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->unsignedBigInteger('church_scope_id')->storedAs('coalesce(church_id, 0)');
+            // MySQL does not allow ON DELETE CASCADE on a base column of a stored generated column.
+            $table->unsignedBigInteger('church_scope_id')->virtualAs('coalesce(church_id, 0)');
             $table->string('template_key', 80);
             $table->string('name', 120);
             $table->string('short_description', 240);

@@ -100,6 +100,28 @@ class ListFinancialCategoriesTest extends TestCase
             ->assertJsonPath('message', 'Sessao invalida. Entre novamente.');
     }
 
+    public function test_administrator_can_list_financial_categories(): void
+    {
+        [$user, $church] = $this->seedMembership('administrator', 'admin@example.com', 'igreja-central');
+
+        FinancialCategory::query()->withoutGlobalScopes()->create([
+            'church_id' => $church->id,
+            'name' => 'Dizimos',
+            'slug' => 'dizimos',
+            'kind' => 'income',
+            'is_default' => true,
+        ]);
+
+        $response = $this
+            ->withHeader('Authorization', 'Bearer '.$this->createInternalJwt($user->id, $church->id, ['administrator'], 'session-123'))
+            ->getJson('/api/v1/finance/categories');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data.financial_categories')
+            ->assertJsonPath('data.financial_categories.0.slug', 'dizimos');
+    }
+
     public function test_it_requires_treasury_access_to_list_categories(): void
     {
         [$user, $church] = $this->seedMembership('leadership', 'lideranca@example.com', 'igreja-central');

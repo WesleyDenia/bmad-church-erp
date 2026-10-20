@@ -58,7 +58,9 @@ export function buildSessionCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.AUTH_COOKIE_SECURE === "false"
+      ? false
+      : process.env.NODE_ENV === "production",
     path: "/",
     maxAge: AUTH_SESSION_TTL_SECONDS,
   };

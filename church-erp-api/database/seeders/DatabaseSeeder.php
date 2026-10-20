@@ -6,6 +6,7 @@ use App\Domain\Communications\Services\ProvisionBaseCommunicationTemplatesServic
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,11 +19,12 @@ class DatabaseSeeder extends Seeder
     {
         app(ProvisionBaseCommunicationTemplatesService::class)->provision();
 
-        // User::factory(10)->create();
-
-        User::factory()->create([
+        User::forceCreate([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'wesley@church.com',
+            'password' => bcrypt('12345678'),
+            'email_verified_at' => now(),
+            'remember_token' => Str::random(10),
         ]);
     }
 }

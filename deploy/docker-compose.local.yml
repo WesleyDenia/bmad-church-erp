@@ -14,7 +14,10 @@ services:
       - edge
 
   mysql-core:
-    image: mysql:8.4.8
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
+    image: church-erp-mysql:local
     restart: unless-stopped
     init: true
     command:
@@ -105,6 +108,7 @@ services:
       INTERNAL_API_AUDIENCE: church-erp-api-local
       INTERNAL_API_ISSUER: church-erp-web-local
       INTERNAL_JWT_PRIVATE_KEY_FILE: /run/secrets/jwt_local_private_key
+      AUTH_COOKIE_SECURE: "false"
     secrets:
       - jwt_local_private_key
     depends_on:
