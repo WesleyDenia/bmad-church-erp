@@ -104,6 +104,7 @@ services:
     environment:
       NEXT_PUBLIC_APP_NAME: Church ERP Local
       NEXT_PUBLIC_APP_URL: http://localhost:8080
+      BFF_INTERNAL_BASE_URL: ${LOCAL_BFF_INTERNAL_BASE_URL:-http://web-dev:3000}
       API_BASE_URL: http://api-dev:8080
       INTERNAL_API_AUDIENCE: church-erp-api-local
       INTERNAL_API_ISSUER: church-erp-web-local
@@ -118,7 +119,7 @@ services:
       - edge
       - app-dev
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', (response) => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      test: ["CMD-SHELL", "node -e \"const baseUrl = process.env.BFF_INTERNAL_BASE_URL; if (!baseUrl) process.exit(1); let url; try { url = new URL('/api/health', baseUrl); } catch { process.exit(1); } fetch(url).then((response) => process.exit(response.status === 200 ? 0 : 1)).catch(() => process.exit(1));\""]
       interval: 15s
       timeout: 5s
       retries: 5
