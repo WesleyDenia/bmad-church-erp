@@ -1,4 +1,4 @@
-#!/bin/sh
+cd ..#!/bin/sh
 set -eu
 
 load_secret() {
@@ -19,6 +19,10 @@ load_secret() {
 load_secret APP_KEY
 load_secret DB_PASSWORD
 load_secret INTERNAL_JWT_PUBLIC_KEY
+
+chown -R www-data:www-data storage bootstrap/cache
+find storage bootstrap/cache -type d -exec chmod 775 {} +
+find storage bootstrap/cache -type f -exec chmod 664 {} +
 
 if [ -z "${APP_KEY:-}" ]; then
   echo "APP_KEY must be provided through APP_KEY or APP_KEY_FILE." >&2

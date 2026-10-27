@@ -17,6 +17,22 @@ const protectedPrefixes = [
   "/communications",
 ];
 
+const publicPagePrefixes = [
+  "/login",
+  "/onboarding",
+  "/logout",
+  "/termos",
+  "/termos-de-responsabilidade",
+];
+
+function hasPathPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isPublicPage(pathname: string): boolean {
+  return publicPagePrefixes.some((prefix) => hasPathPrefix(pathname, prefix));
+}
+
 async function readSessionContext(
   request: NextRequest,
   sessionToken: string,
@@ -63,7 +79,10 @@ async function readSessionContext(
 
 function redirectToLogin(request: NextRequest, clearCookie: boolean): NextResponse {
   const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("next", request.nextUrl.pathname);
+  loginUrl.searchParams.set(
+    "next",
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  );
 
   const response = NextResponse.redirect(loginUrl);
 
@@ -77,7 +96,7 @@ function redirectToLogin(request: NextRequest, clearCookie: boolean): NextRespon
   return response;
 }
 
-function continueToLoginPage(clearCookie: boolean): NextResponse {
+function continueToPublicPage(clearCookie: boolean): NextResponse {
   const response = NextResponse.next();
 
   if (clearCookie) {
@@ -93,20 +112,17 @@ function continueToLoginPage(clearCookie: boolean): NextResponse {
 export async function proxy(request: NextRequest) {
   const sessionToken = request.cookies.get(AUTH_SESSION_COOKIE_NAME)?.value;
   const isProtectedRoute = protectedPrefixes.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix),
+    hasPathPrefix(request.nextUrl.pathname, prefix),
   );
-  const isLoginRoute = request.nextUrl.pathname.startsWith("/login");
+  const isLoginRoute = hasPathPrefix(request.nextUrl.pathname, "/login");
+  const publicPage = isPublicPage(request.nextUrl.pathname);
 
   if (!sessionToken) {
-    if (isProtectedRoute) {
-      return redirectToLogin(request, false);
+    if (publicPage) {
+      return NextResponse.next();
     }
 
-    return NextResponse.next();
-  }
-
-  if (!isProtectedRoute && !isLoginRoute) {
-    return NextResponse.next();
+    return redirectToLogin(request, false);
   }
 
   const sessionContext = await readSessionContext(request, sessionToken);
@@ -116,8 +132,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (isLoginRoute) {
-    return continueToLoginPage(!validSession);
+  if (publicPage) {
+    return continueToPublicPage(!validSession);
   }
 
   if (!validSession) {
@@ -137,11 +153,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/login",
-    "/admin/users/:path*",
-    "/treasury/:path*",
-    "/secretaria/:path*",
-    "/leadership/:path*",
-    "/communications/:path*",
+    "/((?!api|_next|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.webmanifest|.*\\.(?:svg|png|jpe?g|gif|webp|ico|txt|xml|webmanifest)$).*)",
   ],
 };

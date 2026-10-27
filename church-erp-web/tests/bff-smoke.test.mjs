@@ -1497,6 +1497,21 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
 
     if (url === "http://web.test/api/auth/me") {
       const cookie = init?.headers?.cookie ?? "";
+
+      if (cookie.includes("invalid-token")) {
+        return new Response(
+          JSON.stringify({
+            message: "Sessao invalida. Entre novamente.",
+          }),
+          {
+            status: 401,
+            headers: {
+              "content-type": "application/json",
+            },
+          },
+        );
+      }
+
       const role = cookie.includes("leadership-token") ? "leadership" : "administrator";
 
       return new Response(
@@ -1776,7 +1791,10 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
   };
 
   try {
-    const { proxy } = await import("../src/proxy.ts");
+    const { config: proxyConfig, proxy } = await import("../src/proxy.ts");
+    const { unstable_doesMiddlewareMatch } = await import(
+      "next/experimental/testing/server.js"
+    );
     const { GET: authMeGET } = await import("../src/app/api/auth/me/route.ts");
     const { GET: backofficeAccessGET } = await import("../src/app/api/backoffice/access/[area]/route.ts");
     const { GET: categoryDefaultsGET } = await import(
@@ -1795,6 +1813,21 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       "../src/app/api/finance/entries/route.ts"
     );
 
+    const unauthenticatedRootProxyResponse = await proxy(createNextLikeRequest("/"));
+    const unauthenticatedPageProxyResponse = await proxy(
+      createNextLikeRequest("/pagina-publica"),
+    );
+    const unauthenticatedDeepLinkProxyResponse = await proxy(
+      createNextLikeRequest("/secretaria?people=pending"),
+    );
+    const loginProxyResponse = await proxy(createNextLikeRequest("/login"));
+    const onboardingProxyResponse = await proxy(createNextLikeRequest("/onboarding"));
+    const logoutProxyResponse = await proxy(createNextLikeRequest("/logout"));
+    const termsProxyResponse = await proxy(createNextLikeRequest("/termos-de-responsabilidade"));
+    const loginHelpProxyResponse = await proxy(createNextLikeRequest("/login-help"));
+    const invalidSessionRootProxyResponse = await proxy(
+      createNextLikeRequest("/", "invalid-token"),
+    );
     const allowedProxyResponse = await proxy(createNextLikeRequest("/treasury", "runtime-token"));
     const deniedProxyResponse = await proxy(createNextLikeRequest("/treasury", "leadership-token"));
     const authMeResponse = await authMeGET(
@@ -1888,11 +1921,75 @@ test("proxy and BFF routes execute real runtime logic with controlled fetch resp
       },
     );
 
+    assert.equal(unauthenticatedRootProxyResponse.status, 307);
+    assert.equal(
+      unauthenticatedRootProxyResponse.headers.get("location"),
+      "http://web.test/login?next=%2F",
+    );
+    assert.equal(unauthenticatedPageProxyResponse.status, 307);
+    assert.equal(
+      unauthenticatedPageProxyResponse.headers.get("location"),
+      "http://web.test/login?next=%2Fpagina-publica",
+    );
+    assert.equal(unauthenticatedDeepLinkProxyResponse.status, 307);
+    assert.equal(
+      unauthenticatedDeepLinkProxyResponse.headers.get("location"),
+      "http://web.test/login?next=%2Fsecretaria%3Fpeople%3Dpending",
+    );
+    assert.equal(loginProxyResponse.status, 200);
+    assert.equal(onboardingProxyResponse.status, 200);
+    assert.equal(logoutProxyResponse.status, 200);
+    assert.equal(termsProxyResponse.status, 200);
+    assert.equal(loginHelpProxyResponse.status, 307);
+    assert.equal(invalidSessionRootProxyResponse.status, 307);
+    assert.equal(
+      invalidSessionRootProxyResponse.headers.get("location"),
+      "http://web.test/login?next=%2F",
+    );
+    assert.match(
+      invalidSessionRootProxyResponse.headers.get("set-cookie") ?? "",
+      /Max-Age=0/,
+    );
     assert.equal(allowedProxyResponse.status, 200);
     assert.equal(deniedProxyResponse.status, 307);
     assert.equal(
       deniedProxyResponse.headers.get("location"),
       "http://web.test/acesso-negado?area=treasury&from=%2Ftreasury",
+    );
+    assert.equal(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "http://web.test/secretaria",
+      }),
+      true,
+    );
+    assert.equal(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "http://web.test/api/auth/me",
+      }),
+      false,
+    );
+    assert.equal(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "http://web.test/_next/static/chunks/app.js",
+      }),
+      false,
+    );
+    assert.equal(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "http://web.test/next.svg",
+      }),
+      false,
+    );
+    assert.equal(
+      unstable_doesMiddlewareMatch({
+        config: proxyConfig,
+        url: "http://web.test/robots.txt",
+      }),
+      false,
     );
 
     assert.equal(authMeResponse.status, 401);
