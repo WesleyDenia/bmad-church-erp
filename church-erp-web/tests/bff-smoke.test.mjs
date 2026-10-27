@@ -22,6 +22,10 @@ import {
   decodeJwtPayload,
   InternalJwtConfigurationError,
 } from "../src/features/auth/session.ts";
+import {
+  buildInternalBffRequestHeaders,
+  resolveInternalBffBaseUrl,
+} from "../src/lib/api/internal-bff.ts";
 
 test("session cookie uses secure transport by default in production and permits explicit HTTP development", () => {
   const restoreEnv = setEnv({ NODE_ENV: "production", AUTH_COOKIE_SECURE: undefined });
@@ -91,11 +95,31 @@ test("BFF env example exposes internal API variables", () => {
   const envExample = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
 
   assert.match(envExample, /API_BASE_URL=/);
+  assert.match(envExample, /BFF_INTERNAL_BASE_URL=/);
   assert.match(envExample, /INTERNAL_API_AUDIENCE=/);
   assert.match(envExample, /INTERNAL_API_ISSUER=/);
   assert.match(envExample, /INTERNAL_JWT_PRIVATE_KEY=/);
   assert.match(envExample, /secret manager/);
   assert.doesNotMatch(envExample, /BEGIN PRIVATE KEY/); // pragma: allowlist secret
+});
+
+test("internal BFF requests prefer a valid configured URL and preserve the session cookie", () => {
+  assert.equal(
+    resolveInternalBffBaseUrl("http://web-dev:3000/", "http://localhost:8080"),
+    "http://web-dev:3000",
+  );
+  assert.equal(
+    resolveInternalBffBaseUrl("", "http://localhost:8080"),
+    "http://localhost:8080",
+  );
+  assert.equal(
+    resolveInternalBffBaseUrl("not a URL", "http://localhost:8080"),
+    "http://localhost:8080",
+  );
+  assert.deepEqual(buildInternalBffRequestHeaders("session-token"), {
+    cookie: "session-token",
+  });
+  assert.equal(buildInternalBffRequestHeaders(""), undefined);
 });
 
 test("communications message drafts BFF route is registered behind Laravel boundary", () => {
@@ -574,6 +598,8 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
   assert.match(adminUsersPage, /fetch\(/);
   assert.match(adminUsersPage, /\/api\/auth\/me/);
   assert.match(adminUsersPage, /\/api\/admin\/users/);
+  assert.match(adminUsersPage, /resolveInternalBffBaseUrl/);
+  assert.match(adminUsersPage, /buildInternalBffRequestHeaders/);
   assert.doesNotMatch(adminUsersPage, /decodeJwtPayload/);
   assert.match(adminUsersPage, /AccessDeniedPanel/);
   assert.doesNotMatch(adminUsersPage, /AreaGuard/);

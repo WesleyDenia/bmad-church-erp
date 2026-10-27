@@ -35,12 +35,13 @@ Frontend Next.js desacoplado, preparado para atuar como BFF do projeto.
 ## Desenvolvimento
 
 1. Copie `.env.example` para `.env.local`.
-2. Ajuste `API_BASE_URL=http://localhost:8000`.
-3. Mantenha `INTERNAL_API_AUDIENCE=church-erp-api` e `INTERNAL_API_ISSUER=church-erp-web`, salvo se o backend local usar valores diferentes.
-4. Preencha `INTERNAL_JWT_PRIVATE_KEY` com uma chave privada RSA valida compativel com `INTERNAL_JWT_PUBLIC_KEY` configurada no `church-erp-api`.
-5. Execute `npm install`.
-6. Execute `npm run dev`.
-7. Rode `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`.
+2. Ajuste `BFF_INTERNAL_BASE_URL=http://localhost:3000` para o endereco que o processo Next.js usa para chamar os seus route handlers. Em Docker, use o nome do servico e a porta interna, por exemplo `http://web-dev:3000`.
+3. Ajuste `API_BASE_URL=http://localhost:8000`.
+4. Mantenha `INTERNAL_API_AUDIENCE=church-erp-api` e `INTERNAL_API_ISSUER=church-erp-web`, salvo se o backend local usar valores diferentes.
+5. Preencha `INTERNAL_JWT_PRIVATE_KEY` com uma chave privada RSA valida compativel com `INTERNAL_JWT_PUBLIC_KEY` configurada no `church-erp-api`.
+6. Execute `npm install`.
+7. Execute `npm run dev`.
+8. Rode `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`.
 
 ## Configuracao local do JWT interno
 

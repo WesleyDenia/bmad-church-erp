@@ -2,6 +2,10 @@ import { headers } from "next/headers";
 import { AccessDeniedPanel } from "@/components/operational/access-denied-panel";
 import { ChurchUserCreateForm } from "@/components/operational/church-user-create-form";
 import { ChurchUserManagementPanel } from "@/components/operational/church-user-management-panel";
+import {
+  buildInternalBffRequestHeaders,
+  resolveInternalBffBaseUrl,
+} from "@/lib/api/internal-bff";
 import type {
   AuthenticatedSessionResponse,
   ChurchRole,
@@ -38,13 +42,17 @@ async function fetchFromBff(path: string): Promise<Response> {
   const host = requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
   const cookie = requestHeaders.get("cookie") ?? "";
-  const baseUrl = host
+  const publicBaseUrl = host
     ? `${protocol}://${host}`
     : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+  const baseUrl = resolveInternalBffBaseUrl(
+    process.env.BFF_INTERNAL_BASE_URL,
+    publicBaseUrl,
+  );
 
   return fetch(new URL(path, baseUrl), {
     method: "GET",
-    headers: cookie ? { cookie } : undefined,
+    headers: buildInternalBffRequestHeaders(cookie),
     cache: "no-store",
   });
 }
