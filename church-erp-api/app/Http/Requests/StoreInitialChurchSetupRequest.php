@@ -23,6 +23,7 @@ class StoreInitialChurchSetupRequest extends FormRequest
             'admin_name' => ['required', 'string', 'max:160'],
             'admin_email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'terms_accepted' => ['required', 'accepted'],
         ];
     }
 
@@ -41,6 +42,8 @@ class StoreInitialChurchSetupRequest extends FormRequest
             'password.required' => 'Informe uma senha.',
             'password.min' => 'Use uma senha com pelo menos 8 caracteres.',
             'password.confirmed' => 'A confirmacao da senha precisa ser igual a senha.',
+            'terms_accepted.required' => 'Voce precisa aceitar os termos para concluir a configuracao.',
+            'terms_accepted.accepted' => 'Voce precisa aceitar os termos para concluir a configuracao.',
         ];
     }
 

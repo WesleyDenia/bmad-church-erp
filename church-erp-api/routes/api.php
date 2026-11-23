@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\LogoutController;
 use App\Http\Controllers\Api\V1\ShowFinancialClosingSummaryController;
 use App\Http\Controllers\Api\V1\ShowLeadershipClosingSummaryController;
 use App\Http\Controllers\Api\V1\ShowMemberController;
+use App\Http\Controllers\Api\V1\ShowOnboardingTermsController;
 use App\Http\Controllers\Api\V1\ShowSecretaryHomeController;
 use App\Http\Controllers\Api\V1\ShowVisitorController;
 use App\Http\Controllers\Api\V1\StoreChurchUserController;
@@ -35,6 +36,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function (): void {
     Route::get('/health', HealthCheckController::class);
     Route::post('/onboarding/initial-setup', InitialChurchSetupController::class);
+    Route::get('/onboarding/terms', ShowOnboardingTermsController::class);
     Route::post('/auth/login', LoginController::class);
     Route::get('/auth/me', CurrentSessionController::class);
     Route::post('/auth/logout', LogoutController::class);

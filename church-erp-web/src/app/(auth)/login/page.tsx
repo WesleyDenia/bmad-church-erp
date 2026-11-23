@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,9 +179,14 @@ function LoginPageContent({
               </p>
             ) : null}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Autenticando..." : "Entrar"}
-            </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? "Autenticando..." : "Entrar"}
+              </Button>
+              <Button asChild variant="secondary" className="w-full">
+                <Link href="/onboarding">Registrar-se</Link>
+              </Button>
+            </div>
           </form>
         </div>
       </section>

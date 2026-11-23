@@ -17,6 +17,10 @@ import {
 } from "../src/features/auth/access-response-runtime.js";
 import { normalizeInitialSetupResponse } from "../src/features/auth/initial-setup-response.js";
 import {
+  isLatestTermsRequest,
+  parseOnboardingTerms,
+} from "../src/features/auth/onboarding-terms.ts";
+import {
   buildSessionCookieOptions,
   createInternalJwt,
   decodeJwtPayload,
@@ -120,6 +124,102 @@ test("internal BFF requests prefer a valid configured URL and preserve the sessi
     cookie: "session-token",
   });
   assert.equal(buildInternalBffRequestHeaders(""), undefined);
+});
+
+test("logout BFF clears the local session even when Laravel is unavailable", async () => {
+  const originalFetch = globalThis.fetch;
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  globalThis.fetch = async (url, init) => {
+    assert.equal(url, "http://api.test/api/v1/auth/logout");
+    assert.equal(init?.method, "POST");
+    assert.equal(init?.headers.get("Authorization"), "Bearer runtime-token");
+    throw new Error("Laravel unavailable");
+  };
+
+  try {
+    const { POST } = await import("../src/app/api/auth/logout/route.ts");
+    const response = await POST(
+      new Request("http://web.test/api/auth/logout", {
+        method: "POST",
+        headers: {
+          cookie: `${AUTH_SESSION_COOKIE_NAME}=runtime-token`,
+        },
+      }),
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      message: "Sessao encerrada com sucesso.",
+    });
+    assert.match(response.headers.get("set-cookie") ?? "", /Max-Age=0/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("onboarding terms BFF keeps the browser behind the Laravel boundary", async () => {
+  const originalFetch = globalThis.fetch;
+  const restoreEnv = setEnv({
+    API_BASE_URL: "http://api.test",
+    INTERNAL_API_AUDIENCE: "church-erp-api",
+    INTERNAL_API_ISSUER: "church-erp-web",
+  });
+  globalThis.fetch = async (url, init) => {
+    assert.equal(url, "http://api.test/api/v1/onboarding/terms");
+    assert.equal(init?.headers.get("X-Internal-Audience"), "church-erp-api");
+    assert.equal(init?.headers.get("X-Internal-Issuer"), "church-erp-web");
+
+    return Response.json({
+      data: {
+        id: 1,
+        version: 1,
+        content: "Mocked terms",
+        content_hash: "a".repeat(64),
+      },
+    });
+  };
+
+  try {
+    const { GET } = await import("../src/app/api/onboarding/terms/route.ts");
+    const response = await GET();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      data: {
+        id: 1,
+        version: 1,
+        content: "Mocked terms",
+        content_hash: "a".repeat(64),
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv();
+  }
+});
+
+test("onboarding terms reject invalid payloads and stale responses", () => {
+  const validTerms = {
+    data: {
+      id: 2,
+      version: 3,
+      content: "Termos publicados",
+      content_hash: "b".repeat(64),
+    },
+  };
+
+  assert.deepEqual(parseOnboardingTerms(validTerms), validTerms.data);
+  assert.equal(parseOnboardingTerms({ data: { ...validTerms.data, content: "" } }), null);
+  assert.equal(parseOnboardingTerms({ data: { ...validTerms.data, id: "2" } }), null);
+  assert.equal(parseOnboardingTerms({ data: { ...validTerms.data, content_hash: "invalid" } }), null);
+  assert.equal(parseOnboardingTerms({}), null);
+  assert.equal(isLatestTermsRequest(2, 2), true);
+  assert.equal(isLatestTermsRequest(1, 2), false);
 });
 
 test("communications message drafts BFF route is registered behind Laravel boundary", () => {
@@ -271,6 +371,8 @@ test("internal session signing accepts multiline PEM keys and escaped newline va
 test("web baseline contains route shells and BFF boundary files", () => {
   const requiredPaths = [
     "../src/app/(auth)/login/page.tsx",
+    "../src/app/(auth)/logout/page.tsx",
+    "../src/app/api/onboarding/terms/route.ts",
     "../src/app/admin/users/loading.tsx",
     "../src/app/admin/users/page.tsx",
     "../src/app/api/admin/users/route.ts",
@@ -366,6 +468,27 @@ test("web baseline contains route shells and BFF boundary files", () => {
   for (const path of requiredPaths) {
     assert.equal(existsSync(new URL(path, import.meta.url)), true, `${path} should exist`);
   }
+});
+
+test("auth pages provide reciprocal registration and login calls to action", () => {
+  const loginPage = readFileSync(
+    new URL("../src/app/(auth)/login/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const onboardingPage = readFileSync(
+    new URL("../src/app/(auth)/onboarding/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(loginPage, /<Link href="\/onboarding">Registrar-se<\/Link>/);
+  assert.match(loginPage, /variant="secondary"/);
+  assert.match(onboardingPage, /<Link href="\/login">Já é registrado\?<\/Link>/);
+  assert.match(onboardingPage, /<Button type="submit" className="w-full"/);
+  assert.match(onboardingPage, /variant="secondary"/);
+  assert.match(onboardingPage, /name="terms_accepted"/);
+  assert.match(onboardingPage, /\/api\/onboarding\/terms/);
+  assert.match(onboardingPage, /function openTermsFromTrigger\(\)/);
+  assert.doesNotMatch(onboardingPage, /hasOpenedInitialTermsRef/);
 });
 
 test("app shell navigation is role-aware", () => {
@@ -564,6 +687,10 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
     new URL("../src/app/api/auth/me/route.ts", import.meta.url),
     "utf8",
   );
+  const logoutPage = readFileSync(
+    new URL("../src/app/(auth)/logout/page.tsx", import.meta.url),
+    "utf8",
+  );
   const backofficeAccessRoute = readFileSync(
     new URL("../src/app/api/backoffice/access/[area]/route.ts", import.meta.url),
     "utf8",
@@ -613,6 +740,10 @@ test("BFF route handlers and proxy keep authorization logic outside the browser"
   assert.match(authLoginRoute, /auth_login_internal_session_failed/);
   assert.match(authLoginRoute, /Nao foi possivel concluir o login agora/);
   assert.match(authMeRoute, /safeBody/);
+  assert.match(logoutPage, /fetch\("\/api\/auth\/logout"/);
+  assert.match(logoutPage, /method:\s*"POST"/);
+  assert.match(logoutPage, /router\.replace\("\/login"\)/);
+  assert.doesNotMatch(logoutPage, /api\/v1/);
   assert.match(backofficeAccessRoute, /safeBody/);
   assert.match(categoryDefaultsRoute, /safeBody/);
   assert.match(financeCategoriesRoute, /callLaravel/);

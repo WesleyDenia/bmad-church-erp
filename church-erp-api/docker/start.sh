@@ -1,4 +1,4 @@
-cd ..#!/bin/sh
+#!/bin/sh
 set -eu
 
 load_secret() {
