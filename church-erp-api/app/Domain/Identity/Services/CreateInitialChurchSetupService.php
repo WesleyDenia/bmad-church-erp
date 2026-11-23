@@ -6,6 +6,8 @@ use App\Domain\Finance\Services\ProvisionInitialFinancialCategoriesService;
 use App\Domain\Identity\Models\Church;
 use App\Domain\Identity\Models\ChurchUser;
 use App\Domain\People\Services\ProvisionInitialPersonCategoriesService;
+use App\Domain\Settings\Services\RecordTermsAcceptanceService;
+use App\Domain\Settings\Services\ResolveOnboardingTermsService;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -18,16 +20,17 @@ class CreateInitialChurchSetupService
     public function __construct(
         private readonly ProvisionInitialFinancialCategoriesService $financialCategories,
         private readonly ProvisionInitialPersonCategoriesService $personCategories,
+        private readonly ResolveOnboardingTermsService $onboardingTerms,
+        private readonly RecordTermsAcceptanceService $termsAcceptances,
     ) {}
 
     /**
-     * @param  array{church_name: string, admin_name: string, admin_email: string, password: string}  $payload
+     * @param  array{church_name: string, admin_name: string, admin_email: string, password: string, terms_accepted: bool}  $payload
      * @return array{church: Church, admin: User, membership: ChurchUser}
      */
     public function create(array $payload): array
     {
         $slug = Str::slug($payload['church_name']);
-
         if ($slug === '') {
             throw ValidationException::withMessages([
                 'church_name' => ['Informe um nome de igreja valido.'],
@@ -36,11 +39,13 @@ class CreateInitialChurchSetupService
 
         try {
             return DB::transaction(function () use ($payload, $slug): array {
+                $terms = $this->onboardingTerms->current();
                 $existingSetup = $this->resolveExistingSetup($payload, $slug);
 
                 if ($existingSetup !== null) {
                     $this->financialCategories->provision($existingSetup['church']);
                     $this->personCategories->provision($existingSetup['church']);
+                    $this->termsAcceptances->record($existingSetup['admin'], $terms);
 
                     return $existingSetup;
                 }
@@ -65,6 +70,7 @@ class CreateInitialChurchSetupService
 
                 $this->financialCategories->provision($church);
                 $this->personCategories->provision($church);
+                $this->termsAcceptances->record($admin, $terms);
 
                 return [
                     'church' => $church,

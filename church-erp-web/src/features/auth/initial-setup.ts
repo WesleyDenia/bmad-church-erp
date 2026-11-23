@@ -4,6 +4,7 @@ export type InitialSetupPayload = {
   admin_email: string;
   password: string;
   password_confirmation: string;
+  terms_accepted: boolean;
 };
 
 export type InitialSetupErrors = Partial<
@@ -30,4 +31,15 @@ export type InitialSetupSuccess = {
 export type InitialSetupErrorResponse = {
   message: string;
   errors?: InitialSetupErrors;
+};
+
+export type OnboardingTerms = {
+  id: number;
+  version: number;
+  content: string;
+  content_hash: string;
+};
+
+export type OnboardingTermsResponse = {
+  data: OnboardingTerms;
 };

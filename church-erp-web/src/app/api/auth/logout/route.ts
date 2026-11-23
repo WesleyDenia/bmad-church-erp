@@ -14,12 +14,16 @@ export async function POST(request: Request): Promise<Response> {
   );
 
   if (token) {
-    await callLaravel("/api/v1/auth/logout", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      await callLaravel("/api/v1/auth/logout", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch {
+      // The local session must end even when the upstream API is unavailable.
+    }
   }
 
   const nextResponse = NextResponse.json(

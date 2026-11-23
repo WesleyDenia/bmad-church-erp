@@ -1,13 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type {
   InitialSetupErrorResponse,
   InitialSetupErrors,
   InitialSetupPayload,
   InitialSetupSuccess,
+  OnboardingTerms,
 } from "@/features/auth/initial-setup";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  isLatestTermsRequest,
+  parseOnboardingTerms,
+} from "@/features/auth/onboarding-terms";
 
 const initialForm: InitialSetupPayload = {
   church_name: "",
@@ -15,6 +29,7 @@ const initialForm: InitialSetupPayload = {
   admin_email: "",
   password: "",
   password_confirmation: "",
+  terms_accepted: false,
 };
 
 function FieldError({ messages }: { messages?: string[] }) {
@@ -31,10 +46,107 @@ export default function OnboardingPage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [success, setSuccess] = useState<InitialSetupSuccess["data"] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [terms, setTerms] = useState<OnboardingTerms | null>(null);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const [isTermsLoading, setIsTermsLoading] = useState(true);
+  const [isTermsDialogOpen, setIsTermsDialogOpen] = useState(false);
+  const latestTermsRequestRef = useRef(0);
+  const activeTermsRequestRef = useRef<AbortController | null>(null);
+  const focusReturnTargetRef = useRef<"checkbox" | "trigger">("checkbox");
+  const checkboxRef = useRef<HTMLInputElement>(null);
+  const termsTriggerRef = useRef<HTMLButtonElement>(null);
 
-  function updateField(field: keyof InitialSetupPayload, value: string) {
+  const loadTerms = useCallback(() => {
+    activeTermsRequestRef.current?.abort();
+
+    const controller = new AbortController();
+    const requestId = latestTermsRequestRef.current + 1;
+    latestTermsRequestRef.current = requestId;
+    activeTermsRequestRef.current = controller;
+    setTerms(null);
+    setTermsError(null);
+    setIsTermsLoading(true);
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/onboarding/terms", {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Terms request failed");
+        }
+
+        const termsResponse = parseOnboardingTerms(await response.json());
+
+        if (!termsResponse) {
+          throw new Error("Invalid terms response");
+        }
+
+        if (!isLatestTermsRequest(requestId, latestTermsRequestRef.current)) {
+          return;
+        }
+
+        setTerms(termsResponse);
+      } catch {
+        if (controller.signal.aborted || !isLatestTermsRequest(requestId, latestTermsRequestRef.current)) {
+          return;
+        }
+
+        setTerms(null);
+        setTermsError("Nao foi possivel carregar os termos agora. Tente novamente em instantes.");
+      } finally {
+        if (isLatestTermsRequest(requestId, latestTermsRequestRef.current)) {
+          setIsTermsLoading(false);
+        }
+      }
+    })();
+
+    return controller;
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void Promise.resolve().then(() => {
+      if (!cancelled) {
+        loadTerms();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      activeTermsRequestRef.current?.abort();
+    };
+  }, [loadTerms]);
+
+  function openTermsFromTrigger() {
+    focusReturnTargetRef.current = "trigger";
+    setIsTermsDialogOpen(true);
+  }
+
+  function returnFocusAfterTermsDialogClose() {
+    window.requestAnimationFrame(() => {
+      if (focusReturnTargetRef.current === "trigger") {
+        termsTriggerRef.current?.focus();
+        return;
+      }
+
+      checkboxRef.current?.focus();
+    });
+  }
+
+  function updateField(
+    field: Exclude<keyof InitialSetupPayload, "terms_accepted">,
+    value: string,
+  ) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function updateTermsAcceptance(termsAccepted: boolean) {
+    setForm((current) => ({ ...current, terms_accepted: termsAccepted }));
+    setErrors((current) => ({ ...current, terms_accepted: undefined }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -108,12 +220,9 @@ export default function OnboardingPage() {
               <p className="mt-4 text-base leading-8 text-[color:var(--color-muted)]">
                 {success.message}
               </p>
-              <Link
-                href="/login"
-                className="mt-8 inline-flex w-fit rounded-full bg-[color:var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#115e59]"
-              >
-                Seguir para login
-              </Link>
+              <Button asChild className="mt-8 w-fit">
+                <Link href="/login">Seguir para login</Link>
+              </Button>
             </div>
           ) : (
             <form className="space-y-5" onSubmit={handleSubmit}>
@@ -201,23 +310,98 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              <fieldset className="rounded-2xl border border-[color:var(--color-border)] bg-[#f7f4ed] p-4">
+                <legend className="px-1 text-sm font-semibold">Termos de uso</legend>
+                {terms ? (
+                  <>
+                    <div className="mt-2 flex items-start gap-3 text-sm font-medium leading-6" role="group" aria-labelledby="terms-acceptance-label">
+                      <input
+                        ref={checkboxRef}
+                        id="terms_accepted"
+                        name="terms_accepted"
+                        type="checkbox"
+                        checked={form.terms_accepted}
+                        onChange={(event) => updateTermsAcceptance(event.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-[color:var(--color-border)] text-[color:var(--color-accent)] focus:ring-[color:var(--color-accent)]"
+                      />
+                      <label id="terms-acceptance-label" htmlFor="terms_accepted">
+                        Li e aceito os termos de uso.
+                      </label>
+                      <button
+                      ref={termsTriggerRef}
+                      type="button"
+                      onClick={openTermsFromTrigger}
+                      className="mt-0.5 text-sm font-semibold text-[color:var(--color-accent)] underline underline-offset-4 focus:outline-none focus:ring-4 focus:ring-teal-700/10"
+                    >
+                      termos
+                    </button>
+                    </div>
+                    
+                    <FieldError messages={errors.terms_accepted} />
+                  </>
+                ) : (
+                  <div className="mt-2 text-sm leading-6 text-[color:var(--color-muted)]" aria-live="polite">
+                    <p>{termsError ?? "Carregando termos..."}</p>
+                    {termsError ? (
+                      <button
+                        type="button"
+                        onClick={loadTerms}
+                        className="mt-3 font-semibold text-[color:var(--color-accent)] underline underline-offset-4 focus:outline-none focus:ring-4 focus:ring-teal-700/10"
+                      >
+                        Tentar novamente
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </fieldset>
+
               {feedback ? (
                 <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
                   {feedback}
                 </p>
               ) : null}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-full bg-[color:var(--color-accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#115e59] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? "Criando configuracao..." : "Concluir configuracao"}
-              </button>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button type="submit" className="w-full" disabled={isSubmitting || isTermsLoading || !terms}>
+                  {isSubmitting ? "Criando configuracao..." : "Salvar"}
+                </Button>
+                <Button asChild variant="secondary" className="w-full">
+                  <Link href="/login">Já é registrado?</Link>
+                </Button>
+              </div>
             </form>
           )}
         </div>
       </section>
+      <Dialog open={isTermsDialogOpen} onOpenChange={setIsTermsDialogOpen}>
+        <DialogContent
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            document.getElementById("onboarding-terms-dialog-title")?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            returnFocusAfterTermsDialogClose();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle id="onboarding-terms-dialog-title" tabIndex={-1}>
+              Termos de uso
+            </DialogTitle>
+            <DialogDescription>
+              Leia o documento antes de confirmar o aceite.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-5 max-h-[min(50vh,28rem)] overflow-y-auto whitespace-pre-line pr-3 text-sm leading-7 text-[color:var(--color-foreground)]">
+            {terms?.content}
+          </div>
+          <DialogFooter className="mt-6">
+            <Button type="button" onClick={() => setIsTermsDialogOpen(false)}>
+              Fechar termos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
